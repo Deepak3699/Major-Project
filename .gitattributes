@@ -1,0 +1,15 @@
+# Normalize line endings so behavior is identical on every clone.
+*	text=auto
+
+# PowerShell 5.1 mis-parses LF-only scripts; keep the Windows launcher CRLF
+# regardless of the operator's core.autocrlf setting.
+*.ps1	text eol=crlf
+*.cmd	text eol=crlf
+
+# Shell scripts must stay LF or they break inside Linux containers.
+*.sh	text eol=lf
+*.bash	text eol=lf
+Dockerfile*	text eol=lf
+
+*.png binary
+*.jpg binary

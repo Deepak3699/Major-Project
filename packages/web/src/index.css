@@ -1,0 +1,285 @@
+@import '@fontsource-variable/inter';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ---- premium dark, violet→cyan ---- */
+    --background: 240 24% 5%;
+    --surface: 240 20% 9%;
+    --foreground: 220 20% 96%;
+    --muted: 240 12% 16%;
+    --muted-foreground: 240 6% 62%;
+    --accent: 240 14% 18%;
+    --accent-foreground: 220 20% 96%;
+    --border: 240 12% 20%;
+    --border-strong: 240 10% 30%;
+    --input: 240 12% 16%;
+    --ring: 251 90% 70%;
+    --ring-soft: rgb(129 108 255 / 0.22);
+
+    --primary: 251 91% 67%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 251 95% 73%;
+    --primary-soft: 251 60% 18%;
+
+    --secondary: 240 10% 17%;
+    --secondary-foreground: 220 20% 96%;
+
+    --destructive: 350 90% 66%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 350 60% 16%;
+
+    --success: 158 84% 52%;
+    --success-foreground: 140 90% 6%;
+    --success-soft: 158 60% 12%;
+
+    --warning: 38 95% 60%;
+    --warning-foreground: 30 90% 8%;
+    --warning-soft: 38 60% 13%;
+
+    --info: 189 94% 58%;
+    --info-foreground: 190 90% 8%;
+    --info-soft: 189 60% 13%;
+
+    --sidebar: 240 24% 7%;
+    --sidebar-foreground: 240 6% 62%;
+    --sidebar-muted: 240 12% 14%;
+    --sidebar-border: 240 12% 14%;
+    --sidebar-active: 251 50% 20%;
+    --sidebar-active-foreground: 251 95% 82%;
+
+    --hot: 350 90% 66%;
+    --hot-soft: 350 60% 16%;
+    --warm: 38 95% 60%;
+    --warm-soft: 38 60% 13%;
+    --cold: 189 94% 58%;
+    --cold-soft: 189 60% 13%;
+
+    /* gradients + glow (raw values consumed by tailwind) */
+    --grad-primary: linear-gradient(135deg, hsl(251 91% 67%), hsl(199 92% 58%));
+    --grad-mesh: radial-gradient(at 18% 12%, hsl(251 90% 30% / 0.55) 0px, transparent 55%),
+      radial-gradient(at 88% 6%, hsl(199 90% 34% / 0.35) 0px, transparent 50%),
+      radial-gradient(at 72% 92%, hsl(286 80% 34% / 0.30) 0px, transparent 55%),
+      radial-gradient(at 8% 96%, hsl(158 84% 30% / 0.22) 0px, transparent 50%);
+    --glow-primary: 0 0 42px -6px hsl(251 91% 67% / 0.6);
+    --glow-soft: 0 12px 44px -14px rgb(0 0 0 / 0.8);
+
+    --radius: 0.85rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* ambient aurora field behind the whole app */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--grad-mesh);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight text-foreground;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.35);
+    color: hsl(var(--primary-foreground));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-strong));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+    background-clip: padding-box;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+@layer components {
+  .skeleton {
+    @apply rounded-md;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--accent)) 37%,
+      hsl(var(--muted)) 63%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* glassmorphic elevated card */
+  .card {
+    @apply rounded-xl border bg-surface/70 backdrop-blur-xl;
+    border-color: hsl(var(--border) / 0.7);
+    box-shadow: var(--glow-soft), inset 0 1px 0 0 hsl(var(--foreground) / 0.04);
+  }
+
+  .input {
+    @apply h-10 w-full rounded-lg border border-input bg-surface/60 px-3 py-2 text-sm text-foreground shadow-sm backdrop-blur transition-all duration-150 placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-muted-foreground;
+  }
+
+  .table-th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+
+  .table-td {
+    @apply px-4 py-3.5 text-sm text-foreground;
+  }
+
+  /* gradient text */
+  .text-gradient {
+    background: var(--grad-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* glowing primary action */
+  .btn-glow {
+    box-shadow: var(--glow-primary);
+  }
+
+  /* animated gradient border used on hero cards */
+  .glow-ring {
+    position: relative;
+  }
+  .glow-ring::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--grad-primary);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-surface/60 backdrop-blur-xl;
+  }
+  .glass-strong {
+    @apply bg-surface/85 backdrop-blur-2xl;
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-pulse-glow {
+    animation: pulseGlow 2.4s ease-in-out infinite;
+  }
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--foreground)) 0%,
+      hsl(var(--primary)) 45%,
+      hsl(var(--info)) 55%,
+      hsl(var(--foreground)) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmerText 6s linear infinite;
+  }
+}
+
+/* ---- keyframes (referenced by .animate-* + .card/.skeleton above) ---- */
+@keyframes shimmer {
+  0% { background-position: 400% 0; }
+  100% { background-position: -400% 0; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 28px 4px hsl(var(--primary) / 0.5); }
+}
+@keyframes shimmerText {
+  to { background-position: 200% center; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes aurora {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(4%, -4%) rotate(8deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.animate-fade-in { animation: fadeIn 0.4s ease both; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-aurora { animation: aurora 18s ease-in-out infinite; }

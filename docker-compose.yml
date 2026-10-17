@@ -1,0 +1,127 @@
+# (removed obsolete `version` key: compose v2 warns on it every invocation)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sales-agent-postgres
+    environment:
+      POSTGRES_DB: leads_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pg-migrator:
+    image: postgres:16-alpine
+    container_name: sales-agent-pg-migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./packages/api/database:/db
+    entrypoint: ["sh", "-c", "PGPASSWORD=postgres psql -h postgres -U postgres -c 'CREATE DATABASE n8n' 2>/dev/null || true; DATABASE_URL=postgresql://postgres:postgres@postgres:5432/leads_db sh /db/utils/apply_schema.sh"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: sales-agent-redis
+    # Durability (Track 1): AOF everysec + named volume, so queued jobs, DLQs,
+    # circuit-breaker state and daily-claim keys survive restarts (RPO <= 1s).
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    container_name: sales-agent-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/leads_db
+      REDIS_URL: redis://redis:6379
+      HOST: 0.0.0.0
+      WORKERS_URL: http://workers:8000
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile
+    container_name: sales-agent-web
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  workers:
+    build:
+      context: ./packages/scrapers
+      dockerfile: Dockerfile
+    container_name: sales-agent-workers
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/leads_db
+      REDIS_URL: redis://redis:6379
+      REACHER_URL: http://reacher:3000
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ./packages/scrapers:/app
+
+  reacher:
+    image: reacherhq/check-if-email-exists:latest
+    container_name: sales-agent-reacher
+    ports:
+      - "5050:3000"
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sales-agent-n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=postgres
+      - VOLS_PATH=/tmp/n8n-data
+      - N8N_PORT=5678
+      - N8N_HOST=0.0.0.0
+    ports:
+      - "5678:5678"
+    depends_on:
+      - postgres
+    volumes:
+      - n8n-data:/home/node/.n8n
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  n8n-data:

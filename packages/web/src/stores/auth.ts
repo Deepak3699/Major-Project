@@ -8,7 +8,7 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, role?: 'admin' | 'sales_rep') => Promise<void>;
   logout: () => Promise<void>;
   revokeCurrentToken: () => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
@@ -24,8 +24,8 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
 
-      login: async (email: string, password: string) => {
-        const res: LoginResponse = await authApi.login(email, password);
+      login: async (email: string, password: string, role?: 'admin' | 'sales_rep') => {
+        const res: LoginResponse = await authApi.login(email, password, role);
         const user: User = {
           id: res.user.id,
           email: res.user.email,

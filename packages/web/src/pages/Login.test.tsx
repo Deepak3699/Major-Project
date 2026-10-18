@@ -38,7 +38,7 @@ describe('Login', () => {
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
-    await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('test@test.com', 'password123'));
+    await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('test@test.com', 'password123', 'admin'));
   });
 
   it('shows error on login failure', async () => {

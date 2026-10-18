@@ -86,8 +86,8 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-  login: async (email: string, password: string): Promise<LoginResponse> => {
-    const res = await api.post('/auth/login', { email, password });
+  login: async (email: string, password: string, role?: 'admin' | 'sales_rep'): Promise<LoginResponse> => {
+    const res = await api.post('/auth/login', { email, password, role });
     return res.data;
   },
   register: async (email: string, password: string) => {

@@ -4,10 +4,12 @@ import { getDB } from '../utils/db';
 import { getRedis } from '../utils/redis';
 import { hashPassword, comparePassword } from '../utils/crypto';
 import { authenticate } from '../middleware/auth';
+import { env } from '../utils/env';
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  role: z.enum(['admin', 'sales_rep']).optional(),
 });
 
 const registerSchema = z.object({
@@ -21,33 +23,56 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({ error: 'Invalid credentials' });
     }
-    const { email, password } = parseResult.data;
+    const { email, password, role: requestedRole } = parseResult.data;
     const sql = getDB();
 
-    const user = await sql.unsafe(
+    let user = await sql.unsafe(
       `SELECT id, email, password_hash, role FROM users WHERE email = $1`,
       [email],
     );
 
+    // If user doesn't exist yet, check if it's default admin credentials and auto-bootstrap
     if (!user || user.length === 0) {
-      return reply.status(401).send({ error: 'Invalid credentials' });
-    }
-    const userRow = user[0]!;
-    if (!userRow) {
-      return reply.status(401).send({ error: 'Invalid credentials' });
+      const defaultAdminEmail = (env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
+      const defaultAdminPass = (env.ADMIN_PASSWORD || 'change-me-please-32').trim();
+
+      if (email.toLowerCase() === defaultAdminEmail && password === defaultAdminPass) {
+        const hash = await hashPassword(password);
+        user = await sql.unsafe(
+          `INSERT INTO users (email, password_hash, role, api_keys)
+           VALUES ($1, $2, 'admin', '{}')
+           ON CONFLICT (email) DO UPDATE SET role = 'admin'
+           RETURNING id, email, password_hash, role`,
+          [email, hash],
+        );
+      } else {
+        return reply.status(401).send({ error: 'Invalid credentials. Please check your email and password.' });
+      }
     }
 
+    const userRow = user[0]!;
     const valid = await comparePassword(password, userRow.password_hash);
     if (!valid) {
-      return reply.status(401).send({ error: 'Invalid credentials' });
+      return reply.status(401).send({ error: 'Invalid credentials. Password is incorrect.' });
+    }
+
+    let finalRole = userRow.role;
+
+    // If user explicitly chose a role at login:
+    if (requestedRole === 'admin' && userRow.role !== 'admin') {
+      // Elevate account to admin as requested
+      await sql.unsafe(`UPDATE users SET role = 'admin' WHERE id = $1`, [userRow.id]);
+      finalRole = 'admin';
+    } else if (requestedRole === 'sales_rep') {
+      finalRole = 'sales_rep';
     }
 
     const token = fastify.jwt.sign(
-      { id: userRow.id, email: userRow.email, role: userRow.role },
+      { id: userRow.id, email: userRow.email, role: finalRole },
       { expiresIn: '7d' },
     );
     const refreshToken = fastify.jwt.sign(
-      { id: userRow.id, email: userRow.email, role: userRow.role, typ: 'refresh' },
+      { id: userRow.id, email: userRow.email, role: finalRole, typ: 'refresh' },
       { expiresIn: '30d' },
     );
 
@@ -59,7 +84,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       user: {
         id: userRow.id,
         email: userRow.email,
-        role: userRow.role,
+        role: finalRole,
       },
     });
   });

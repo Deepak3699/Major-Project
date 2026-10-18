@@ -14,7 +14,7 @@
     "schema:apply": "tsx src/scripts/applySchema.ts",
     "migrate": "node --import tsx node_modules/node-pg-migrate/bin/node-pg-migrate -c database/config/migrate-config.cjs -m database/migrations --ignore-pattern \"README.md\" up",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
-    "db:init": "tsx src/scripts/applySchema.ts && npm run migrate && npm run seed:admin"
+    "db:init": "tsx src/scripts/initDb.ts"
   },
   "dependencies": {
     "@fastify/compress": "^7.0.3",

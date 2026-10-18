@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { env } from './env';
+import { printDatabaseError } from './friendlyErrors';
 
 let pool: postgres.Sql | null = null;
 
@@ -18,9 +19,9 @@ export async function connectDB(): Promise<void> {
   const sql = getDB();
   try {
     await sql`SELECT 1`;
-    console.info('✅ Connected to PostgreSQL');
+    console.info('✅ [API Backend] Connected to PostgreSQL (leads_db)');
   } catch (err) {
-    console.error('❌ PostgreSQL connection failed:', err);
+    printDatabaseError(err, env.DATABASE_URL);
     throw err;
   }
 }

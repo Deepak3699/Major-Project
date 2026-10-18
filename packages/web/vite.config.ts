@@ -21,6 +21,17 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
+        configure: (proxy) => {
+          let lastWarn = 0;
+          proxy.on('error', () => {
+            const now = Date.now();
+            if (now - lastWarn > 5000) {
+              lastWarn = now;
+              console.warn('\n\x1b[33m⚠️  [Take It Web Frontend] Backend API (http://localhost:3000) se connect nahi ho pa raha!\x1b[0m');
+              console.warn('\x1b[36m👉 Solution:\x1b[0m Ek alag terminal me `cd packages\\api` aur `npm run dev` start karein.\n');
+            }
+          });
+        },
       },
       '/sse': {
         target: 'http://localhost:3000',

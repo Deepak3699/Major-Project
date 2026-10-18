@@ -182,6 +182,32 @@ async def startup_event():
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
+
+    # Friendly diagnostic banner
+    print("\n" + "=" * 68)
+    print("🚀 \033[1;36mTake It — Scraper Fleet & Background Workers Started!\033[0m")
+    print("=" * 68)
+    print("  • \033[1mWorkers API:\033[0m   http://localhost:8000")
+    print("  • \033[1mHealth Check:\033[0m  http://localhost:8000/health")
+
+    try:
+        r = get_redis()
+        await r.ping()
+        print("  • \033[1mRedis:\033[0m         \033[32m✅ Connected (Queue workers active)\033[0m")
+    except Exception:
+        print("  • \033[1mRedis:\033[0m         \033[33m⚠️ Not connected (Port 6379)\033[0m")
+        print("    \033[90m-> Notice: Queue consumers paused. Start Redis or configure REDIS_URL in .env\033[0m")
+
+    try:
+        pool = await get_db_pool()
+        if pool:
+            print("  • \033[1mPostgreSQL:\033[0m    \033[32m✅ Connected\033[0m")
+        else:
+            print("  • \033[1mPostgreSQL:\033[0m    \033[33m⚠️ Not connected\033[0m")
+    except Exception:
+        print("  • \033[1mPostgreSQL:\033[0m    \033[33m⚠️ Not connected (Check DATABASE_URL in .env)\033[0m")
+
+    print("=" * 68 + "\n")
     asyncio.create_task(start_consumers())
 
 

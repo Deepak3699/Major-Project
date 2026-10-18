@@ -1,24 +1,31 @@
 import IORedis from 'ioredis';
 import { env } from './env';
+import { printRedisError } from './friendlyErrors';
 
 let client: IORedis | null = null;
+let hasReportedRedisError = false;
 
 export function getRedis(): IORedis {
   if (!client) {
     client = new IORedis(env.REDIS_URL, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 1,
+      lazyConnect: true,
       retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
+        if (times > 3) return null; // stop hammering after 3 tries
+        return Math.min(times * 100, 1000);
       },
     });
 
     client.on('error', (err: Error) => {
-      console.error('[Redis] Connection error:', err.message);
+      if (!hasReportedRedisError) {
+        hasReportedRedisError = true;
+        printRedisError(err, env.REDIS_URL);
+      }
     });
 
     client.on('connect', () => {
-      console.info('[Redis] Connected');
+      hasReportedRedisError = false;
+      console.info('✅ [API Backend] Connected to Redis');
     });
   }
   return client;
@@ -26,8 +33,17 @@ export function getRedis(): IORedis {
 
 export async function connectRedis(): Promise<void> {
   const redis = getRedis();
-  await redis.ping();
-  console.info('✅ Connected to Redis');
+  try {
+    await redis.connect();
+    await redis.ping();
+    console.info('✅ [API Backend] Connected to Redis');
+  } catch (err) {
+    if (!hasReportedRedisError) {
+      hasReportedRedisError = true;
+      printRedisError(err, env.REDIS_URL);
+    }
+    throw err;
+  }
 }
 
 export async function closeRedis(): Promise<void> {

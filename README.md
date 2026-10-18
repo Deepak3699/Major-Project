@@ -139,6 +139,7 @@ Sign in at **http://localhost:5173** with the admin credentials from `.env`:
 ```ini
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-me-please-32
+Or Create a New Account 
 ```
 
 > ⚠️ **Important:**

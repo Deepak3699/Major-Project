@@ -83,11 +83,17 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const hashedPassword = await hashPassword(password);
 
+    // If no admin exists yet, the first registered user gets the 'admin' role automatically
+    const adminCheck = await sql.unsafe(
+      `SELECT id FROM users WHERE role = 'admin' LIMIT 1`,
+    );
+    const assignedRole = (adminCheck && adminCheck.length > 0) ? 'sales_rep' : 'admin';
+
     const result = await sql.unsafe(
       `INSERT INTO users (email, password_hash, role, api_keys)
-       VALUES ($1, $2, 'sales_rep', '{}')
+       VALUES ($1, $2, $3, '{}')
        RETURNING id, email, role`,
-      [email, hashedPassword],
+      [email, hashedPassword, assignedRole],
     );
 
     return reply.status(201).send({

@@ -3,14 +3,17 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth";
 import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
-  Settings as SettingsIcon, LogOut, Search, PanelLeft, Radar,
+  Settings as SettingsIcon, LogOut, Search, PanelLeft, Radar, BriefcaseBusiness,
+  Target, ClipboardList, UserRound,
+  MessageCircle,
+  Bookmark, FileText,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
 import { Avatar } from "@/components/ui/avatar";
 
 type IconType = typeof Users;
-const SECTIONS: { label: string; items: { to: string; label: string; icon: IconType }[] }[] = [
+const LEGACY_SECTIONS: { label: string; items: { to: string; label: string; icon: IconType }[] }[] = [
   { label: "Workspace", items: [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/leads", label: "Leads", icon: Users },
@@ -20,6 +23,33 @@ const SECTIONS: { label: string; items: { to: string; label: string; icon: IconT
   { label: "Insights", items: [
     { to: "/duplicates", label: "Duplicates", icon: GitMerge },
     { to: "/analytics", label: "Analytics", icon: TrendingUp },
+  ] },
+];
+const CANDIDATE_SECTIONS = [
+  { label: "Career space", items: [
+    { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { to: "/jobs", label: "Discover jobs", icon: BriefcaseBusiness },
+    { to: "/recommendations", label: "For you", icon: Target },
+    { to: "/saved", label: "Saved jobs", icon: Bookmark },
+    { to: "/applications", label: "Applications", icon: ClipboardList },
+    { to: "/contacts", label: "Employer contacts", icon: Contact },
+    { to: "/resume", label: "Resume studio", icon: FileText },
+    { to: "/profile", label: "My profile", icon: UserRound },
+  ] },
+];
+const ADMIN_SECTIONS = [
+  { label: "Platform", items: [
+    { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { to: "/jobs", label: "Job review", icon: BriefcaseBusiness },
+    { to: "/leads", label: "Lead pipeline", icon: Users },
+    { to: "/companies", label: "Companies", icon: Building2 },
+    { to: "/contacts", label: "HR contacts & verification", icon: Contact },
+  ] },
+  { label: "Insights", items: [
+    { to: "/duplicates", label: "Duplicates", icon: GitMerge },
+    { to: "/analytics", label: "Analytics", icon: TrendingUp },
+    { to: "/admin/feedback", label: "Candidate feedback", icon: MessageCircle },
+    { to: "/settings", label: "System settings", icon: SettingsIcon },
   ] },
 ];
 
@@ -54,10 +84,11 @@ function NavItem({ to, label, icon: Icon, collapsed, onNavigate }: NavItemProps)
   );
 }
 
-function Nav({ collapsed, isAdmin, onNavigate }: { collapsed: boolean; isAdmin: boolean; onNavigate?: () => void }) {
+function Nav({ collapsed, isAdmin, isCandidate, onNavigate }: { collapsed: boolean; isAdmin: boolean; isCandidate: boolean; onNavigate?: () => void }) {
+  const sections = isCandidate ? CANDIDATE_SECTIONS : isAdmin ? ADMIN_SECTIONS : LEGACY_SECTIONS;
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-x-hidden overflow-y-auto px-2 py-2">
-      {SECTIONS.map((sec) => (
+      {sections.map((sec) => (
         <div key={sec.label}>
           {!collapsed && <p className={cn("px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60", EASE)}>{sec.label}</p>}
           {collapsed && <div className="mx-1 my-1.5 h-px bg-sidebar-border" />}
@@ -66,13 +97,6 @@ function Nav({ collapsed, isAdmin, onNavigate }: { collapsed: boolean; isAdmin: 
           </div>
         </div>
       ))}
-      {isAdmin && (
-        <div>
-          {!collapsed && <p className="px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/60">System</p>}
-          {collapsed && <div className="mx-1 my-1.5 h-px bg-sidebar-border" />}
-          <NavItem to="/settings" label="Settings" icon={SettingsIcon} collapsed={collapsed} onNavigate={onNavigate} />
-        </div>
-      )}
     </nav>
   );
 }
@@ -109,6 +133,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   const { user, logout, revokeCurrentToken } = useAuthStore();
   const navigate = useNavigate();
   const isAdmin = user?.role === "admin";
+  const isCandidate = user?.role === "candidate";
   const onLogout = async () => { await revokeCurrentToken(); await logout(); navigate("/login"); };
   const openPalette = () => window.dispatchEvent(new Event("hiregen:open-palette"));
 
@@ -128,7 +153,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
       {/* Desktop rail */}
       <aside className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 68 : 232 }}>
         <Header compact={collapsed} />
-        <Nav collapsed={collapsed} isAdmin={isAdmin} />
+        <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
         <Footer collapsed={collapsed} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
       </aside>
 
@@ -141,7 +166,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
               <Logo />
               <button type="button" onClick={onDrawerClose} aria-label="Close menu" className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"><Radar className="h-4 w-4 opacity-0" /><span className="-ml-4 text-xl leading-none">×</span></button>
             </div>
-            <Nav collapsed={false} isAdmin={isAdmin} onNavigate={onDrawerClose} />
+            <Nav collapsed={false} isAdmin={isAdmin} isCandidate={isCandidate} onNavigate={onDrawerClose} />
             <Footer collapsed={false} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
           </aside>
         </div>

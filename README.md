@@ -1,8 +1,21 @@
-# Take It — Lead Intelligence Engine
+# JobPilot AI — Job Intelligence & Application Platform
 
-Full-stack lead generation & outreach system: scrape job postings → enrich leads → verify emails → AI-draft outreach → send.
+Candidate-first job intelligence platform built on this repository's React, Fastify, PostgreSQL and Python worker stack. Discover recent roles from permitted sources, review evidence-based listing confidence, compare explainable profile matches, prepare truthful application materials, and track application outcomes.
+
+The original recruiter lead-intelligence workflow remains available to administrators as a legacy operations area. New candidate registrations use the candidate workspace.
 
 You can run this project **Without Docker** (pure local setup) or **With Docker** (one-command containerized stack).
+
+## Candidate workflow
+
+1. Register a candidate account or sign in. New registrations open the candidate workspace.
+2. Build a profile manually or upload a PDF/DOCX/TXT resume. Extracted fields are suggestions; review and save them before they become the profile used for matching.
+3. Discover fresh roles, inspect source evidence, and filter by role, location, work setup and age.
+4. Review recommendations with weighted dimensions for skills, experience, education, location, role fit, projects, salary and preferences.
+5. Generate role-specific resume and email drafts from confirmed profile facts. Gemini is optional; a local template is used when no API key is configured. Review every draft before use.
+6. Open the employer's application page yourself, then track saved, applied, screening, interview, offer, rejection, withdrawal and joining milestones.
+
+The app never submits applications automatically or attempts to bypass CAPTCHA, anti-bot checks, access controls or source terms. Scraping defaults to official ATS connectors and selected public feeds. Other connectors are filtered unless an operator has reviewed access permissions and adds them to `SCRAPE_PERMITTED_SOURCES`. See [the implementation alignment notes](docs/IMPLEMENTATION_ALIGNMENT.md) for the detailed mapping to the project blueprint.
 
 ---
 
@@ -98,7 +111,7 @@ npm run dev
 
 ### Step 5: Start Python Scraper Workers (Terminal 3 — Optional)
 
-If you want to run live web scrapers, OSINT contact enrichment, and AI draft generation:
+If you want live job discovery and resume parsing, start the Python worker:
 ```powershell
 cd packages\scrapers
 
@@ -134,7 +147,7 @@ Both launchers build the images, spin up all containers (Postgres, Redis, API, W
 
 ## 🔑 Login & First Access
 
-Sign in at **http://localhost:5173** with the admin credentials from `.env`:
+For Docker mode, sign in at **http://localhost:5174** with the admin credentials from `.env`:
 
 ```ini
 ADMIN_EMAIL=admin@example.com
@@ -142,9 +155,7 @@ ADMIN_PASSWORD=change-me-please-32
 Or Create a New Account 
 ```
 
-> ⚠️ **Important:**
-> - Do not use the self-registration form (`/register`) for the initial access. Self-registration creates a `sales_rep` account that can only view assigned leads.
-> - Use the **admin account** above to see all scraped leads and manage API keys under **Settings**.
+> Candidate sign-up at `/register` creates a candidate account. Use the admin credentials above for job review, source health, settings, and legacy recruiter operations.
 
 ---
 
@@ -152,36 +163,30 @@ Or Create a New Account
 
 | Service | Port / URL | Description |
 |---|---|---|
-| **Web CRM** | http://localhost:5173 | React 18 + Vite + Tailwind UI |
-| **API** | http://localhost:3000 | Fastify REST API + WebSockets |
-| **API Health** | http://localhost:3000/health | Health & uptime endpoint |
-| **Workers** | http://localhost:8000 | Python FastAPI Scrapers & Queue Consumers |
-| **Workers Health** | http://localhost:8000/health | Scraper fleet status |
-| **PostgreSQL** | `localhost:5432` | Database (`leads_db`) |
-| **Redis** | `localhost:6379` | Message queues & caching |
-| **n8n** | http://localhost:5678 | Workflow orchestration (Docker mode) |
-| **Reacher** | http://localhost:5050 | Email verification service (Docker mode) |
+| **JobPilot (Docker)** | http://localhost:5174 | Candidate and admin workspaces |
+| **API (Docker)** | http://localhost:3001 | Fastify REST API + WebSockets |
+| **API Health (Docker)** | http://localhost:3001/health | Health & uptime endpoint |
+| **Workers (Docker)** | http://localhost:8011 | Python FastAPI Scrapers & Queue Consumers |
+| **Workers Health (Docker)** | http://localhost:8011/health | Scraper fleet status |
+| **PostgreSQL (Docker)** | `localhost:5434` | Database (`leads_db`) |
+| **Redis (Docker)** | `localhost:6381` | Message queues & caching |
+| **n8n (Docker)** | http://localhost:5679 | Workflow orchestration |
+| **Reacher (Docker)** | http://localhost:5051 | Email verification service |
 
 ---
 
-## 🔄 The Pipeline
+## 🔄 Job intelligence pipeline
 
 ```text
-Step 1  Scrape       Scraper fleet (Naukri, Internshala, Lever, Greenhouse, Adzuna...)
-                     → raw leads → Postgres               [cron / manual trigger]
-
-Step 2  Enrich       OSINT enrichment (Snov.io, ContactOut — keys in Settings)
-                     → company + HR contact data          [per-lead button in UI]
-
-Step 3  Verify       Email & contact verification (Reacher / SMTP checks)
-                     → verification_log                   [per-lead button in UI]
-
-Step 4  Draft        Gemini AI outreach draft generation
-                     → outreach_drafts                    [per-lead button in UI]
-
-Step 5  Send         Resend / Brevo email or WhatsApp
-                     → outreach_log + webhooks            [per-lead button in UI]
+Permitted sources → ingestion workers → normalization + deduplication
+  → evidence-based quality score → PostgreSQL → profile-specific candidate matching
+  → user-reviewed resume/email drafts → user-authorized employer application
+  → status history, outcomes, feedback and admin monitoring
 ```
+
+The existing lead enrichment and outreach workers are available for the legacy admin workflow only when `ENABLE_LEGACY_OUTREACH_PIPELINE=1`. Candidate job discovery, recommendations and applications do not depend on them. A listing with an evidence-based quality score above 70 is published automatically; lower-quality listings stay in the admin review queue. Existing pending listings are re-scored by migration 009.
+
+Candidate recommendations use a small feed-forward neural ranker (9 inputs → 14 → 8 → 1). The committed bootstrap artifact is trained on generated weak-label examples; it does not claim to be trained on real applicant outcomes. Admin retraining requires at least 20 usable interview/offer/joined or withdrawn outcomes with both positive and negative examples. Recommendations show only model scores of 70% or higher. Resume Studio provides three fixed PDF layouts and uses profile facts; job tailoring can call Gemini when `GEMINI_API_KEY` is set. Uploaded resumes are processed in memory. Scanned PDFs without selectable text should be uploaded as OCR-enabled PDFs or as DOCX/TXT.
 
 ---
 
@@ -190,17 +195,17 @@ Step 5  Send         Resend / Brevo email or WhatsApp
 ```text
 packages/
   api/                    ← Fastify (Node 20) Backend
-    src/routes/           ← auth, leads, companies, contacts, dashboard, admin, ws
+    src/routes/           ← candidate, auth, admin, legacy leads, companies, contacts, dashboard, ws
     src/scripts/          ← applySchema.ts (cross-platform schema runner), seedAdmin.ts
     database/
       schema/             ← tables, constraints, functions, triggers, indexes
       migrations/         ← node-pg-migrate deltas
-  web/                    ← React 18 CRM (Vite, Tailwind, Framer Motion, TanStack Table)
-    src/pages/            ← Dashboard, Leads, Contacts, Companies, Analytics, Settings
-    src/components/       ← UI components, Header, Sidebar, Logo
-  scrapers/               ← Python fleet (FastAPI, Scrapy, Playwright, HTTPX)
-    main.py               ← Supervisor + queue consumers
-    scrapers/             ← 40+ job board & OSINT scrapers
+  web/                    ← React 18 platform (Vite, Tailwind, Framer Motion)
+    src/pages/            ← Candidate profile, discovery, recommendations, applications, admin review
+    src/components/       ← Candidate cards, shared UI, Header, Sidebar, Logo
+  scrapers/               ← Python job discovery and resume parser workers
+    main.py               ← FastAPI service + queue consumers
+    scrapers/             ← ATS/public-feed connectors and legacy integrations
 docker-compose.yml        ← Container orchestration stack
 up.ps1 / up.sh            ← One-shot Docker launchers
 .env.example              ← Template configuration
@@ -231,4 +236,8 @@ cd packages/scrapers && pytest tests/
 - **Secrets**: Never commit `.env` to version control.
 - **API Keys**: Stored via the web Settings page and encrypted at rest with AES-256-GCM.
 - **Admin Endpoints**: Integrity checks, metric streams, and DLQ routes are strictly admin-authenticated.
-- **Anti-Spam & Compliance**: Built-in CAN-SPAM footer, unsubscribe endpoints, and cooldown periods.
+- **Source policy**: discovery filters to permitted ATS/public-feed connectors; browser stealth, proxy rotation and CAPTCHA solving are disabled by default.
+- **Candidate data**: profile and application endpoints are account-scoped. Uploaded resumes are parsed in memory; the original file is not stored.
+- **Truthful drafting**: the AI prompt limits drafts to confirmed profile facts; all generated materials remain drafts for the candidate to review.
+- **Authorized applications**: the user completes final submission on the employer site; status changes are tracked with history.
+- **Legacy outreach**: its CAN-SPAM footer, unsubscribe endpoints and cooldown controls remain in place for the recruiter lead workflow.

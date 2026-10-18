@@ -9,7 +9,7 @@ import { env } from '../utils/env';
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  role: z.enum(['admin', 'sales_rep']).optional(),
+  role: z.enum(['admin', 'user']).optional(),
 });
 
 const registerSchema = z.object({
@@ -56,16 +56,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(401).send({ error: 'Invalid credentials. Password is incorrect.' });
     }
 
-    let finalRole = userRow.role;
-
-    // If user explicitly chose a role at login:
-    if (requestedRole === 'admin' && userRow.role !== 'admin') {
-      // Elevate account to admin as requested
-      await sql.unsafe(`UPDATE users SET role = 'admin' WHERE id = $1`, [userRow.id]);
-      finalRole = 'admin';
-    } else if (requestedRole === 'sales_rep') {
-      finalRole = 'sales_rep';
+    if (
+      (requestedRole === 'admin' && userRow.role !== 'admin') ||
+      (requestedRole === 'user' && userRow.role === 'admin')
+    ) {
+      return reply.status(403).send({ error: 'This account does not have the selected role.' });
     }
+
+    const finalRole = userRow.role;
 
     const token = fastify.jwt.sign(
       { id: userRow.id, email: userRow.email, role: finalRole },
@@ -108,17 +106,11 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const hashedPassword = await hashPassword(password);
 
-    // If no admin exists yet, the first registered user gets the 'admin' role automatically
-    const adminCheck = await sql.unsafe(
-      `SELECT id FROM users WHERE role = 'admin' LIMIT 1`,
-    );
-    const assignedRole = (adminCheck && adminCheck.length > 0) ? 'sales_rep' : 'admin';
-
     const result = await sql.unsafe(
       `INSERT INTO users (email, password_hash, role, api_keys)
-       VALUES ($1, $2, $3, '{}')
+       VALUES ($1, $2, 'candidate', '{}')
        RETURNING id, email, role`,
-      [email, hashedPassword, assignedRole],
+      [email, hashedPassword],
     );
 
     return reply.status(201).send({

@@ -42,11 +42,11 @@ const Register: React.FC = () => {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Start building your lead pipeline">
+    <AuthShell title="Create your account" subtitle="Start discovering roles that fit your profile">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="email" className="label">Email</label>
-          <Input id="email" type="email" icon={<Mail className="h-4 w-4" />} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required autoComplete="email" />
+          <Input id="email" type="email" icon={<Mail className="h-4 w-4" />} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email" />
         </div>
         <div className="space-y-1.5">
           <label htmlFor="password" className="label">Password</label>

@@ -1,31 +1,10 @@
-"""Escalating anti-bot HTTP layer (SRS §3.4 / §9.4).
+"""Standards-first HTTP client for permitted job feeds and career pages.
 
-Single async entrypoints `fetch_text()` / `fetch_json()`. Every request escalates
-through increasingly-strengthened engines and DEGRADES GRACEFULLY — a missing
-optional dependency or credential never crashes the run, it just falls to the
-next tier (this fixes the old per-scraper behaviour where a missing Playwright
-browser raised ScraperError and lost the whole source).
-
-Tiers (strongest last; each skipped if its dep/key is absent):
-  0. httpx          - plain async GET with realistic browser headers.
-  1. curl_cffi      - browser TLS/JA3 impersonation (open-source anti-fingerprint).
-  2. playwright     - real headless Chromium + stealth init script, honouring the
-                      configured proxy; best-effort CAPTCHA solve if a solver
-                      provider + key are configured.
-
-Evasion config is entirely env-driven so the *plumbing* ships here but the paid
-/optional parts only activate when the operator adds credentials:
-  ROTATING_PROXIES / PROXY_URL   comma list / single auth proxy
-                                 (e.g. Bright Data, Oxylabs, Smartproxy endpoint
-                                 `http://user:pass@gate:port`). Round-robined.
-  HTTP_IMPERSONATE               curl_cffi impersonation target (default chrome)
-  CAPTCHA_PROVIDER               one of: 2captcha, anticaptcha  (else disabled)
-  CAPTCHA_API_KEY                key for the chosen solver (else disabled)
-  HEADLESS                       "0" to run Playwright headed (debugging)
-
-This module deliberately keeps no per-site logic: callers get a rendered document
-and parse it. That keeps the evasion concerns (headers/TLS/proxy/stealth/captcha)
-in exactly one place.
+Plain HTTPX with an identifiable product user-agent is the default. Proxy
+rotation, TLS fingerprint spoofing, browser stealth and CAPTCHA solving are
+disabled unless a separate, explicitly authorized workflow opts in with
+SCRAPER_ALLOW_ADVANCED_FETCH=1. A block response is returned to the caller and
+is never treated as permission to evade the source's controls.
 """
 
 from __future__ import annotations
@@ -67,24 +46,10 @@ _ACCEPT = (
 
 
 def _browser_headers(extra: Optional[dict[str, str]] = None) -> dict[str, str]:
-    ua = os.environ.get("SCRAPER_USER_AGENT")
-    if not ua:
-        try:  # reuse the repo's UA rotator if present
-            from fake_useragent import UserAgent
-            ua = UserAgent().random
-        except Exception:  # noqa: BLE001
-            ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+    ua = os.environ.get("SCRAPER_USER_AGENT", "JobPilotAI/1.0")
     h = {
         "User-Agent": ua,
-        "Accept": _ACCEPT,
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Connection": "keep-alive",
+        "Accept": "text/html,application/json;q=0.9,*/*;q=0.5",
     }
     if extra:
         h.update(extra)
@@ -92,6 +57,8 @@ def _browser_headers(extra: Optional[dict[str, str]] = None) -> dict[str, str]:
 
 
 def _proxies() -> list[str]:
+    if os.environ.get("SCRAPER_ALLOW_ADVANCED_FETCH") != "1":
+        return []
     raw = os.environ.get("ROTATING_PROXIES", "")
     out = [p.strip() for p in raw.split(",") if p.strip()]
     one = os.environ.get("PROXY_URL", "").strip()
@@ -273,7 +240,7 @@ async def _t_playwright(url: str, headers: dict, proxy: Optional[str], timeout: 
 
 
 def _captcha_configured() -> bool:
-    return bool(os.environ.get("CAPTCHA_API_KEY")) and \
+    return os.environ.get("SCRAPER_ALLOW_ADVANCED_FETCH") == "1" and bool(os.environ.get("CAPTCHA_API_KEY")) and \
         os.environ.get("CAPTCHA_PROVIDER", "").lower() in ("2captcha", "anticaptcha")
 
 
@@ -285,7 +252,7 @@ class Response:
 
 
 async def fetch(url: str, *, timeout: int = 20, headers: Optional[dict] = None,
-                max_engine: str = "playwright", min_engine: str = "httpx") -> Response:
+                max_engine: str = "httpx", min_engine: str = "httpx") -> Response:
     """Fetch `url`, escalating engines until one returns a non-blocked document.
 
     `min_engine`/`max_engine`: one of "httpx" | "curl" | "playwright". Most public
@@ -302,6 +269,8 @@ async def fetch(url: str, *, timeout: int = 20, headers: Optional[dict] = None,
     # today; this guards future ones.
     if not url.lower().startswith(("http://", "https://")):
         raise ValueError(f"refusing to fetch non-http(s) URL: {url!r}")
+    if os.environ.get("SCRAPER_ALLOW_ADVANCED_FETCH") != "1":
+        min_engine = max_engine = "httpx"
     lo = ranks.get(min_engine, 0)
     hi = ranks.get(max_engine, 2)
     order = [e for i, e in enumerate(["httpx", "curl", "playwright"]) if lo <= i <= hi]

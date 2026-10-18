@@ -14,6 +14,9 @@ fi
 echo "==> Building images & starting stack (postgres, redis, api, web, workers, reacher, n8n)..."
 docker compose up -d --build
 
+echo "==> Applying base database schema (idempotent)..."
+docker compose run --rm pg-migrator
+
 echo "==> Applying database migrations (idempotent; waits for postgres)..."
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
   if docker compose exec -T api npm run --silent migrate 2>/dev/null; then

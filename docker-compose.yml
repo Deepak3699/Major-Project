@@ -2,7 +2,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: sales-agent-postgres
     environment:
       POSTGRES_DB: leads_db
       POSTGRES_USER: postgres
@@ -10,7 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5434}:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -20,7 +19,6 @@ services:
 
   pg-migrator:
     image: postgres:16-alpine
-    container_name: sales-agent-pg-migrator
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,21 +28,19 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: sales-agent-redis
     # Durability (Track 1): AOF everysec + named volume, so queued jobs, DLQs,
     # circuit-breaker state and daily-claim keys survive restarts (RPO <= 1s).
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
     volumes:
       - redisdata:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6381}:6379"
     restart: unless-stopped
 
   api:
     build:
       context: ./packages/api
       dockerfile: Dockerfile
-    container_name: sales-agent-api
     env_file:
       - .env
     environment:
@@ -55,17 +51,18 @@ services:
     depends_on:
       - postgres
       - redis
+    volumes:
+      - ./packages/api/src/models/recommender:/app/src/models/recommender
     ports:
-      - "3000:3000"
+      - "${API_PORT:-3001}:3000"
     restart: unless-stopped
 
   web:
     build:
       context: ./packages/web
       dockerfile: Dockerfile
-    container_name: sales-agent-web
     ports:
-      - "5173:80"
+      - "${WEB_PORT:-5174}:80"
     depends_on:
       - api
     restart: unless-stopped
@@ -74,7 +71,6 @@ services:
     build:
       context: ./packages/scrapers
       dockerfile: Dockerfile
-    container_name: sales-agent-workers
     env_file:
       - .env
     environment:
@@ -85,21 +81,19 @@ services:
       - postgres
       - redis
     ports:
-      - "8000:8000"
+      - "${WORKERS_PORT:-8011}:8000"
     restart: unless-stopped
     volumes:
       - ./packages/scrapers:/app
 
   reacher:
     image: reacherhq/check-if-email-exists:latest
-    container_name: sales-agent-reacher
     ports:
-      - "5050:3000"
+      - "${REACHER_PORT:-5051}:3000"
     restart: unless-stopped
 
   n8n:
     image: n8nio/n8n:latest
-    container_name: sales-agent-n8n
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
@@ -114,7 +108,7 @@ services:
       - N8N_PORT=5678
       - N8N_HOST=0.0.0.0
     ports:
-      - "5678:5678"
+      - "${N8N_PORT:-5679}:5678"
     depends_on:
       - postgres
     volumes:

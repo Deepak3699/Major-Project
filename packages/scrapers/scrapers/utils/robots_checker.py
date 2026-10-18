@@ -55,12 +55,21 @@ class RobotsChecker:
                         text = await resp.text()
                         _cache[cache_key] = {"content": text, "fetched_at": time.time()}
                         return text
-                    logger.debug(f"robots.txt returned {resp.status} for {base_url}")
+                    if resp.status == 404:
+                        _cache[cache_key] = {"content": "", "fetched_at": time.time()}
+                        return ""
+                    # An inaccessible or unavailable robots policy is not a
+                    # signal that automated access is allowed.
+                    restricted = "User-agent: *\nDisallow: /"
+                    _cache[cache_key] = {"content": restricted, "fetched_at": time.time()}
+                    logger.debug(f"robots.txt returned {resp.status} for {base_url}; denying access")
+                    return restricted
         except Exception as e:
             logger.debug(f"Failed to fetch robots.txt for {base_url}: {e}")
 
-        _cache[cache_key] = {"content": "", "fetched_at": time.time()}
-        return ""
+        restricted = "User-agent: *\nDisallow: /"
+        _cache[cache_key] = {"content": restricted, "fetched_at": time.time()}
+        return restricted
 
     def _parse_robots_txt(self, content: str) -> dict[str, dict[str, any]]:
         """Parse robots.txt content into per-useragent rules.
@@ -114,7 +123,7 @@ class RobotsChecker:
 
         return True
 
-    async def is_allowed(self, url: str, user_agent: str = "HireGen-LeadGen/1.0") -> bool:
+    async def is_allowed(self, url: str, user_agent: str = "JobPilotAI/1.0") -> bool:
         """Check if a URL is allowed to be scraped per robots.txt.
 
         If robots.txt cannot be fetched, defaults to True (allow).
@@ -140,7 +149,7 @@ class RobotsChecker:
 
         return self._is_path_allowed(path, ua_rules)
 
-    def is_allowed_sync(self, url: str, user_agent: str = "HireGen-LeadGen/1.0") -> bool:
+    def is_allowed_sync(self, url: str, user_agent: str = "JobPilotAI/1.0") -> bool:
         """Synchronous version — checks cache only, does not fetch."""
         base_url = self._get_base_url(url)
         path = self._get_path(url)

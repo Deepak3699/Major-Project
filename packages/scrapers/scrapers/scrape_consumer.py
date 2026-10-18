@@ -94,23 +94,41 @@ EXTRA_SOURCES = [
     "reddit", "facebook", "whatsapp", "college_portals",
 ]
 
+# Candidate-facing discovery starts from official ATS pages and public feeds.
+# Other connectors stay available for legacy/explicit integrations but never run
+# until an operator lists them in SCRAPE_PERMITTED_SOURCES after confirming the
+# source's terms and an authorized access path.
+PERMITTED_DEFAULT_SOURCES = [
+    "greenhouse", "lever", "workday", "ashby", "smartrecruiters",
+    "bamboohr", "personio", "recruitee", "teamtailor", "breezy",
+    "remoteok", "arbeitnow", "remotive", "adzuna", "jooble", "usajobs",
+]
+
 
 def resolve_sources(job_sources):
-    """Choose which sources a run scrapes.
+    """Choose an explicitly permitted source set for a discovery run.
 
-    Priority: explicit per-job list > SCRAPE_SOURCES env override > India-fresher
-    DEFAULT_SOURCES. Keeps the operator able to retune the fleet without a code
-    deploy (e.g. enable the global set, or narrow to a few reliable boards), and
-    ignores unknown names rather than crashing the run.
+    An explicit run or SCRAPE_SOURCES override narrows the selected sources; it
+    does not bypass the allowlist. SCRAPE_PERMITTED_SOURCES can extend the safe
+    defaults only after the operator has confirmed an authorized source path.
     """
-    if job_sources:
-        return [x for x in job_sources if x in SCRAPER_MAP] or None
+    permitted = set(PERMITTED_DEFAULT_SOURCES)
+    configured = os.environ.get("SCRAPE_PERMITTED_SOURCES", "").strip()
+    if configured:
+        permitted.update(x.strip() for x in configured.split(",") if x.strip() in SCRAPER_MAP)
+    requested = list(job_sources) if job_sources is not None else []
     override = os.environ.get("SCRAPE_SOURCES", "").strip()
-    if override:
-        picked = [x.strip() for x in override.split(",") if x.strip() in SCRAPER_MAP]
-        if picked:
-            return picked
-    return DEFAULT_SOURCES
+    if job_sources is None and override:
+        requested = [x.strip() for x in override.split(",") if x.strip()]
+    elif job_sources is None:
+        requested = PERMITTED_DEFAULT_SOURCES
+    unknown = sorted(set(requested) - set(SCRAPER_MAP))
+    blocked = sorted(set(requested) - permitted - set(unknown))
+    if unknown:
+        logger.warning("Ignoring unknown job source(s): %s", unknown)
+    if blocked:
+        logger.warning("Source(s) excluded because no permitted access path is configured: %s", blocked)
+    return list(dict.fromkeys(x for x in requested if x in SCRAPER_MAP and x in permitted))
 
 
 async def run_scraper(source: str, redis_client: redis.Redis, db=None, requested_by: str | None = None) -> tuple[int, str | None]:

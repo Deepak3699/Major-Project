@@ -29,6 +29,7 @@ _ENABLED = os.environ.get("ENABLE_DAILY_SCHEDULER", "1") != "0"
 _HOUR = int(os.environ.get("DAILY_SCRAPE_HOUR", "3"))
 _MINUTE = int(os.environ.get("DAILY_SCRAPE_MINUTE", "0"))
 _CATCHUP_AT_BOOT = os.environ.get("DAILY_SCRAPE_CATCHUP", "0") == "1"
+_LEGACY_OUTREACH_ENABLED = os.environ.get("ENABLE_LEGACY_OUTREACH_PIPELINE", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 # Source toggles (Settings UI -> settings.sources_enabled): the daily fleet and
 # manual army runs skip disabled sources. Unset/empty -> all defaults.
@@ -43,8 +44,7 @@ async def load_enabled_sources(db_pool) -> list[str] | None:
             )
         if not isinstance(row, dict):
             return None
-        enabled = [k for k, v in row.items() if v]
-        return enabled or None
+        return [k for k, v in row.items() if v]
     except Exception as e:  # noqa: BLE001
         logger.debug(f"sources_enabled unreadable, using defaults: {e}")
         return None
@@ -237,8 +237,7 @@ async def _claim_day(redis_client, when: datetime) -> bool:
 
 async def daily_scrape_scheduler(redis_client, sources: list[str] | None = None, db_pool=None) -> None:
     """Forever-loop: enqueue one full-fleet scrape per day at the configured time,
-    then run the self-healing re-enrichment sweep so under-enriched leads keep
-    climbing toward full contact coverage across runs."""
+    and run legacy lead maintenance only when that workflow is explicitly enabled."""
     if redis_client is None or not _ENABLED:
         logger.info("Daily scheduler disabled (no redis or ENABLE_DAILY_SCHEDULER=0)")
         return
@@ -252,10 +251,11 @@ async def daily_scrape_scheduler(redis_client, sources: list[str] | None = None,
 
     # Sweep once at boot too, so leads left under-enriched by a previous run (or
     # a crash) get re-tried without waiting for the next scheduled scrape.
-    try:
-        await sweep_unenriched(redis_client, db_pool)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"Boot re-enrichment sweep failed: {e}")
+    if _LEGACY_OUTREACH_ENABLED:
+        try:
+            await sweep_unenriched(redis_client, db_pool)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Boot re-enrichment sweep failed: {e}")
 
     while True:
         now = datetime.now(timezone.utc)
@@ -278,20 +278,19 @@ async def daily_scrape_scheduler(redis_client, sources: list[str] | None = None,
             logger.error(f"Daily scheduler enqueue failed: {e}")
             await asyncio.sleep(60)
         # After the scrape settles, re-try every lead still missing a contact.
-        try:
-            # let the scrape→normalize→enrich chain drain a bit before sweeping
-            await asyncio.sleep(600)
-            await sweep_unenriched(redis_client, db_pool)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"scheduled re-enrichment sweep failed: {e}")
-        # Once-daily data-retention pass (opt-in via RETENTION_* env; no-op off).
-        try:
-            await enforce_retention(db_pool)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"retention sweep failed: {e}")
-        # Operator digest (opt-in via TELEGRAM_* env; no-op off).
-        try:
-            from .utils.ops_digest import maybe_send_daily_digest
-            await maybe_send_daily_digest(redis_client, db_pool)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"daily digest failed: {e}")
+        if _LEGACY_OUTREACH_ENABLED:
+            try:
+                await asyncio.sleep(600)
+                await sweep_unenriched(redis_client, db_pool)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"scheduled re-enrichment sweep failed: {e}")
+            try:
+                await enforce_retention(db_pool)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"retention sweep failed: {e}")
+        if _LEGACY_OUTREACH_ENABLED:
+            try:
+                from .utils.ops_digest import maybe_send_daily_digest
+                await maybe_send_daily_digest(redis_client, db_pool)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"daily digest failed: {e}")

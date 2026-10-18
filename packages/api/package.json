@@ -15,6 +15,7 @@
     "migrate": "node --import tsx node_modules/node-pg-migrate/bin/node-pg-migrate -c database/config/migrate-config.cjs -m database/migrations --ignore-pattern \"README.md\" up",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "make:admin": "tsx src/scripts/promoteAdmin.ts",
+    "model:train": "tsx src/scripts/trainRecommendationModel.ts",
     "db:init": "tsx src/scripts/initDb.ts"
   },
   "dependencies": {

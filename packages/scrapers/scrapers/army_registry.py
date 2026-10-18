@@ -140,7 +140,9 @@ async def maybe_fallback_wave(
         await redis_client.lpush(
             "scrape_queue:requests",
             _json.dumps({
-                "run_id": f"fallback-{_uuid.uuid4().hex[:8]}",
+                # scrape_runs.id is UUID. A prefixed identifier made fallback
+                # discovery waves fail persistence and endlessly requeue.
+                "run_id": str(_uuid.uuid4()),
                 "run_type": "fallback-wave",
                 "sources": sibs,
                 "triggered_by": (job or {}).get("triggered_by"),

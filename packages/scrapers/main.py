@@ -2,8 +2,11 @@ import os
 import json
 import asyncio
 import logging
+import io
+import re
+import secrets
 from datetime import datetime, timezone
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 import uuid
@@ -29,9 +32,13 @@ from scrapers.utils.db import get_db_pool
 
 logger = logging.getLogger(__name__)
 
+
+def legacy_outreach_enabled() -> bool:
+    return os.environ.get("ENABLE_LEGACY_OUTREACH_PIPELINE", "0").strip().lower() in {"1", "true", "yes", "on"}
+
 app = FastAPI(
-    title="Take It Scraper Fleet API",
-    description="Python worker service for scraping, enrichment, verification, and AI drafting",
+    title="JobPilot AI Worker Service",
+    description="Worker service for permitted job discovery, normalization, and application support",
     version="0.1.0",
 )
 
@@ -44,6 +51,10 @@ class ScrapeRequest(BaseModel):
     sources: Optional[list[str]] = None
     run_type: str = "auto"
     triggered_by: Optional[str] = None
+
+
+class ContactDiscoveryRequest(BaseModel):
+    limit: int = 12
 
 
 class HealthResponse(BaseModel):
@@ -77,15 +88,293 @@ async def health():
 
 @app.get("/scrapers")
 async def list_scrapers():
-    from scrapers.scrape_consumer import SCRAPER_MAP, DEFAULT_SOURCES
+    from scrapers.scrape_consumer import SCRAPER_MAP, PERMITTED_DEFAULT_SOURCES, resolve_sources
 
     return {
         "available": [
-            {"name": name, "module": mod, "tier": _get_tier(name)}
+            {"name": name, "module": mod, "tier": _get_tier(name), "permitted_by_default": name in PERMITTED_DEFAULT_SOURCES}
             for name, (mod, _) in SCRAPER_MAP.items()
         ],
-        "active": DEFAULT_SOURCES,
+        "active": resolve_sources(None),
     }
+
+
+@app.post("/resume/parse")
+async def parse_resume(request: Request):
+    """Extract editable profile suggestions without storing the uploaded file."""
+    expected_token = os.getenv("WORKER_INTERNAL_TOKEN", "")
+    supplied_token = request.headers.get("x-internal-token", "")
+    if not expected_token or not secrets.compare_digest(expected_token, supplied_token):
+        raise HTTPException(status_code=401, detail="Unauthorized worker request")
+
+    filename = request.headers.get("x-resume-filename", "resume.txt")
+    extension = os.path.splitext(filename.lower())[1]
+    if extension not in {".pdf", ".docx", ".txt"}:
+        raise HTTPException(status_code=415, detail="Upload a PDF, DOCX, or TXT resume")
+    raw = await request.body()
+    if not raw or len(raw) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=413 if raw else 400, detail="Resume must be between 1 byte and 8 MB")
+
+    try:
+        if extension == ".pdf":
+            from pypdf import PdfReader
+            document = PdfReader(io.BytesIO(raw))
+            text = "\n".join(page.extract_text() or "" for page in document.pages[:30])
+        elif extension == ".docx":
+            from docx import Document
+            document = Document(io.BytesIO(raw))
+            text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+            for table in document.tables:
+                text += "\n" + "\n".join(" | ".join(cell.text for cell in row.cells) for row in table.rows)
+        else:
+            text = raw.decode("utf-8", errors="replace")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="We could not read this resume file") from exc
+
+    text = re.sub(r"\r\n?", "\n", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()[:120_000]
+    if len(text) < 30:
+        if extension == ".pdf":
+            raise HTTPException(status_code=422, detail="This PDF has no readable text layer. Export an OCR-enabled PDF or upload a DOCX/TXT copy of the resume.")
+        raise HTTPException(status_code=422, detail="The file contains too little readable text. Check that it is not empty or password protected.")
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    section_names = {
+        "experience": {"experience", "work experience", "professional experience", "employment history", "internship experience"},
+        "projects": {"projects", "personal projects", "academic projects"},
+        "certifications": {"certifications", "certificates", "licenses and certifications"},
+        "skills": {"skills", "technical skills", "core skills", "key skills", "competencies"},
+    }
+    all_headings = set().union(*section_names.values()) | {
+        "education", "academic background", "education and training", "summary",
+        "professional summary", "career summary", "objective", "profile",
+        "interests", "awards", "contact", "personal details", "career objective",
+    }
+    header_lines = []
+    for line in lines:
+        heading = re.sub(r"[^a-z ]", "", line.lower()).strip()
+        if heading in all_headings:
+            break
+        header_lines.append(line)
+    header_text = "\n".join(header_lines[:20])
+
+
+    def section_body(names: set[str]) -> str:
+        start = None
+        for index, line in enumerate(lines):
+            heading = re.sub(r"[^a-z ]", "", line.lower()).strip()
+            if heading in names:
+                start = index + 1
+                break
+        if start is None:
+            return ""
+        stop = len(lines)
+        other_headings = all_headings - names
+        for index in range(start, len(lines)):
+            heading = re.sub(r"[^a-z ]", "", lines[index].lower()).strip()
+            if heading in other_headings or heading in {"education", "skills", "technical skills", "summary", "objective", "profile", "interests", "awards"}:
+                stop = index
+                break
+        return "\n".join(lines[start:stop]).strip()
+
+    # Names belong in the header, before the first section. A loose "2–5 words"
+    # rule used to accept degree/institution lines such as "Bachelor of
+    # Technology" or "University of Delhi" as a candidate's full name.
+    section_heading_words = all_headings
+    name_block: list[str] = []
+    for line in lines[:16]:
+        heading = re.sub(r"[^a-z ]", "", line.lower()).strip()
+        if heading in section_heading_words:
+            break
+        if re.search(r"@|https?://|\b(?:phone|mobile|email|address|linkedin)\b", line, re.IGNORECASE):
+            continue
+        name_block.append(line)
+    name_exclusions = (
+        "resume", "curriculum", "profile", "portfolio", "experience", "education", "skills",
+        "bachelor", "master", "doctor", "ph.d", "b.tech", "b.e.", "b.sc", "bca", "mca",
+        "mba", "diploma", "degree", "university", "college", "institute", "engineering", "technology",
+        "computer science", "information technology", "commerce", "arts", "science",
+    )
+
+    def looks_like_person_name(value: str) -> bool:
+        normalized = re.sub(r"\s+", " ", value).strip(" |·,;:-")
+        words = normalized.split()
+        if not 1 <= len(words) <= 4 or len(normalized) > 64:
+            return False
+        role_words = ("developer", "engineer", "analyst", "manager", "designer", "scientist", "consultant", "specialist", "intern", "architect", "professional", "associate", "recruiter")
+        if any(term in normalized.lower() for term in name_exclusions) or any(term in normalized.lower() for term in role_words):
+            return False
+        if re.search(r"\d|[@:/|•]", normalized):
+            return False
+        # Permit common international name punctuation, but reject degree
+        # abbreviations, job titles and prose fragments.
+        return bool(re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ.'’-]*(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ.'’-]*){0,3}", normalized))
+
+    explicit_name = re.search(r"(?:full\s+name|candidate\s+name|name)\s*[:|-]\s*([^\n|]{2,64})", header_text, re.IGNORECASE)
+    explicit_candidate = explicit_name.group(1).strip() if explicit_name else ""
+    name = explicit_candidate if looks_like_person_name(explicit_candidate) else next((re.sub(r"\s+", " ", line).strip() for line in name_block if looks_like_person_name(line)), "")
+
+    known_skills = [
+        "JavaScript", "TypeScript", "React", "Node.js", "Python", "Java", "C++", "C#", ".NET",
+        "SQL", "PostgreSQL", "MySQL", "MongoDB", "Redis", "AWS", "Azure", "GCP", "Docker",
+        "Kubernetes", "Git", "HTML", "CSS", "Next.js", "FastAPI", "Django", "Flask",
+        "Machine Learning", "Deep Learning", "Data Analysis", "Excel", "Power BI", "Tableau",
+        "Figma", "Linux", "REST API", "GraphQL", "Tailwind CSS", "Spring Boot",
+    ]
+    skills_section = section_body(section_names["skills"])
+    skill_source = skills_section or "\n".join(name_block)
+    found_skills = [skill for skill in known_skills if re.search(r"(?<![A-Za-z0-9])" + re.escape(skill) + r"(?![A-Za-z0-9])", skill_source, re.IGNORECASE)]
+    for raw_skill in re.split(r"[,;|\n•]+", skills_section):
+        value = re.sub(r"^[-*\s]+", "", raw_skill).strip()
+        # Resume skill sections commonly use a bullet/list item per line. Do not
+        # treat whole descriptive sentences as one "skill" value.
+        if 1 < len(value) <= 40 and len(value.split()) <= 5 and value.lower() not in {item.lower() for item in found_skills}:
+            found_skills.append(value)
+    skills = found_skills[:80]
+    email_match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", header_text, re.IGNORECASE)
+    phone_match = re.search(r"(?:phone|mobile|tel|contact)\s*[:|-]?\s*(\+?\d[\d ()-]{8,}\d)", header_text, re.IGNORECASE)
+    if not phone_match:
+        phone_match = next((match for match in re.finditer(r"(?:\+?\d[\d ()-]{8,}\d)", header_text) if 10 <= len(re.sub(r"\D", "", match.group(0))) <= 15), None)
+    exp_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:\+|to|-)?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|work)", text, re.IGNORECASE)
+    years = float(exp_match.group(1)) if exp_match else 0
+    education_text = section_body({"education", "academic background", "education and training"}) or text
+    lower = education_text.lower()
+    education = next((level for key, level in (("ph.d", "PhD"), ("doctorate", "Doctorate"), ("master", "Master's"), ("m.tech", "Master's"), ("mba", "Master's"), ("bachelor", "Bachelor's"), ("b.tech", "Bachelor's"), ("b.e.", "Bachelor's"), ("b.sc", "Bachelor's"), ("bca", "Bachelor's"), ("diploma", "Diploma"), ("12th", "12th")) if key in lower), "")
+    location_match = re.search(r"(?:location|based in|address)\s*[:|-]\s*([^\n|]{2,80})", header_text, re.IGNORECASE)
+    summary_match = re.search(r"(?:professional summary|career summary|summary|career objective|objective|profile)\s*\n(.*?)(?=\n\s*(?:education|experience|work experience|skills|projects|certifications?)\b|\Z)", text, re.IGNORECASE | re.DOTALL)
+    experience_body = section_body(section_names["experience"])
+    projects_body = section_body(section_names["projects"])
+    certifications_body = section_body(section_names["certifications"])
+
+    def parse_entries(body: str, kind: str) -> list[dict[str, str]]:
+        entries: list[dict[str, str]] = []
+        for chunk in re.split(r"\n\s*\n", body):
+            lines = [line.strip(" \t-•*") for line in chunk.splitlines() if line.strip(" \t-•*")]
+            if not lines:
+                continue
+            header = lines[0]
+            period_match = re.search(r"((?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*(?:(?:[-–—]|to)\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:(?:19|20)\d{2}|present|current))?)", " ".join(lines[:4]), re.IGNORECASE)
+            period = period_match.group(1).strip() if period_match else ""
+            if period and period in header:
+                header = header.replace(period, "").strip(" -|—,:")
+            title, company = header, ""
+            for separator in (" | ", " — ", " at ", " @ "):
+                if separator in header:
+                    title, company = [part.strip() for part in header.split(separator, 1)]
+                    break
+            title = title.strip(" |—-,:;")
+            company = company.strip(" |—-,:;")
+            rest = [line for line in lines[1:] if not (period and period.lower() in line.lower())]
+            description = "\n".join(rest)[:3000]
+            if kind == "project":
+                project_text = description or "\n".join(lines[1:])
+                technologies = [skill for skill in known_skills if re.search(r"(?<![A-Za-z0-9])" + re.escape(skill) + r"(?![A-Za-z0-9])", project_text, re.IGNORECASE)]
+                entries.append({"name": title[:200], "description": project_text[:3000], "technologies": technologies[:30]})
+            else:
+                entries.append({"title": title[:200], "company": company[:200], "period": period[:100], "description": description})
+        return entries[:20]
+
+    experience_entries = parse_entries(experience_body, "experience")
+    project_entries = parse_entries(projects_body, "project")
+    headline = ""
+    if name:
+        name_index = next((index for index, line in enumerate(lines[:16]) if line.strip() == name), -1)
+        for possible in lines[name_index + 1:name_index + 9] if name_index >= 0 else []:
+            if not re.search(r"@|\b(?:resume|curriculum vitae|email|phone|mobile|bachelor|master|b\.tech|b\.e\.|university|college|institute|education|india|delhi|mumbai|bengaluru|bangalore|hyderabad|pune|chennai|kolkata|noida|gurgaon)\b", possible, re.IGNORECASE) and not re.search(r"\d{5,}", possible):
+                headline = possible[:200]
+                break
+
+    return {
+        "filename": os.path.basename(filename),
+        "text_characters": len(text),
+        "suggested_profile": {
+            "full_name": name,
+            "headline": headline,
+            "email": email_match.group(0) if email_match else "",
+            "phone": phone_match.group(1).strip() if phone_match and phone_match.lastindex else phone_match.group(0).strip() if phone_match else "",
+            "location": location_match.group(1).strip() if location_match else "",
+            "skills": skills,
+            "experience_years": years,
+            "education_level": education,
+            "summary": re.sub(r"\s+", " ", summary_match.group(1)).strip()[:1200] if summary_match else "",
+            "experience": experience_entries,
+            "projects": project_entries,
+            "certifications": [line.lstrip("-•* ").strip() for line in certifications_body.splitlines() if line.strip()][:30],
+        },
+        "review_required": True,
+    }
+
+
+async def _discover_public_hr_contacts(limit: int) -> None:
+    """Find public HR details from listing, career and public search sources."""
+    from scrapers.normalizer import enrich_public_job_contact, save_public_hr_contact
+
+    pool = await get_db_pool()
+    if not pool:
+        logger.warning("Public HR discovery stopped: database unavailable")
+        return
+    async with pool.acquire() as conn:
+        jobs = await conn.fetch(
+            """SELECT jp.id, jp.fingerprint, jp.job_url, jp.title, jp.hr_contact_id,
+                      c.id AS company_id, c.name AS company_name
+                 FROM job_postings jp JOIN companies c ON c.id=jp.company_id
+                WHERE jp.hr_contact_id IS NULL
+                  AND jp.job_url ~* '^https://'
+                  AND jp.review_status IN ('pending','published')
+                ORDER BY COALESCE(jp.posted_at,jp.first_seen_at) DESC
+                LIMIT $1""",
+            max(1, min(limit, 12)),
+        )
+    semaphore = asyncio.Semaphore(4)
+
+    async def process_job(row) -> int:
+        normalized = {
+            "fingerprint": row["fingerprint"], "job_url": row["job_url"],
+            "job_title": row["title"], "company_id": row["company_id"],
+            "company_name": row["company_name"], "hr_name": "", "hr_email": "",
+            "hr_mobile": "", "hr_linkedin_url": "", "hr_extraction_provenance": {"stages": []},
+        }
+        async with semaphore:
+            try:
+                normalized = await enrich_public_job_contact(normalized, pool, allow_search=True)
+                if not normalized.get("_public_hr_discovery"):
+                    return 0
+                async with pool.acquire() as conn:
+                    contact_id = await save_public_hr_contact(conn, normalized, row["company_id"])
+                    if not contact_id:
+                        return 0
+                    await conn.execute("UPDATE job_postings SET hr_contact_id=$2 WHERE id=$1 AND hr_contact_id IS NULL", row["id"], contact_id)
+                    if normalized.get("hr_email") or normalized.get("hr_mobile"):
+                        await get_redis().lpush("verification_queue:requests", json.dumps({
+                            "contact_id": contact_id,
+                            "requested_by": "system",
+                            "requested_at": datetime.now(timezone.utc).isoformat(),
+                        }))
+                    return 1
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Public HR discovery failed for job %s: %s", row["id"], exc)
+                return 0
+
+    results = await asyncio.gather(*(process_job(row) for row in jobs))
+    logger.info("Public HR discovery complete: checked=%s discovered=%s", len(jobs), sum(results))
+
+
+async def _run_public_hr_discovery(limit: int) -> None:
+    try:
+        await _discover_public_hr_contacts(limit)
+    except Exception:  # noqa: BLE001
+        logger.exception("Public HR contact discovery task failed")
+
+
+@app.post("/contacts/discover")
+async def discover_contacts(req: ContactDiscoveryRequest, request: Request):
+    expected_token = os.getenv("WORKER_INTERNAL_TOKEN", "")
+    supplied_token = request.headers.get("x-internal-token", "")
+    if not expected_token or not secrets.compare_digest(expected_token, supplied_token):
+        raise HTTPException(status_code=401, detail="Unauthorized worker request")
+    asyncio.create_task(_run_public_hr_discovery(req.limit))
+    return {"status": "queued", "limit": max(1, min(req.limit, 12)), "message": "Public job and careers page contact discovery queued"}
 
 
 def _get_tier(name: str) -> int:
@@ -167,11 +456,12 @@ async def army_run(req: ScrapeRequest):
         }),
     )
     swept = 0
-    try:
-        from scrapers.scheduler import sweep_unenriched
-        swept = await sweep_unenriched(redis_client, _db_pool)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"army sweep failed (scrape still queued): {e}")
+    if legacy_outreach_enabled():
+        try:
+            from scrapers.scheduler import sweep_unenriched
+            swept = await sweep_unenriched(redis_client, _db_pool)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"army sweep failed (scrape still queued): {e}")
     return {"message": "Army run queued", "run_id": run_id, "sweep_reenqueued": swept}
 
 
@@ -217,14 +507,9 @@ async def shutdown_event():
 
 
 async def start_consumers():
-    """Start background queue consumers per SRS §9.1."""
+    """Start discovery workers; start legacy contact/outreach queues only by opt-in."""
     from scrapers.scrape_consumer import consume_scrape_queue
     from scrapers.normalizer import run_normalizer
-    from scrapers.enrichment_worker import consume_enrichment_queue
-    from scrapers.verification_worker import consume_verification_queue
-    from scrapers.draft_worker import consume_draft_queue
-    from scrapers.send_worker import consume_send_queue
-    from scrapers.verify_send_worker import consume_verify_send_queue
     from scrapers.scheduler import daily_scrape_scheduler
 
     redis_client = get_redis()
@@ -235,6 +520,7 @@ async def start_consumers():
         db_pool = None
     global _db_pool
     _db_pool = db_pool
+    legacy_enabled = legacy_outreach_enabled()
 
     tasks = []
     if redis_client:
@@ -242,12 +528,13 @@ async def start_consumers():
         # between pop and ack) go back to their queues before consumers start.
         try:
             from scrapers.queue import reclaim_processing, dlq_depth
-            reclaimed = await reclaim_processing(redis_client, [
-                "scrape_queue:requests", "raw_leads_queue:requests",
-                "enrichment_queue:requests", "verification_queue:requests",
-                "draft_queue:requests", "send_queue:requests",
-                "verify_send_queue:requests",
-            ])
+            queues = ["scrape_queue:requests", "raw_leads_queue:requests", "verification_queue:requests"]
+            if legacy_enabled:
+                queues.extend([
+                    "enrichment_queue:requests",
+                    "draft_queue:requests", "send_queue:requests", "verify_send_queue:requests",
+                ])
+            reclaimed = await reclaim_processing(redis_client, queues)
             total_dlq = 0
             for qn in list(reclaimed):
                 total_dlq += await dlq_depth(redis_client, qn)
@@ -257,10 +544,17 @@ async def start_consumers():
             logging.getLogger(__name__).warning(f"Boot reclaim failed (queues still consumable): {e}")
         tasks.append(asyncio.create_task(consume_scrape_queue(redis_client, db_pool)))
         tasks.append(asyncio.create_task(run_normalizer(redis_client, db_pool)))
-        # daily full-fleet heartbeat (India jobs -> enrich -> verify -> draft -> send)
+        # Daily permitted job discovery. Legacy lead enrichment is separately gated.
         tasks.append(asyncio.create_task(daily_scrape_scheduler(redis_client, db_pool=db_pool)))
 
         if db_pool:
+            from scrapers.verification_worker import consume_verification_queue
+            tasks.append(asyncio.create_task(consume_verification_queue(redis_client, db_pool)))
+        if db_pool and legacy_enabled:
+            from scrapers.enrichment_worker import consume_enrichment_queue
+            from scrapers.draft_worker import consume_draft_queue
+            from scrapers.send_worker import consume_send_queue
+            from scrapers.verify_send_worker import consume_verify_send_queue
             # Contact enrichment is the product priority, but the keyless OSINT
             # cascade is latency-bound (crt.sh / search-engine timeouts), so a
             # single consumer drains the queue ~1 lead/min. Run a small bounded
@@ -270,7 +564,6 @@ async def start_consumers():
             _enrich_n = max(1, int(os.environ.get("ENRICH_CONCURRENCY", "4") or 4))
             for _ in range(_enrich_n):
                 tasks.append(asyncio.create_task(consume_enrichment_queue(redis_client, db_pool)))
-            tasks.append(asyncio.create_task(consume_verification_queue(redis_client, db_pool)))
             tasks.append(asyncio.create_task(consume_draft_queue(redis_client, db_pool)))
             tasks.append(asyncio.create_task(consume_send_queue(redis_client, db_pool)))
             tasks.append(asyncio.create_task(consume_verify_send_queue(redis_client, db_pool)))

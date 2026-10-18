@@ -5,69 +5,119 @@
 
 @layer base {
   :root {
-    /* ---- premium dark, violet→cyan ---- */
-    --background: 240 24% 5%;
-    --surface: 240 20% 9%;
-    --foreground: 220 20% 96%;
-    --muted: 240 12% 16%;
-    --muted-foreground: 240 6% 62%;
-    --accent: 240 14% 18%;
-    --accent-foreground: 220 20% 96%;
-    --border: 240 12% 20%;
-    --border-strong: 240 10% 30%;
-    --input: 240 12% 16%;
-    --ring: 251 90% 70%;
-    --ring-soft: rgb(129 108 255 / 0.22);
+    /* Calm, familiar career-workspace palette. */
+    --background: 210 24% 98%;
+    --surface: 0 0% 100%;
+    --foreground: 222 40% 13%;
+    --muted: 214 24% 94%;
+    --muted-foreground: 215 16% 43%;
+    --accent: 210 25% 95%;
+    --accent-foreground: 222 40% 13%;
+    --border: 214 20% 88%;
+    --border-strong: 214 18% 78%;
+    --input: 214 20% 88%;
+    --ring: 210 75% 42%;
+    --ring-soft: rgb(20 96 160 / 0.12);
 
-    --primary: 251 91% 67%;
+    --primary: 210 75% 39%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 251 95% 73%;
-    --primary-soft: 251 60% 18%;
+    --primary-hover: 210 78% 33%;
+    --primary-soft: 210 55% 94%;
 
-    --secondary: 240 10% 17%;
-    --secondary-foreground: 220 20% 96%;
+    --secondary: 214 24% 94%;
+    --secondary-foreground: 222 40% 13%;
 
-    --destructive: 350 90% 66%;
+    --destructive: 350 68% 48%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 350 60% 16%;
+    --destructive-soft: 350 65% 95%;
 
-    --success: 158 84% 52%;
-    --success-foreground: 140 90% 6%;
-    --success-soft: 158 60% 12%;
+    --success: 153 58% 34%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 150 45% 93%;
 
-    --warning: 38 95% 60%;
-    --warning-foreground: 30 90% 8%;
-    --warning-soft: 38 60% 13%;
+    --warning: 34 80% 38%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 38 80% 93%;
 
-    --info: 189 94% 58%;
-    --info-foreground: 190 90% 8%;
-    --info-soft: 189 60% 13%;
+    --info: 202 65% 41%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 200 55% 93%;
 
-    --sidebar: 240 24% 7%;
-    --sidebar-foreground: 240 6% 62%;
-    --sidebar-muted: 240 12% 14%;
-    --sidebar-border: 240 12% 14%;
-    --sidebar-active: 251 50% 20%;
-    --sidebar-active-foreground: 251 95% 82%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 215 16% 43%;
+    --sidebar-muted: 210 24% 97%;
+    --sidebar-border: 214 20% 91%;
+    --sidebar-active: 210 55% 94%;
+    --sidebar-active-foreground: 210 75% 32%;
 
-    --hot: 350 90% 66%;
-    --hot-soft: 350 60% 16%;
-    --warm: 38 95% 60%;
-    --warm-soft: 38 60% 13%;
-    --cold: 189 94% 58%;
-    --cold-soft: 189 60% 13%;
+    --hot: 350 68% 48%;
+    --hot-soft: 350 65% 95%;
+    --warm: 34 80% 38%;
+    --warm-soft: 38 80% 93%;
+    --cold: 202 65% 41%;
+    --cold-soft: 200 55% 93%;
 
-    /* gradients + glow (raw values consumed by tailwind) */
-    --grad-primary: linear-gradient(135deg, hsl(251 91% 67%), hsl(199 92% 58%));
-    --grad-mesh: radial-gradient(at 18% 12%, hsl(251 90% 30% / 0.55) 0px, transparent 55%),
-      radial-gradient(at 88% 6%, hsl(199 90% 34% / 0.35) 0px, transparent 50%),
-      radial-gradient(at 72% 92%, hsl(286 80% 34% / 0.30) 0px, transparent 55%),
-      radial-gradient(at 8% 96%, hsl(158 84% 30% / 0.22) 0px, transparent 50%);
-    --glow-primary: 0 0 42px -6px hsl(251 91% 67% / 0.6);
-    --glow-soft: 0 12px 44px -14px rgb(0 0 0 / 0.8);
+    --grad-primary: linear-gradient(135deg, hsl(210 75% 39%), hsl(210 75% 39%));
+    --grad-mesh: none;
+    --glow-primary: 0 2px 6px rgb(20 55 85 / 0.08);
+    --glow-soft: 0 2px 10px rgb(25 45 65 / 0.045);
 
     --radius: 0.85rem;
   }
+
+  html.dark {
+    color-scheme: dark;
+    --background: 220 25% 10%;
+    --surface: 222 23% 13%;
+    --foreground: 214 28% 93%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 215 14% 67%;
+    --accent: 220 18% 20%;
+    --accent-foreground: 214 28% 93%;
+    --border: 220 16% 25%;
+    --border-strong: 218 15% 35%;
+    --input: 220 16% 25%;
+    --ring: 205 85% 62%;
+    --ring-soft: rgb(59 149 214 / 0.18);
+    --primary: 205 82% 59%;
+    --primary-foreground: 220 28% 10%;
+    --primary-hover: 205 82% 67%;
+    --primary-soft: 207 44% 22%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 214 28% 93%;
+    --destructive: 350 70% 62%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 350 36% 22%;
+    --success: 153 48% 55%;
+    --success-foreground: 220 28% 10%;
+    --success-soft: 153 32% 20%;
+    --warning: 38 83% 62%;
+    --warning-foreground: 220 28% 10%;
+    --warning-soft: 38 40% 20%;
+    --info: 202 72% 62%;
+    --info-foreground: 220 28% 10%;
+    --info-soft: 202 36% 20%;
+    --sidebar: 222 23% 12%;
+    --sidebar-foreground: 215 14% 74%;
+    --sidebar-muted: 220 20% 17%;
+    --sidebar-border: 220 16% 23%;
+    --sidebar-active: 207 44% 22%;
+    --sidebar-active-foreground: 205 86% 78%;
+    --hot: 350 70% 62%;
+    --hot-soft: 350 36% 22%;
+    --warm: 38 83% 62%;
+    --warm-soft: 38 40% 20%;
+    --cold: 202 72% 62%;
+    --cold-soft: 202 36% 20%;
+    --grad-primary: linear-gradient(135deg, hsl(205 82% 59%), hsl(195 78% 57%));
+    --grad-mesh: none;
+    --glow-primary: 0 2px 10px rgb(0 0 0 / 0.3);
+    --glow-soft: 0 2px 10px rgb(0 0 0 / 0.2);
+  }
+
+  html.dark .bg-white { background-color: hsl(var(--surface)); }
+  html.dark .bg-gray-50 { background-color: hsl(var(--background)); }
+  html.dark .text-gray-600 { color: hsl(var(--muted-foreground)); }
 
   * {
     border-color: hsl(var(--border));
@@ -75,7 +125,7 @@
 
   html {
     -webkit-text-size-adjust: 100%;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -87,14 +137,14 @@
     overflow-x: hidden;
   }
 
-  /* ambient aurora field behind the whole app */
+  /* Keep the workspace calm and readable. */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: -1;
     background: var(--grad-mesh);
-    opacity: 0.55;
+    opacity: 0;
     pointer-events: none;
   }
 
@@ -162,13 +212,13 @@
 
   /* glassmorphic elevated card */
   .card {
-    @apply rounded-xl border bg-surface/70 backdrop-blur-xl;
-    border-color: hsl(var(--border) / 0.7);
-    box-shadow: var(--glow-soft), inset 0 1px 0 0 hsl(var(--foreground) / 0.04);
+    @apply rounded-xl border bg-surface;
+    border-color: hsl(var(--border));
+    box-shadow: var(--glow-soft);
   }
 
   .input {
-    @apply h-10 w-full rounded-lg border border-input bg-surface/60 px-3 py-2 text-sm text-foreground shadow-sm backdrop-blur transition-all duration-150 placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    @apply h-10 w-full rounded-lg border border-input bg-surface px-3 py-2 text-sm text-foreground shadow-sm transition-all duration-150 placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .label {
@@ -185,10 +235,7 @@
 
   /* gradient text */
   .text-gradient {
-    background: var(--grad-primary);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: hsl(var(--primary));
   }
 
   /* glowing primary action */
@@ -201,18 +248,71 @@
     position: relative;
   }
   .glow-ring::after {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: var(--grad-primary);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.5;
-    pointer-events: none;
+    display: none;
   }
+}
+
+.resume-page {
+  box-sizing: border-box;
+  width: min(100%, 850px);
+  min-height: 1080px;
+  margin: 0 auto 3rem;
+  padding: 56px;
+  color: #1f2937;
+  background: #fff;
+  border: 1px solid #d9e0e8;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgb(15 35 55 / 0.08);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.resume-heading h1 { margin: 0; color: #172b42; font-size: 32px; line-height: 1.15; font-weight: 700; }
+.resume-headline { margin: 7px 0 0; color: #315f87; font-size: 15px; font-weight: 600; }
+.resume-contact { margin: 12px 0 0; color: #536273; font-size: 11px; line-height: 1.6; }
+.resume-target { margin: 8px 0 0; color: #526273; font-size: 11px; }
+.resume-content { margin-top: 28px; }
+.resume-section { margin: 0 0 19px; break-inside: avoid; }
+.resume-section h2 { margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid #cbd5df; color: #244c70; font-size: 12px; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase; }
+.resume-section p { margin: 0 0 6px; color: #374151; font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
+.resume-gap { height: 5px; }
+.resume-template-modern { padding: 0 0 48px; }
+.resume-template-modern .resume-heading { padding: 52px 56px 32px; background: #eff5fa; border-bottom: 3px solid #315f87; }
+.resume-template-modern .resume-content { padding: 0 56px; }
+.resume-template-compact { padding: 42px 46px; }
+.resume-template-compact .resume-content { column-count: 2; column-gap: 32px; }
+.resume-template-compact .resume-section h2 { color: #176b68; }
+.resume-template-classic .resume-heading { padding-bottom: 22px; border-bottom: 2px solid #244c70; }
+.resume-template-classic .resume-content { margin-top: 22px; }
+.resume-template-compact .resume-section { break-inside: avoid; }
+.resume-template-thumb {
+  display: flex;
+  width: 100%;
+  height: 74px;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  padding: 9px 11px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: linear-gradient(180deg, hsl(var(--surface)), hsl(var(--muted) / .5));
+}
+.resume-template-thumb i { display: block; height: 3px; width: 76%; border-radius: 9px; background: hsl(var(--border-strong)); }
+.resume-template-thumb i:first-child { width: 42%; height: 6px; background: hsl(var(--primary) / .8); }
+.resume-template-thumb i:nth-child(3) { width: 92%; }
+.resume-template-thumb i:nth-child(4) { width: 60%; }
+.resume-thumb-modern { border-top: 10px solid hsl(var(--primary) / .18); }
+.resume-thumb-compact { display: grid; grid-template-columns: 1fr 1fr; align-content: start; }
+.resume-thumb-compact i:first-child { grid-column: span 2; }
+.resume-thumb-compact i:nth-child(3), .resume-thumb-compact i:nth-child(4) { width: 80%; }
+
+@media print {
+  @page { size: A4; margin: 0; }
+  html, body, #root { width: 100%; height: auto; min-height: 0; overflow: visible; background: #fff !important; color: #111827 !important; }
+  body::before { display: none !important; }
+  body * { visibility: hidden !important; }
+  .resume-page, .resume-page * { visibility: visible !important; }
+  .resume-page { position: absolute; left: 0; top: 0; width: 210mm; min-height: 297mm; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .resume-hide { display: none !important; }
 }
 
 @layer utilities {

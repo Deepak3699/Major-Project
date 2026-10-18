@@ -24,7 +24,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Pagination } from '@/components/ui/pagination';
 import { useToast } from '@/components/ui/toast';
-import { Plus, Search, RefreshCw, ChevronUp, ChevronDown, Trash2, Users, Pencil, Link2, Mail, Phone } from 'lucide-react';
+import { Plus, Search, RefreshCw, ChevronUp, ChevronDown, Trash2, Users, Pencil, Link2, Mail, Phone, ShieldCheck, ScanSearch } from 'lucide-react';
 import { initials, formatDate } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -91,6 +91,22 @@ const Contacts: React.FC = () => {
       toast({ title: 'Contact deleted', variant: 'success' });
     },
     onError: (err) => toast({ title: 'Failed to delete contact', description: (err as Error).message, variant: 'error' }),
+  });
+
+  const discoverMutation = useMutation(() => contactsApi.discover(), {
+    onSuccess: (result) => {
+      toast({ title: 'HR contact scan queued', description: `Checking up to ${result.limit} job listing and official careers pages. Search-discovered profiles stay in admin review until verified.`, variant: 'success' });
+    },
+    onError: (err) => toast({ title: 'Could not start contact discovery', description: (err as Error).message, variant: 'error' }),
+  });
+
+  const verifyMutation = useMutation((id: string) => contactsApi.verify(id), {
+    onSuccess: () => {
+      toast({ title: 'Verification queued', description: 'Email and phone status will update after the checker responds.', variant: 'success' });
+      window.setTimeout(() => queryClient.invalidateQueries('contacts'), 2500);
+      window.setTimeout(() => queryClient.invalidateQueries('contacts'), 8000);
+    },
+    onError: (err) => toast({ title: 'Could not verify contact', description: (err as Error).message, variant: 'error' }),
   });
 
   const contactData = (data as any) ?? { data: [], pagination: { page: 1, limit: 50, total: 0, pages: 0 } };
@@ -163,6 +179,11 @@ const Contacts: React.FC = () => {
         header: 'Company',
         cell: (info) => <span className="text-[13px] text-muted-foreground">{info.getValue() || '—'}</span>,
       }),
+      columnHelper.display({
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => row.original.contact_url ? <a href={row.original.contact_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-info hover:underline"><Link2 className="h-3.5 w-3.5" />{row.original.contact_source === 'direct_extracted' ? 'Public job page' : 'View source'}</a> : <span className="text-xs text-muted-foreground">Not recorded</span>,
+      }),
       columnHelper.accessor('confidence_score', {
         header: 'Confidence',
         cell: (info) => {
@@ -175,6 +196,23 @@ const Contacts: React.FC = () => {
               <span className="text-[13px] font-medium tabular-nums text-muted-foreground">{score}%</span>
             </div>
           );
+        },
+      }),
+      columnHelper.display({
+        id: 'verification',
+        header: 'Verification',
+        cell: ({ row }) => {
+          const result = row.original.verification;
+          if (!result?.checked_at) return <span className="text-xs text-muted-foreground">Not checked</span>;
+          const states = [
+            { label: 'Email', value: result.email_status },
+            { label: 'Phone', value: result.phone_status },
+          ].filter((entry) => entry.value && entry.value !== 'not_provided');
+          return <div className="space-y-1.5" title={`Last checked ${formatDate(result.checked_at)}`}><div className="flex flex-wrap gap-1">{states.map(({ label, value }) => {
+            const good = value === 'valid' || value === 'catch_all' || value === 'registered';
+            const bad = value === 'invalid' || value === 'disposable' || value === 'not_registered';
+            return <span key={label} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${good ? 'border-success/20 bg-success-soft text-success' : bad ? 'border-destructive/20 bg-destructive-soft text-destructive' : 'border-warning/20 bg-warning-soft text-warning'}`}><ShieldCheck className="h-3 w-3" />{label}: {value?.replace(/_/g, ' ')}</span>;
+          })}</div><span className="block text-[10px] text-muted-foreground">Checked {formatDate(result.checked_at)}</span></div>;
         },
       }),
       columnHelper.accessor('created_at', {
@@ -207,6 +245,15 @@ const Contacts: React.FC = () => {
               >
                 <Pencil className="h-4 w-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Verify email and phone"
+                disabled={verifyMutation.isLoading || (!contact.personal_email && !contact.personal_mobile)}
+                onClick={() => verifyMutation.mutate(contact.id)}
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </Button>
               {isAdmin ? (
                 <Button
                   variant="ghost"
@@ -223,7 +270,7 @@ const Contacts: React.FC = () => {
         },
       }),
     ],
-    [isAdmin],
+    [isAdmin, verifyMutation.isLoading],
   );
 
   const table = useReactTable({
@@ -265,7 +312,7 @@ const Contacts: React.FC = () => {
     <div className="space-y-4">
       <PageHeader
         title="HR Contacts"
-        description="Manage the HR contacts associated with your leads"
+        description="Discover contacts published on job pages, review their source, and check email or phone reachability."
         actions={
           <>
             <div className="relative w-full sm:w-64">
@@ -281,6 +328,10 @@ const Contacts: React.FC = () => {
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
+            {isAdmin && <Button variant="outline" onClick={() => discoverMutation.mutate()} loading={discoverMutation.isLoading}>
+              <ScanSearch className="h-4 w-4" />
+              Find HR contacts
+            </Button>}
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
               Add Contact

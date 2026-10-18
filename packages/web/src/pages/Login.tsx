@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { AlertCircle, ArrowRight, Lock, Mail, ShieldCheck, User, Sparkles } from 'lucide-react';
 import { cn } from '@/components/ui/cn';
 
-type UserRole = 'admin' | 'sales_rep';
+type UserRole = 'admin' | 'user';
 
 const Login: React.FC = () => {
   const { login } = useAuthStore();
@@ -82,13 +82,13 @@ const Login: React.FC = () => {
               </p>
             </button>
 
-            {/* User / Sales Rep Option */}
+            {/* Candidate and other non-admin accounts */}
             <button
               type="button"
-              onClick={() => handleRoleSelect('sales_rep')}
+              onClick={() => handleRoleSelect('user')}
               className={cn(
                 "relative flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all duration-200",
-                role === 'sales_rep'
+                role === 'user'
                   ? "border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary/40 text-foreground"
                   : "border-border/70 bg-surface/50 hover:border-border hover:bg-surface text-muted-foreground"
               )}
@@ -96,18 +96,16 @@ const Login: React.FC = () => {
               <div className="flex w-full items-center justify-between">
                 <div className={cn(
                   "p-1.5 rounded-lg transition-colors",
-                  role === 'sales_rep' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                  role === 'user' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
                 )}>
                   <User className="h-4 w-4" />
                 </div>
-                {role === 'sales_rep' && (
+                {role === 'user' && (
                   <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
                 )}
               </div>
               <p className="mt-1 font-semibold text-sm text-foreground">User</p>
-              <p className="text-[11px] leading-tight text-muted-foreground">
-                Assigned leads & outreach
-              </p>
+              <p className="text-[11px] leading-tight text-muted-foreground">Job search & applications</p>
             </button>
           </div>
 

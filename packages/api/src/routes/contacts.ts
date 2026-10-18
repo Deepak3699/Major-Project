@@ -4,6 +4,7 @@ import { getDB } from '../utils/db';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/auth';
 import { logAuditEvent } from '../utils/audit';
+import { getRedis } from '../utils/redis';
 
 const contactSchema = z.object({
   full_name: z.string().optional(),
@@ -57,7 +58,8 @@ export const contactsRoutes: FastifyPluginAsync = async (fastify) => {
 
     const rows = await sql.unsafe(
       `SELECT hc.id, hc.full_name, hc.linkedin_url, hc.personal_email, hc.personal_mobile,
-              hc.confidence_score, hc.created_at, hc.updated_at,
+              hc.confidence_score, hc.created_at, hc.updated_at, hc.contact_source, hc.contact_method, hc.contact_url,
+              hc.extraction_provenance->'verification' AS verification,
               c.id as company_id, c.name as company_name
        FROM hr_contacts hc
        LEFT JOIN companies c ON hc.current_company_id = c.id
@@ -71,6 +73,55 @@ export const contactsRoutes: FastifyPluginAsync = async (fastify) => {
       data: rows,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
+  });
+
+  fastify.post('/discover', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const token = process.env.WORKER_INTERNAL_TOKEN;
+    if (!token) return reply.status(503).send({ error: 'Contact discovery is not configured. Set WORKER_INTERNAL_TOKEN for the API and worker.' });
+    const workersUrl = (process.env.WORKERS_URL || 'http://localhost:8000').replace(/\/$/, '');
+    try {
+      const response = await fetch(`${workersUrl}/contacts/discover`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-internal-token': token },
+        body: JSON.stringify({ limit: 12 }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return reply.status(response.status >= 500 ? 502 : response.status).send({ error: (data as any)?.detail || 'Contact discovery could not be queued' });
+      await logAuditEvent({
+        user_id: (req.user as { id: string }).id,
+        action: 'discover_public_hr_contacts',
+        resource_type: 'hr_contact',
+        resource_id: 'public-listing-scan',
+        details: { limit: (data as any)?.limit || 12 },
+      });
+      return reply.status(202).send(data);
+    } catch (error) {
+      return reply.status(502).send({ error: `Contact discovery worker is unavailable: ${(error as Error).message}` });
+    }
+  });
+
+  fastify.post('/:id/verify', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const params = contactIdSchema.safeParse(req.params);
+    if (!params.success) return reply.status(400).send({ error: 'Invalid contact ID' });
+    const sql = getDB();
+    const rows = await sql.unsafe('SELECT id,personal_email,personal_mobile FROM hr_contacts WHERE id=$1', [params.data.id]);
+    const contact = rows[0] as unknown as { id: string; personal_email: string | null; personal_mobile: string | null } | undefined;
+    if (!contact) return reply.status(404).send({ error: 'Contact not found' });
+    if (!contact.personal_email && !contact.personal_mobile) return reply.status(409).send({ error: 'This contact has no email or phone number to verify' });
+    const jobId = await getRedis().lpush('verification_queue:requests', JSON.stringify({
+      contact_id: contact.id,
+      requested_by: (req.user as { id: string }).id,
+      requested_at: new Date().toISOString(),
+    }));
+    await logAuditEvent({
+      user_id: (req.user as { id: string }).id,
+      action: 'enqueue_hr_contact_verification',
+      resource_type: 'hr_contact',
+      resource_id: contact.id,
+      details: { job_id: String(jobId) },
+    });
+    return reply.status(202).send({ message: 'Contact verification queued', job_id: String(jobId), contact_id: contact.id });
   });
 
   fastify.get('/:id', async (req, reply) => {

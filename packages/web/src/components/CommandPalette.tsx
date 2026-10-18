@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
-  Settings, LogOut, Zap, CornerDownLeft, Command,
+  Settings, LogOut, Zap, CornerDownLeft, Command, BriefcaseBusiness, Target,
+  ClipboardList, UserRound, MessageCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { admin } from '@/lib/api';
@@ -47,9 +48,17 @@ export function CommandPalette() {
 
   const go = (path: string) => { navigate(path); setOpen(false); };
   const isAdmin = user?.role === 'admin';
+  const isCandidate = user?.role === 'candidate';
 
   const commands = useMemo<Cmd[]>(() => {
-    const nav: Cmd[] = [
+    const candidateNav: Cmd[] = [
+      { id: 'dashboard', label: 'Overview', icon: <LayoutDashboard />, group: 'Navigate', run: () => go('/dashboard') },
+      { id: 'jobs', label: 'Discover jobs', icon: <BriefcaseBusiness />, group: 'Navigate', run: () => go('/jobs') },
+      { id: 'recommendations', label: 'Recommended jobs', icon: <Target />, group: 'Navigate', run: () => go('/recommendations') },
+      { id: 'applications', label: 'Application tracker', icon: <ClipboardList />, group: 'Navigate', run: () => go('/applications') },
+      { id: 'profile', label: 'Candidate profile', icon: <UserRound />, group: 'Navigate', run: () => go('/profile') },
+    ];
+    const legacyNav: Cmd[] = [
       { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard />, group: 'Navigate', run: () => go('/dashboard') },
       { id: 'leads', label: 'Leads', hint: 'g', icon: <Users />, group: 'Navigate', run: () => go('/leads') },
       { id: 'companies', label: 'Companies', icon: <Building2 />, group: 'Navigate', run: () => go('/companies') },
@@ -57,13 +66,17 @@ export function CommandPalette() {
       { id: 'duplicates', label: 'Duplicates', icon: <GitMerge />, group: 'Navigate', run: () => go('/duplicates') },
       { id: 'analytics', label: 'Analytics', icon: <TrendingUp />, group: 'Navigate', run: () => go('/analytics') },
     ];
-    if (isAdmin) nav.push({ id: 'settings', label: 'Settings', icon: <Settings />, group: 'Navigate', run: () => go('/settings') });
+    const nav = isCandidate ? candidateNav : isAdmin ? [
+      { id: 'dashboard', label: 'Platform overview', icon: <LayoutDashboard />, group: 'Navigate', run: () => go('/dashboard') },
+      { id: 'jobs', label: 'Job quality review', icon: <BriefcaseBusiness />, group: 'Navigate', run: () => go('/jobs') },
+      { id: 'feedback', label: 'Candidate feedback', icon: <MessageCircle />, group: 'Navigate', run: () => go('/admin/feedback') },
+      { id: 'settings', label: 'System settings', icon: <Settings />, group: 'Navigate', run: () => go('/settings') },
+    ] : legacyNav;
     const actions: Cmd[] = [
-      { id: 'army', label: 'Run Full Army', hint: 'scrape + enrich all', icon: <Zap />, group: 'Actions', run: () => {
-        if (!isAdmin) { toast({ title: 'Admin only', variant: 'warning' }); return; }
-        admin.runArmy().then(() => toast({ title: 'Army deployed', description: 'Scraping all sources and enriching.', variant: 'success' })).catch((e) => toast({ title: 'Failed', description: (e as Error).message, variant: 'error' }));
+      ...(isAdmin ? [{ id: 'army', label: 'Run job discovery', hint: 'run enabled sources', icon: <Zap />, group: 'Actions', run: () => {
+        admin.triggerRun().then(() => toast({ title: 'Discovery run queued', description: 'Enabled job sources are starting.', variant: 'success' })).catch((e) => toast({ title: 'Failed', description: (e as Error).message, variant: 'error' }));
         setOpen(false);
-      } },
+      } }] : []),
       { id: 'logout', label: 'Sign out', icon: <LogOut />, group: 'Account', run: () => { revokeCurrentToken().then(() => logout()).then(() => go('/login')); } },
     ];
     return [...nav, ...actions];

@@ -18,6 +18,7 @@ import json
 import asyncio
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 import redis.asyncio as redis
@@ -122,6 +123,10 @@ async def process_verification_job(
     db_pool: asyncpg.Pool,
 ) -> None:
     """Process a single verification job from the queue."""
+    contact_id = payload.get("contact_id")
+    if contact_id:
+        await process_contact_verification_job(str(contact_id), redis_client, db_pool)
+        return
     lead_id = payload.get("lead_id")
     requested_by = payload.get("requested_by", "system")
 
@@ -227,6 +232,48 @@ async def process_verification_job(
     if email_status in ("valid", "catch_all"):
         await chain_lead(redis_client, "draft_queue:requests", lead_id,
                          requested_by=requested_by)
+
+
+async def process_contact_verification_job(
+    contact_id: str,
+    redis_client: redis.Redis,
+    db_pool: asyncpg.Pool,
+) -> dict[str, str]:
+    """Verify a saved public HR contact without starting lead outreach."""
+    async with db_pool.acquire() as conn:
+        contact = await conn.fetchrow(
+            "SELECT id,personal_email,personal_mobile,extraction_provenance FROM hr_contacts WHERE id=$1 FOR UPDATE",
+            contact_id,
+        )
+        if not contact:
+            logger.warning("HR contact verification skipped: contact not found (%s)", contact_id)
+            return {"email_status": "unknown", "phone_status": "unknown"}
+        email = str(contact["personal_email"] or "").strip()
+        phone = str(contact["personal_mobile"] or "").strip()
+        email_status = (await verify_email_reacher(email))["status"] if email else "not_provided"
+        phone_status = (await verify_whatsapp(phone))["status"] if phone else "not_provided"
+        provenance = contact["extraction_provenance"] or {}
+        if isinstance(provenance, str):
+            try:
+                provenance = json.loads(provenance)
+            except json.JSONDecodeError:
+                provenance = {}
+        if not isinstance(provenance, dict):
+            provenance = {}
+        provenance["verification"] = {
+            "email_status": email_status,
+            "phone_status": phone_status,
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await conn.execute(
+            "UPDATE hr_contacts SET extraction_provenance=$1::jsonb,updated_at=NOW() WHERE id=$2",
+            json.dumps(provenance), contact_id,
+        )
+    await publish_event(redis_client, "system", {
+        "type": "hr_contact_verification_complete", "contact_id": contact_id,
+        "email_status": email_status, "phone_status": phone_status,
+    })
+    return {"email_status": email_status, "phone_status": phone_status}
 
 
 async def consume_verification_queue(

@@ -81,13 +81,21 @@ export const up = async (pgm: MigrationContext) => {
   //    required: with a NULL provenance the `?` operator yields NULL, and a
   //    CHECK that evaluates to NULL passes, so the guard would not fire.
   await pgm.sql(`
-    ALTER TABLE hr_contacts
-      ADD CONSTRAINT hr_contacts_has_locator CHECK (
-        NULLIF(linkedin_url, '') IS NOT NULL
-        OR NULLIF(personal_email, '') IS NOT NULL
-        OR NULLIF(personal_mobile, '') IS NOT NULL
-        OR COALESCE(extraction_provenance ? 'retained_anonymised_at', false)
-      ) NOT VALID
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+         WHERE conname = 'hr_contacts_has_locator'
+           AND conrelid = 'hr_contacts'::regclass
+      ) THEN
+        ALTER TABLE hr_contacts
+          ADD CONSTRAINT hr_contacts_has_locator CHECK (
+            NULLIF(linkedin_url, '') IS NOT NULL
+            OR NULLIF(personal_email, '') IS NOT NULL
+            OR NULLIF(personal_mobile, '') IS NOT NULL
+            OR COALESCE(extraction_provenance ? 'retained_anonymised_at', false)
+          ) NOT VALID;
+      END IF;
+    END $$
   `);
   await pgm.sql(`ALTER TABLE hr_contacts VALIDATE CONSTRAINT hr_contacts_has_locator`);
 

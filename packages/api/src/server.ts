@@ -12,6 +12,7 @@ import { requestLogger, getPrometheusMetrics } from './utils/logging';
 
 const server = async () => {
   const app = Fastify({
+    bodyLimit: 8 * 1024 * 1024,
     // trustProxy must match the actual trusted proxy hop count; off by default so
     // req.ip can't be spoofed via X-Forwarded-For (keeps rate-limiting honest).
     // Set TRUST_PROXY=true only when running behind a trusted reverse proxy.
@@ -19,6 +20,10 @@ const server = async () => {
     logger: env.NODE_ENV === 'development'
       ? { level: 'info' }
       : { level: 'warn', redact: ['req.headers.authorization'] },
+  });
+
+  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_request, body, done) => {
+    done(null, body);
   });
 
   await app.register(Cors, {

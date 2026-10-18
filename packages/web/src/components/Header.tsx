@@ -2,13 +2,21 @@ import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth";
 import { admin } from "@/lib/api";
-import { Bell, Menu, CheckCircle2, Loader2, XCircle, ChevronDown, Search } from "lucide-react";
+import { Bell, Menu, CheckCircle2, Loader2, XCircle, ChevronDown, Search, Sun, Moon } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/components/ui/cn";
 import { formatDateTime } from "@/lib/format";
 
 const TITLES: Array<{ match: RegExp; title: string }> = [
-  { match: /^\/dashboard/, title: "Dashboard" },
+  { match: /^\/dashboard/, title: "Overview" },
+  { match: /^\/jobs\/[^/]+/, title: "Job details" },
+  { match: /^\/jobs/, title: "Job review" },
+  { match: /^\/recommendations/, title: "Recommended jobs" },
+  { match: /^\/applications/, title: "Application tracker" },
+  { match: /^\/saved/, title: "Saved jobs" },
+  { match: /^\/resume/, title: "Resume studio" },
+  { match: /^\/profile/, title: "Candidate profile" },
+  { match: /^\/admin\/feedback/, title: "Candidate feedback" },
   { match: /^\/leads\/[^/]+/, title: "Lead detail" },
   { match: /^\/leads/, title: "Leads" },
   { match: /^\/companies/, title: "Companies" },
@@ -22,7 +30,7 @@ function usePageTitle(pathname: string): string {
   for (const t of TITLES) {
     if (t.match.test(pathname)) return t.title;
   }
-  return "Take It";
+  return "JobPilot";
 }
 
 interface Run {
@@ -38,17 +46,26 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const { user, logout, revokeCurrentToken } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const title = usePageTitle(location.pathname);
-
   const isAdmin = user?.role === "admin";
+  const isPlatformUser = isAdmin || user?.role === "candidate";
+  const title = isAdmin && /^\/jobs/.test(location.pathname) ? 'Job review' : usePageTitle(location.pathname);
 
   const [runs, setRuns] = useState<Run[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    try { return localStorage.getItem('jobpilot-theme') === 'dark'; } catch { return false; }
+  });
   const notifRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
   const runningCount = runs.filter((r) => !r.finished_at).length;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    try { localStorage.setItem('jobpilot-theme', isDark ? 'dark' : 'light'); } catch { /* storage can be disabled */ }
+  }, [isDark]);
 
   useEffect(() => {
     if (!user || !isAdmin) return;
@@ -96,11 +113,14 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
           {title}
         </p>
         <p className="hidden text-xs text-muted-foreground sm:block">
-          Lead intelligence &amp; outreach
+          {isPlatformUser ? 'Job intelligence & application planning' : 'Lead intelligence & outreach'}
         </p>
       </div>
 
       <div className="ml-auto flex items-center gap-1.5">
+        <button type="button" onClick={() => setIsDark((value) => !value)} aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`} title={`Switch to ${isDark ? 'light' : 'dark'} theme`} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+          {isDark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        </button>
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event('hiregen:open-palette'))}

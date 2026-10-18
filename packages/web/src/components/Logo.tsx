@@ -1,5 +1,4 @@
-import { Radar } from "lucide-react";
-import { motion } from "framer-motion";
+import { BriefcaseBusiness } from "lucide-react";
 import { cn } from "@/components/ui/cn";
 
 export function Logo({
@@ -11,22 +10,16 @@ export function Logo({
 }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[image:var(--grad-primary)] shadow-glow-sm">
-        <motion.span
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-          className="text-white"
-        >
-          <Radar className="h-5 w-5" strokeWidth={2.2} />
-        </motion.span>
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+        <BriefcaseBusiness className="h-5 w-5" strokeWidth={2} />
       </div>
       {showText && (
         <div className="min-w-0 leading-tight">
           <p className="text-gradient text-[15px] font-bold tracking-tight">
-            Take It
+            JobPilot
           </p>
           <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Lead Intelligence
+            Career workspace
           </p>
         </div>
       )}

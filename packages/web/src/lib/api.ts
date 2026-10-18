@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LoginResponse } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LoginResponse } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -86,7 +86,7 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-  login: async (email: string, password: string, role?: 'admin' | 'sales_rep'): Promise<LoginResponse> => {
+  login: async (email: string, password: string, role?: 'admin' | 'user'): Promise<LoginResponse> => {
     const res = await api.post('/auth/login', { email, password, role });
     return res.data;
   },
@@ -192,6 +192,10 @@ export interface HRContact {
   created_at: string;
   updated_at: string;
   company_name?: string;
+  contact_source?: string | null;
+  contact_method?: string | null;
+  contact_url?: string | null;
+  verification?: { email_status?: string; phone_status?: string; checked_at?: string } | null;
 }
 
 export const companies = {
@@ -237,6 +241,14 @@ export const contacts = {
   remove: async (id: string) => {
     const res = await api.delete(`/contacts/${id}`);
     return res.data;
+  },
+  discover: async () => {
+    const res = await api.post('/contacts/discover');
+    return res.data as { status: string; limit: number; message: string };
+  },
+  verify: async (id: string) => {
+    const res = await api.post(`/contacts/${id}/verify`);
+    return res.data as { message: string; job_id: string; contact_id: string };
   },
 };
 
@@ -330,6 +342,88 @@ export const admin = {
     const res = await api.get('/users');
     return res.data;
   },
+};
+
+function profileCollection(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return [parsed];
+    } catch { /* legacy plain-text profile values are handled as one entry */ }
+    return [trimmed];
+  }
+  return value && typeof value === 'object' ? [value] : [];
+}
+
+function profileStrings(value: unknown): string[] {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map((item) => String(item).trim()).filter(Boolean);
+    } catch { /* comma-separated legacy fields are supported below */ }
+    return trimmed.split(/[,;|\n]/).map((item) => item.trim()).filter(Boolean);
+  }
+  return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
+}
+
+function normalizeCandidateProfile(value: unknown): CandidateProfile | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, any>;
+  const text = (field: unknown) => typeof field === 'string' ? field : field == null ? '' : String(field);
+  return {
+    ...raw,
+    full_name: text(raw.full_name), headline: text(raw.headline), contact_email: text(raw.contact_email),
+    phone: text(raw.phone), location: text(raw.location), summary: text(raw.summary),
+    skills: profileStrings(raw.skills), preferred_roles: profileStrings(raw.preferred_roles),
+    preferred_locations: profileStrings(raw.preferred_locations), certifications: profileStrings(raw.certifications),
+    remote_preference: ['any', 'remote', 'hybrid', 'onsite'].includes(raw.remote_preference) ? raw.remote_preference : 'any',
+    experience_years: Number(raw.experience_years) || 0,
+    education_level: text(raw.education_level), salary_currency: raw.salary_currency || 'INR',
+    experience: profileCollection(raw.experience).map((item: any) => typeof item === 'string'
+      ? { title: '', company: '', period: '', description: item }
+      : { title: text(item?.title), company: text(item?.company), period: text(item?.period), description: text(item?.description) }),
+    projects: profileCollection(raw.projects).map((item: any) => typeof item === 'string'
+      ? { name: item, description: '', technologies: [] }
+      : { name: text(item?.name), description: text(item?.description), technologies: profileStrings(item?.technologies) }),
+  } as CandidateProfile;
+}
+
+export const candidate = {
+  profile: async () => {
+    const response = await api.get('/candidate/profile');
+    return { ...response.data, profile: normalizeCandidateProfile(response.data?.profile) } as { profile: CandidateProfile | null; completion: number };
+  },
+  saveProfile: async (profile: CandidateProfile) => {
+    const response = await api.put('/candidate/profile', profile);
+    return { ...response.data, profile: normalizeCandidateProfile(response.data?.profile) };
+  },
+  deleteAccount: async (password:string) => (await api.delete('/candidate/account', { data:{ password } })).data as { deleted:boolean },
+  parseResume: async (file: File) => (await api.post('/candidate/resume/parse', file, {
+    headers: { 'Content-Type': 'application/octet-stream', 'X-Resume-Filename': file.name },
+    timeout: 45000,
+  })).data as { filename: string; suggested_profile: Partial<CandidateProfile>; review_required: true },
+  jobs: async (params: Record<string, unknown> = {}) => (await api.get('/candidate/jobs', { params })).data as { data: CandidateJob[]; pagination: { page: number; limit: number; total: number; pages: number } },
+  contacts: async () => (await api.get('/candidate/contacts')).data as { data: Array<Record<string, any>> },
+  job: async (id: string) => (await api.get(`/candidate/jobs/${id}`)).data as { job: CandidateJob },
+  recommendations: async () => (await api.get('/candidate/recommendations')).data as { needs_profile: boolean; data: CandidateJob[] },
+  summary: async () => (await api.get('/candidate/summary')).data as { profile_completion: number; has_profile: boolean; fresh_jobs_7d: number; application_total: number; application_statuses: Record<string, number> },
+  applications: async () => (await api.get('/candidate/applications')).data as { data: CandidateApplication[] },
+  saveJob: async (job_id: string, status: ApplicationStatus = 'SAVED') => (await api.post('/candidate/applications', { job_id, status })).data,
+  updateApplication: async (id: string, values: { status?: ApplicationStatus; notes?: string; note?: string }) => (await api.patch(`/candidate/applications/${id}`, values)).data,
+  prepare: async (job_id: string) => (await api.post(`/candidate/jobs/${job_id}/prepare`)).data as { application: { id: string }; documents: Array<{ id: string; document_type: string; title: string; content: string }>; generated_by: string; user_review_required: boolean },
+  feedback: async (values: { application_id?: string; rating: number; feedback: string }) => (await api.post('/candidate/feedback', values)).data,
+  adminOverview: async () => (await api.get('/candidate/admin/overview')).data as any,
+  adminJobs: async (params: Record<string, unknown> = {}) => (await api.get('/candidate/admin/jobs', { params })).data as { data: CandidateJob[] },
+  reviewJob: async (id: string, review_status: 'published' | 'pending' | 'quarantined' | 'rejected') => (await api.patch(`/candidate/admin/jobs/${id}/review`, { review_status })).data,
+  trainRecommendationModel: async () => (await api.post('/candidate/admin/recommendations/train')).data as { trained: boolean; model: string; training_examples: number; training_source: string; created_at: string },
+  adminFeedback: async (status: 'pending' | 'approved' | 'rejected' = 'pending') => (await api.get('/candidate/admin/feedback', { params:{ status } })).data as { data:Array<any> },
+  moderateFeedback: async (id:string, moderation_status:'approved'|'rejected') => (await api.patch(`/candidate/admin/feedback/${id}`, { moderation_status })).data,
 };
 
 export const health = {

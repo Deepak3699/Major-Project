@@ -1,18 +1,8 @@
-"""
-Normalizer worker: consumes raw_leads_queue, normalizes to SRS §4.4 schema,
-applies NLP experience re-validation (§4.2b), computes dedup fingerprint (§4.6),
-and inserts into PostgreSQL.
+"""Normalize discovered jobs and persist candidate-safe source snapshots.
 
-Runs as a separate Redis-queue consumer per SRS §9.1 (queue-based stage isolation).
-
-Implements full HR extraction cascade per SRS §4.5:
-1. Direct extraction from job postings (§4.5.1)
-2. LinkedIn cross-reference for HR profile URL (§4.5.2)
-3. Fallback cascade: other HR in same company, generic contacts, WHOIS (§4.5.3)
-4. OSINT personal-contact augmentation with holehe (§4.5.4/§4.5.5)
-
-Every stage records provenance: attempted, successful, failed, source,
-confidence, method, timestamp.
+The default path stores job listings without recruiter enrichment or B2B leads.
+The former contact-discovery and outreach flow is available only when
+ENABLE_LEGACY_OUTREACH_PIPELINE=1.
 """
 
 import json
@@ -31,7 +21,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Immutable-raw-snapshot versioning (Track 3): bump when normalize_lead's
 # output contract changes so reprocessing can tell stale snapshots apart.
-PARSER_VERSION = "3"
+PARSER_VERSION = "5"
 
 
 def content_hash_of(raw_payload: Any) -> str:
@@ -54,8 +44,85 @@ from .utils.redact import redact_email
 logger = logging.getLogger(__name__)
 
 
+def legacy_outreach_enabled() -> bool:
+    """Keep the original recruiter/outreach pipeline behind an explicit opt-in."""
+    return os.environ.get("ENABLE_LEGACY_OUTREACH_PIPELINE", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
 class NormalizationError(Exception):
     pass
+
+
+def _candidate_job_quality(job: dict[str, Any]) -> tuple[int, str, list[dict[str, Any]]]:
+    """Score public job-listing evidence with the same 100-point policy as the API."""
+    source = str(job.get("source_site") or "").lower()
+    company_domain = str(job.get("company_domain") or "").lower().removeprefix("www.").strip("./")
+    apply_url = str(job.get("apply_url") or job.get("job_url") or "")
+    try:
+        host = (urlparse(apply_url).hostname or "").lower().removeprefix("www.")
+    except ValueError:
+        host = ""
+    official = bool(re.search(r"greenhouse|lever|workday|ashby|smartrecruiters|bamboohr|teamtailor|recruitee|breezy|company career|official", source)) or bool(company_domain and host == company_domain)
+    domain_matches = bool(company_domain and host and (host == company_domain or host.endswith("." + company_domain)))
+    secure_url = urlparse(apply_url).scheme.lower() == "https"
+    evidence = [
+        {"signal": "Official source", "points": 30 if official else 0, "detail": "Company career domain or recognized ATS source" if official else f"Collected from {source or 'an external source'}"},
+        {"signal": "Company verification", "points": 20 if domain_matches else (10 if company_domain else 0), "detail": "Application link matches the company domain" if domain_matches else ("A company domain is available but the application host does not match" if company_domain else "Company domain is not available")},
+        {"signal": "Application URL", "points": 15 if secure_url else 0, "detail": "A secure HTTPS listing or application link is available" if secure_url else "A secure application link could not be confirmed"},
+    ]
+    posted_at = job.get("posted_at") or job.get("first_seen_at")
+    age_days = float("inf")
+    if posted_at:
+        try:
+            posted = posted_at if isinstance(posted_at, datetime) else datetime.fromisoformat(str(posted_at).replace("Z", "+00:00"))
+            if posted.tzinfo is None:
+                posted = posted.replace(tzinfo=timezone.utc)
+            age_days = max(0.0, (datetime.now(timezone.utc) - posted.astimezone(timezone.utc)).total_seconds() / 86400)
+        except (TypeError, ValueError):
+            pass
+    freshness = 10 if age_days <= 7 else (5 if age_days <= 30 else 0)
+    evidence.append({"signal": "Freshness", "points": freshness, "detail": f"Seen {int(age_days)} day(s) ago" if age_days != float("inf") else "Posting date is not available"})
+    raw = job.get("raw_payload") or {}
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (TypeError, json.JSONDecodeError):
+            raw = {}
+    if not isinstance(raw, dict):
+        raw = {}
+    contact_verified = bool(job.get("contact_verified") or raw.get("contact_verified") or raw.get("email_verified"))
+    evidence.append({"signal": "Contact validation", "points": 10 if contact_verified else 0, "detail": "Source metadata reports a validated company contact" if contact_verified else "A verified hiring contact is not available"})
+    source_count = max(int(job.get("source_count") or raw.get("source_count") or 0), len(raw.get("sources", [])) if isinstance(raw.get("sources"), list) else 0)
+    evidence.append({"signal": "Cross-source match", "points": 10 if source_count > 1 else 0, "detail": f"Matching listing appears in {source_count} sources" if source_count > 1 else "No independent cross-source confirmation is stored"})
+    description = str(job.get("description") or job.get("about_job") or "")
+    complete = bool(job.get("title") and job.get("company_name") and len(description) >= 180 and apply_url)
+    evidence.append({"signal": "Content consistency", "points": 5 if complete else 0, "detail": "Listing includes company, title, description and application link" if complete else "Some job details are missing or brief"})
+    score = min(100, sum(item["points"] for item in evidence))
+    band = "very_high" if score >= 94 else "high" if score >= 80 else "review" if score >= 60 else "low"
+    return score, band, evidence
+
+
+async def _refresh_candidate_job_quality(sql: asyncpg.Connection, job_id: str) -> None:
+    row = await sql.fetchrow(
+        """SELECT jp.id,jp.title,jp.description,jp.about_job,jp.source_site,jp.apply_url,jp.job_url,
+                  jp.posted_at,jp.first_seen_at,jp.raw_payload,jp.review_status,c.name AS company_name,
+                  c.domain AS company_domain,
+                  COALESCE((SELECT COUNT(DISTINCT js.source_site) FROM job_sources js WHERE js.job_posting_id=jp.id),1)::int AS source_count
+             FROM job_postings jp JOIN companies c ON c.id=jp.company_id WHERE jp.id=$1""",
+        job_id,
+    )
+    if not row:
+        return
+    score, band, evidence = _candidate_job_quality(dict(row))
+    current_status = row["review_status"]
+    next_status = "published" if current_status == "pending" and score > 70 else current_status
+    await sql.execute("UPDATE job_postings SET trust_score=$2,trust_band=$3,review_status=$4 WHERE id=$1", job_id, score, band, next_status)
+    if next_status == "published" and current_status == "pending":
+        await sql.execute(
+            """INSERT INTO job_verifications (job_posting_id,verifier_id,trust_score,trust_band,evidence,review_status)
+               VALUES ($1,NULL,$2,$3,$4::jsonb,'published')""",
+            job_id, score, band, json.dumps(evidence),
+        )
 
 
 def now_iso() -> str:
@@ -255,7 +322,7 @@ async def discover_hr_via_dork(company_name: str, company_domain: str) -> dict[s
     This is the SRS-approved fallback when direct extraction is unavailable.
     Includes retry logic for flaky DDGS connections.
     """
-    result = {"name": "", "email": "", "linkedin": "", "source": "", "confidence": 0.0}
+    result = {"name": "", "email": "", "linkedin": "", "source": "", "source_url": "", "confidence": 0.0}
     try:
         from ddgs import DDGS
     except ImportError:
@@ -298,6 +365,7 @@ async def discover_hr_via_dork(company_name: str, company_domain: str) -> dict[s
                     if _is_valid_person_name(name) and not _is_generic_name(name):
                         result["name"] = name[:80]
                         result["source"] = "duckduckgo_rocketreach"
+                        result["source_url"] = url
                         result["confidence"] = 0.8
                         logger.info(f"Dork found HR name from rocketreach for {company_name}: {name}")
                         return result
@@ -313,6 +381,7 @@ async def discover_hr_via_dork(company_name: str, company_domain: str) -> dict[s
                         result["name"] = name[:80]
                         result["linkedin"] = f"https://www.linkedin.com/in/{profile}"
                         result["source"] = "duckduckgo_linkedin"
+                        result["source_url"] = url
                         result["confidence"] = 0.75
                         logger.info(f"Dork found LinkedIn HR for {company_name}: {name} -> {result['linkedin']}")
                         return result
@@ -329,6 +398,7 @@ async def discover_hr_via_dork(company_name: str, company_domain: str) -> dict[s
                         if _is_valid_person_name(name_from_email):
                             result["name"] = name_from_email
                     result["source"] = result.get("source") or "duckduckgo_snippet"
+                    result["source_url"] = url
                     result["confidence"] = result.get("confidence") or 0.65
                     logger.info(f"Dork found email for {company_name}: {redact_email(email)}")
                     return result
@@ -585,11 +655,7 @@ async def run_holehe_check(email: str) -> dict[str, Any]:
 
 
 def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
-    """Normalize a raw scraped lead to the SRS §4.4 extraction schema.
-
-    Per SRS §9.7: if fields can't be confidently extracted, they are still
-    persisted with data_quality='incomplete' — never silently dropped.
-    """
+    """Normalize a raw job record; legacy contact fields are read only by opt-in."""
     company_name = (raw.get("company_name") or raw.get("company") or "").strip()
     job_title = (raw.get("job_title") or raw.get("title") or "").strip()
     job_url = (raw.get("job_url") or raw.get("url") or "").strip()
@@ -597,23 +663,79 @@ def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
     experience_required = raw.get("experience_required") or raw.get("experience", "")
     about_job = raw.get("about_job") or raw.get("description", "")
 
-    # Product correction: India-only scoping. Capture location from whichever
-    # field the source populated so the central geo-gate can evaluate it.
-    # NOTE: do NOT fall back to experience_required — that field holds years of
-    # experience, not a location (fixed in issue #7).
+    # Capture location from whichever field the source populated. Do not infer
+    # a location from experience_required; it holds years of experience.
     location = (raw.get("location") or raw.get("job_location")
                 or raw.get("city") or "").strip()
+    apply_url = (raw.get("apply_url") or raw.get("applyUrl") or raw.get("application_url")
+                 or raw.get("applicationUrl") or job_url).strip()
+    posted_raw = (raw.get("posted_at") or raw.get("date_posted") or raw.get("posted_date")
+                  or raw.get("postedOn") or raw.get("published_at"))
+    posted_at = None
+    if isinstance(posted_raw, (int, float)) and not isinstance(posted_raw, bool):
+        try:
+            timestamp = float(posted_raw) / (1000 if float(posted_raw) > 10_000_000_000 else 1)
+            posted_at = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            posted_at = None
+    elif isinstance(posted_raw, str) and posted_raw.strip():
+        try:
+            posted_at = datetime.fromisoformat(posted_raw.strip().replace("Z", "+00:00"))
+            if posted_at.tzinfo is None:
+                posted_at = posted_at.replace(tzinfo=timezone.utc)
+        except ValueError:
+            posted_at = None
+    location_type_raw = str(raw.get("location_type") or raw.get("workplace_type")
+                            or raw.get("workplaceType") or "").strip().lower().replace("-", "_")
+    location_type_aliases = {"work_from_home": "remote", "wfh": "remote", "remote": "remote",
+                             "hybrid": "hybrid", "onsite": "onsite", "on_site": "onsite",
+                             "office": "onsite", "field": "field"}
+    location_type = location_type_aliases.get(location_type_raw)
+    employment_raw = str(raw.get("employment_type") or raw.get("employmentType")
+                         or raw.get("job_type") or "").strip().lower().replace("-", "_").replace(" ", "_")
+    employment_aliases = {"fulltime": "full_time", "full_time": "full_time", "parttime": "part_time",
+                          "part_time": "part_time", "intern": "internship", "internship": "internship",
+                          "contractor": "contract", "contract": "contract", "apprentice": "apprenticeship",
+                          "apprenticeship": "apprenticeship", "freelance": "freelance", "temporary": "temporary"}
+    employment_type = employment_aliases.get(employment_raw)
+    raw_skills = raw.get("skills") or raw.get("required_skills") or raw.get("technologies") or []
+    if isinstance(raw_skills, str):
+        raw_skills = re.split(r"[,;|]", raw_skills)
+    skills = list(dict.fromkeys(str(skill).strip() for skill in raw_skills if str(skill).strip())) if isinstance(raw_skills, (list, tuple, set)) else []
 
-    # NLP re-validation per SRS §4.2b: always re-classify using word-boundary matching
-    is_fresher = classify_fresher(job_title, str(experience_required), str(about_job))
+    def numeric_salary(value: Any) -> float | None:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+        if isinstance(value, str) and re.fullmatch(r"\s*\d+(?:,\d{3})*(?:\.\d+)?\s*", value):
+            try:
+                return float(value.replace(",", "").strip())
+            except ValueError:
+                return None
+        return None
 
-    # HR Name extraction with fallback cascade per SRS §4.5
-    hr_name, hr_name_provenance = extract_hr_name_fallback(raw, company_name)
-    hr_contact = extract_hr_contact_fallback(raw, company_name)
-    hr_email = hr_contact["email"]
-    hr_mobile = hr_contact["mobile"]
+    salary_min = numeric_salary(raw.get("salary_min") or raw.get("min_salary") or raw.get("minSalary"))
+    salary_max = numeric_salary(raw.get("salary_max") or raw.get("max_salary") or raw.get("maxSalary"))
+    if salary_min is not None and salary_max is not None and salary_min > salary_max:
+        salary_min, salary_max = None, None
+    salary_currency = str(raw.get("salary_currency") or raw.get("salaryCurrency") or "").upper()
+    if salary_currency not in {"INR", "USD", "EUR", "GBP"}:
+        salary_currency = None
+    salary_period = str(raw.get("salary_period") or raw.get("salaryPeriod") or "").lower()
+    if salary_period not in {"year", "month", "week", "day", "hour"}:
+        salary_period = None
 
-    hr_linkedin = raw.get("hr_linkedin_url", "")
+    legacy_pipeline = legacy_outreach_enabled()
+    is_fresher = classify_fresher(job_title, str(experience_required), str(about_job)) if legacy_pipeline else True
+
+    if legacy_pipeline:
+        hr_name, hr_name_provenance = extract_hr_name_fallback(raw, company_name)
+        hr_contact = extract_hr_contact_fallback(raw, company_name)
+        hr_email = hr_contact["email"]
+        hr_mobile = hr_contact["mobile"]
+        hr_linkedin = raw.get("hr_linkedin_url", "")
+    else:
+        hr_name = hr_email = hr_mobile = hr_linkedin = ""
+        hr_name_provenance = {}
     source_site = raw.get("source_site", "")
     scraped_at = raw.get("scraped_at", now_iso())
     raw_payload = raw.get("raw_payload", raw)
@@ -627,7 +749,7 @@ def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
     fingerprint = generate_fingerprint(company_name, job_title, job_url)
 
     # Preserve incoming hr_extraction_provenance if supplied (SRS §10)
-    incoming_provenance = raw.get("hr_extraction_provenance")
+    incoming_provenance = raw.get("hr_extraction_provenance") if legacy_pipeline else None
     if isinstance(incoming_provenance, dict):
         hr_extraction_provenance = incoming_provenance
     else:
@@ -643,14 +765,23 @@ def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
         "about_company": raw.get("about_company", ""),
         "hr_name": hr_name,
         "hr_email": hr_email,
-        "company_email": raw.get("company_email", ""),
+        "company_email": raw.get("company_email", "") if legacy_pipeline else "",
         "hr_mobile": hr_mobile,
-        "company_mobile": raw.get("company_mobile", ""),
+        "company_mobile": raw.get("company_mobile", "") if legacy_pipeline else "",
         "hr_linkedin_url": hr_linkedin,
         "job_title": job_title,
         "about_job": about_job,
         "experience_required": experience_required,
         "location": location,
+        "apply_url": apply_url,
+        "posted_at": posted_at,
+        "location_type": location_type,
+        "employment_type": employment_type,
+        "skills": skills,
+        "salary_min": salary_min,
+        "salary_max": salary_max,
+        "salary_currency": salary_currency,
+        "salary_period": salary_period,
         "salary_range": raw.get("salary_range", ""),
         "job_url": job_url,
         "source_site": source_site,
@@ -659,7 +790,7 @@ def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
         "data_quality": data_quality,
         "is_fresher": is_fresher,
         "is_india": is_india_relevant({"location": location, "about_job": about_job,
-                                       "source_site": source_site}),
+                                       "source_site": source_site}) if legacy_pipeline else True,
         "raw_payload": raw_payload,
         "hr_extraction_provenance": hr_extraction_provenance,
         # Who triggered the scrape, so downstream auto-chaining publishes SSE to
@@ -863,6 +994,175 @@ async def enrich_hr_data(
     return normalized
 
 
+async def enrich_public_job_contact(
+    normalized: dict[str, Any],
+    db_pool: asyncpg.Pool,
+    allow_search: bool = False,
+) -> dict[str, Any]:
+    """Find public professional contacts from listing/careers pages and, when
+    explicitly requested by an admin, public search snippets. This path never
+    guesses email addresses, searches private accounts, or starts outreach.
+    """
+    job_url = str(normalized.get("job_url") or "").strip()
+    if not job_url or urlparse(job_url).scheme.lower() != "https":
+        return normalized
+    fingerprint = normalized.get("fingerprint")
+    if fingerprint:
+        async with db_pool.acquire() as conn:
+            existing = await conn.fetchval("SELECT hr_contact_id FROM job_postings WHERE fingerprint=$1 LIMIT 1", fingerprint)
+            if existing:
+                return normalized
+    try:
+        direct = await extract_from_job_posting_page(job_url)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Direct public HR extraction failed for %s: %s", job_url, exc)
+        return normalized
+    if not isinstance(direct, dict):
+        direct = {}
+    name = str(direct.get("name") or "").strip()
+    email = str(direct.get("email") or "").strip().lower()
+    linkedin = str(direct.get("linkedin") or "").strip()
+    source_url = str(direct.get("contact_url") or job_url).strip()
+    method = "public_job_listing"
+    source = "direct_extracted"
+    confidence = 90
+
+    def valid_public_source(value: str, expected_domain: str = "") -> bool:
+        try:
+            parsed_url = urlparse(value)
+            host = (parsed_url.hostname or "").lower().removeprefix("www.")
+            base = expected_domain.lower().removeprefix("www.").strip(".")
+            return parsed_url.scheme.lower() == "https" and bool(host) and (not base or host == base or host.endswith("." + base))
+        except ValueError:
+            return False
+
+    def validate_fields() -> tuple[str, str, str]:
+        clean_name = name
+        clean_email = email
+        clean_linkedin = linkedin
+        if clean_name and (_is_generic_name(clean_name) or not _is_valid_person_name(clean_name)):
+            clean_name = ""
+        if clean_email and (not is_valid_email_format(clean_email) or is_generic_email(clean_email)):
+            clean_email = ""
+        if clean_linkedin:
+            try:
+                parsed_linkedin = urlparse(clean_linkedin)
+                if parsed_linkedin.scheme.lower() != "https" or (parsed_linkedin.hostname or "").lower().removeprefix("www.") != "linkedin.com" or not re.search(r"^/(?:in|company)/", parsed_linkedin.path, re.IGNORECASE):
+                    clean_linkedin = ""
+            except ValueError:
+                clean_linkedin = ""
+        return clean_name, clean_email, clean_linkedin
+
+    name, email, linkedin = validate_fields()
+    credible = bool((email or linkedin) and (name or linkedin) and valid_public_source(source_url))
+
+    # Many ATS feeds expose no recruiter details on the posting itself. Check
+    # only the employer's own careers/contact pages next; never infer a person
+    # from a generated mailbox or expose guessed addresses to candidates.
+    domain = derive_company_domain(str(normalized.get("company_name") or ""), job_url)
+    if not credible and domain and allow_search:
+        try:
+            career = await extract_from_career_page(domain, str(normalized.get("company_name") or ""))
+            name = str(career.get("name") or "").strip()
+            email = str(career.get("email") or "").strip().lower()
+            linkedin = str(career.get("linkedin") or "").strip()
+            source_url = str(career.get("contact_url") or "").strip()
+            name, email, linkedin = validate_fields()
+            credible = bool((email or linkedin) and (name or linkedin) and valid_public_source(source_url, domain))
+            if credible:
+                method = "company_career_page"
+                confidence = 88 if name and email else 85
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Official career-page HR extraction failed for %s: %s", domain, exc)
+
+    # A manually requested scan can also check public search results for
+    # professional profiles. These remain search_discovered/low-confidence and
+    # are never shown in candidate job cards until verified by a human/source.
+    if not credible and allow_search:
+        try:
+            dork = await asyncio.wait_for(
+                discover_hr_via_dork(str(normalized.get("company_name") or ""), domain or ""),
+                timeout=14,
+            )
+            name = str(dork.get("name") or "").strip()
+            email = str(dork.get("email") or "").strip().lower()
+            linkedin = str(dork.get("linkedin") or "").strip()
+            source_url = str(dork.get("source_url") or "").strip()
+            name, email, linkedin = validate_fields()
+            credible = bool(name and (email or linkedin) and valid_public_source(source_url))
+            if credible:
+                method = "public_search_result"
+                source = "search_discovered"
+                confidence = min(74, max(60, int(float(dork.get("confidence") or 0.65) * 100)))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Public HR search fallback failed for %s: %s", normalized.get("company_name"), exc)
+
+    # A contact should identify a person or a public professional profile; a
+    # bare generic mailbox is handled as company contact information elsewhere.
+    if not credible:
+        return normalized
+    normalized["hr_name"] = name
+    normalized["hr_email"] = email
+    normalized["hr_linkedin_url"] = linkedin
+    normalized["_public_hr_discovery"] = True
+    normalized["_contact_source"] = source
+    normalized["_contact_method"] = method
+    normalized["_contact_confidence"] = confidence
+    normalized["hr_public_contact_url"] = source_url
+    normalized["hr_extraction_provenance"] = {
+        "stages": [{"stage": "public_hr_contact_discovery", "attempted": True, "successful": True,
+                    "failed": False, "source": source_url, "confidence": confidence / 100,
+                    "method": method, "timestamp": now_iso(),
+                    "result": {"url": source_url, "fields": [field for field, value in (("name", name), ("email", email), ("linkedin", linkedin)) if value]}}]
+    }
+    return normalized
+
+
+async def save_public_hr_contact(sql: asyncpg.Connection, normalized: dict[str, Any], company_id: str) -> str | None:
+    """Persist direct public listing contacts and scope deduplication by employer."""
+    if not normalized.get("_public_hr_discovery"):
+        return None
+    name = normalized.get("hr_name") or None
+    email = normalized.get("hr_email") or None
+    linkedin = normalized.get("hr_linkedin_url") or None
+    contact_source = normalized.get("_contact_source") or "direct_extracted"
+    contact_method = normalized.get("_contact_method") or "public_job_listing"
+    confidence = int(normalized.get("_contact_confidence") or 90)
+    if not (email or linkedin) or not (name or linkedin):
+        return None
+    existing_id = await sql.fetchval(
+        """SELECT id FROM hr_contacts WHERE current_company_id=$1 AND
+             ((NULLIF($2,'') IS NOT NULL AND personal_email=$2) OR
+              (NULLIF($3,'') IS NOT NULL AND linkedin_url=$3)) LIMIT 1""",
+        company_id, email or "", linkedin or "",
+    )
+    if existing_id:
+        await sql.execute(
+            """UPDATE hr_contacts SET full_name=COALESCE(full_name,$1),
+                 personal_email=COALESCE(personal_email,NULLIF($2,'')),
+                 linkedin_url=COALESCE(linkedin_url,NULLIF($3,'')),
+                 contact_source=CASE WHEN $7>=confidence_score THEN $4 ELSE contact_source END,
+                 contact_method=CASE WHEN $7>=confidence_score THEN $5 ELSE contact_method END,
+                 contact_url=CASE WHEN $7>=confidence_score THEN $6 ELSE contact_url END,
+                 confidence_score=GREATEST(confidence_score,$7),
+                 extraction_provenance=COALESCE(extraction_provenance,'{}'::jsonb) || $8::jsonb,
+                 updated_at=NOW() WHERE id=$9""",
+            name, email or "", linkedin or "", contact_source, contact_method,
+            normalized["hr_public_contact_url"], confidence,
+            json.dumps(normalized["hr_extraction_provenance"]), existing_id,
+        )
+        return str(existing_id)
+    return str(await sql.fetchval(
+        """INSERT INTO hr_contacts
+             (full_name,personal_email,linkedin_url,current_company_id,contact_source,
+              contact_method,contact_url,confidence_score,extraction_provenance)
+           VALUES ($1,NULLIF($2,''),NULLIF($3,''),$4,$5,$6,$7,$8,$9::jsonb) RETURNING id""",
+        name, email or "", linkedin or "", company_id, contact_source, contact_method,
+        normalized["hr_public_contact_url"], confidence,
+        json.dumps(normalized["hr_extraction_provenance"]),
+    ))
+
+
 def _levenshtein(a: str, b: str) -> int:
     """Compute Levenshtein edit distance between two strings."""
     if len(a) < len(b):
@@ -956,6 +1256,182 @@ async def _find_fuzzy_duplicate(sql: asyncpg.Connection, normalized: dict[str, A
     return None
 
 
+async def _find_canonical_job(sql: asyncpg.Connection, normalized: dict[str, Any], company_id: str) -> str | None:
+    """Find a high-confidence cross-source match before creating another job."""
+    company = (normalized.get("company_name") or "").strip()
+    title = (normalized.get("job_title") or "").strip()
+    location = (normalized.get("location") or "").strip() or None
+    description = (normalized.get("about_job") or "").strip()
+    apply_url = (normalized.get("apply_url") or normalized.get("job_url") or "").strip()
+    if not company or not title:
+        return None
+    return await sql.fetchval(
+        """
+        SELECT jp.id
+          FROM job_postings jp
+          JOIN companies c ON c.id = jp.company_id
+         WHERE jp.is_active = TRUE
+           AND jp.first_seen_at > NOW() - INTERVAL '14 days'
+           AND (jp.company_id = $1 OR similarity(lower(c.name), lower($2)) >= 0.88)
+           AND similarity(regexp_replace(lower(jp.title), '[^a-z0-9]+', '', 'g'),
+                          regexp_replace(lower($3), '[^a-z0-9]+', '', 'g')) >= 0.86
+           AND (jp.location IS NULL OR $4::text IS NULL OR
+                similarity(regexp_replace(lower(jp.location), '[^a-z0-9]+', '', 'g'),
+                           regexp_replace(lower($4), '[^a-z0-9]+', '', 'g')) >= 0.80)
+           AND ((NULLIF(jp.apply_url, '') IS NOT NULL AND jp.apply_url = NULLIF($5, ''))
+                OR (length($6) >= 240 AND length(COALESCE(jp.description, '')) >= 240
+                    AND similarity(left(jp.description, 12000), left($6, 12000)) >= 0.62
+                    AND jp.location IS NOT NULL AND $4::text IS NOT NULL))
+         ORDER BY similarity(left(COALESCE(jp.description, ''), 12000), left($6, 12000)) DESC,
+                  jp.first_seen_at DESC
+         LIMIT 1
+        """,
+        company_id, company, title, location, apply_url, description,
+    )
+
+
+async def _record_job_source(sql: asyncpg.Connection, job_id: str, normalized: dict[str, Any]) -> None:
+    raw = normalized.get("raw_payload") or {}
+    source_job_id = ""
+    if isinstance(raw, dict):
+        source_job_id = str(raw.get("source_job_id") or raw.get("job_id") or raw.get("id") or "")
+    await sql.execute(
+        """
+        INSERT INTO job_sources (job_posting_id, source_site, source_job_id, source_url, raw_payload)
+        VALUES ($1, $2, NULLIF($3, ''), $4, $5::jsonb)
+        ON CONFLICT (job_posting_id, source_site, source_url)
+        DO UPDATE SET last_seen_at = NOW(), raw_payload = EXCLUDED.raw_payload,
+                      source_job_id = COALESCE(job_sources.source_job_id, EXCLUDED.source_job_id)
+        """,
+        job_id, normalized.get("source_site") or "unknown", source_job_id,
+        normalized.get("job_url") or "", json.dumps(raw),
+    )
+
+
+def _candidate_safe_payload(value: Any) -> Any:
+    """Remove direct recruiter/contact fields before persisting candidate data."""
+    private_keys = {
+        "email", "hr_email", "personal_email", "recruiter_email", "phone", "mobile",
+        "hr_mobile", "personal_mobile", "recruiter_phone", "linkedin_url",
+        "hr_linkedin_url", "hr_name", "contact_name", "recruiter_name", "posted_by",
+        "hiring_manager", "contact_person", "contact", "recruiter", "poster",
+    }
+    if isinstance(value, dict):
+        cleaned = {}
+        for key, item in value.items():
+            normalized_key = re.sub(r"[^a-z0-9]+", "_", str(key).strip().lower()).strip("_")
+            if normalized_key in private_keys or re.search(r"(^|_)(email|phone|mobile|linkedin_url|contact_name|recruiter_name|hiring_manager)(_|$)", normalized_key):
+                continue
+            cleaned[key] = _candidate_safe_payload(item)
+        return cleaned
+    if isinstance(value, list):
+        return [_candidate_safe_payload(item) for item in value]
+    return value
+
+
+async def insert_job_posting(sql: asyncpg.Connection, normalized: dict[str, Any]) -> str | None:
+    """Candidate-mode ingestion: persist jobs/sources without HR enrichment or leads."""
+    fp = normalized["fingerprint"]
+    safe = dict(normalized)
+    safe["raw_payload"] = _candidate_safe_payload(normalized.get("raw_payload") or {})
+
+    recent = await sql.fetchval(
+        "SELECT id FROM job_postings WHERE fingerprint=$1 AND first_seen_at>NOW()-INTERVAL '30 days' LIMIT 1", fp
+    )
+    if recent:
+        existing_contact = await sql.fetchval("SELECT hr_contact_id FROM job_postings WHERE id=$1", recent)
+        contact_id = existing_contact or await save_public_hr_contact(sql, safe, await sql.fetchval("SELECT company_id FROM job_postings WHERE id=$1", recent))
+        await sql.execute(
+            """UPDATE job_postings jp SET last_seen_at=NOW(),
+                 raw_payload=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.raw_payload ELSE $1::jsonb END,
+                 content_hash=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.content_hash ELSE $2 END,
+                 hr_contact_id=COALESCE(jp.hr_contact_id,$4)
+               WHERE jp.id=$3""",
+            json.dumps(safe["raw_payload"]), content_hash_of(safe["raw_payload"]), recent, contact_id,
+        )
+        await _record_job_source(sql, str(recent), safe)
+        await _refresh_candidate_job_quality(sql, str(recent))
+        return None
+
+    job_id = await sql.fetchval("SELECT id FROM job_postings WHERE fingerprint=$1 LIMIT 1", fp)
+    if job_id:
+        existing_contact = await sql.fetchval("SELECT hr_contact_id FROM job_postings WHERE id=$1", job_id)
+        contact_company = await sql.fetchval("SELECT company_id FROM job_postings WHERE id=$1", job_id)
+        contact_id = existing_contact or await save_public_hr_contact(sql, safe, contact_company)
+        await sql.execute(
+            """UPDATE job_postings jp SET first_seen_at=NOW(),last_seen_at=NOW(),
+                 raw_payload=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.raw_payload ELSE $1::jsonb END,
+                 content_hash=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.content_hash ELSE $2 END,
+                 hr_contact_id=COALESCE(jp.hr_contact_id,$4)
+               WHERE jp.id=$3""",
+            json.dumps(safe["raw_payload"]), content_hash_of(safe["raw_payload"]), job_id, contact_id,
+        )
+        await _record_job_source(sql, str(job_id), safe)
+        await _refresh_candidate_job_quality(sql, str(job_id))
+        return None
+
+    employer_domain = derive_company_domain(normalized["company_name"], normalized["job_url"])
+    company = await sql.fetchrow(
+        "SELECT id FROM companies WHERE name=$1 OR domain=$2 LIMIT 1",
+        normalized["company_name"], employer_domain or (urlparse(normalized["job_url"]).hostname if normalized["job_url"] else None),
+    )
+    company_id = company["id"] if company else None
+    if not company_id:
+        from .utils.india_filter import canonical_company_key
+        wanted = canonical_company_key(normalized["company_name"])
+        if wanted:
+            rows = await sql.fetch("SELECT id,name FROM companies")
+            for row in rows:
+                if canonical_company_key(row["name"]) == wanted:
+                    company_id = row["id"]
+                    break
+    if not company_id:
+        company_id = await sql.fetchval(
+            "INSERT INTO companies (name,domain,about) VALUES ($1,$2,$3) RETURNING id",
+            normalized["company_name"], employer_domain or (urlparse(normalized["job_url"]).hostname if normalized["job_url"] else None),
+            (normalized.get("about_company") or "")[:500] or None,
+        )
+
+    if not job_id and company_id:
+        job_id = await _find_canonical_job(sql, normalized, str(company_id))
+    if job_id:
+        contact_id = await save_public_hr_contact(sql, safe, str(company_id))
+        if contact_id:
+            await sql.execute("UPDATE job_postings SET hr_contact_id=$2 WHERE id=$1 AND hr_contact_id IS NULL", job_id, contact_id)
+        await sql.execute("UPDATE job_postings SET last_seen_at=NOW() WHERE id=$1", job_id)
+        await _record_job_source(sql, str(job_id), safe)
+        await _refresh_candidate_job_quality(sql, str(job_id))
+        return None
+    else:
+        contact_id = await save_public_hr_contact(sql, safe, str(company_id))
+        job_id = await sql.fetchval(
+            """INSERT INTO job_postings
+               (company_id,hr_contact_id,title,description,experience_level,salary_range,job_url,source_site,
+                fingerprint,raw_payload,parser_version,content_hash,location,location_type,
+                employment_type,apply_url,posted_at,skills,salary_min,salary_max,salary_currency,salary_period,review_status)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,NULLIF($13,''),$14,$15,
+                       NULLIF($16,''),$17,$18,$19,$20,$21,$22,'pending')
+               ON CONFLICT (fingerprint) DO NOTHING RETURNING id""",
+            company_id, contact_id, normalized["job_title"], normalized["about_job"], normalized["experience_required"],
+            normalized["salary_range"], normalized["job_url"], normalized["source_site"], fp,
+            json.dumps(safe["raw_payload"]), PARSER_VERSION, content_hash_of(safe["raw_payload"]),
+            normalized.get("location") or "", normalized.get("location_type"), normalized.get("employment_type"),
+            normalized.get("apply_url") or "", normalized.get("posted_at"), normalized.get("skills") or [],
+            normalized.get("salary_min"), normalized.get("salary_max"), normalized.get("salary_currency"), normalized.get("salary_period"),
+        )
+    if not job_id:
+        duplicate_id = await sql.fetchval("SELECT id FROM job_postings WHERE fingerprint=$1 LIMIT 1", fp)
+        if not duplicate_id:
+            return None
+        await sql.execute("UPDATE job_postings SET last_seen_at=NOW() WHERE id=$1", duplicate_id)
+        await _record_job_source(sql, str(duplicate_id), safe)
+        await _refresh_candidate_job_quality(sql, str(duplicate_id))
+        return None
+    await _record_job_source(sql, str(job_id), safe)
+    await _refresh_candidate_job_quality(sql, str(job_id))
+    return str(job_id)
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
 async def insert_lead(sql: asyncpg.Connection, normalized: dict[str, Any]) -> str | None:
     """Insert a normalized lead into PostgreSQL with dedup logic per SRS §4.6.
@@ -976,6 +1452,7 @@ async def insert_lead(sql: asyncpg.Connection, normalized: dict[str, Any]) -> st
             content_hash_of(normalized["raw_payload"]),
             existing,
         )
+        await _record_job_source(sql, str(existing), normalized)
         logger.info(f"Lead deduped (fingerprint match): {fp}")
         return None
 
@@ -1031,6 +1508,12 @@ async def insert_lead(sql: asyncpg.Connection, normalized: dict[str, Any]) -> st
             employer_domain or (urlparse(normalized["job_url"]).hostname if normalized["job_url"] else None),
             normalized["about_company"][:500] if normalized["about_company"] else None,
         )
+
+    if not old_existing and not job_id and company_id:
+        job_id = await _find_canonical_job(sql, normalized, str(company_id))
+        if job_id:
+            await sql.execute("UPDATE job_postings SET last_seen_at = NOW() WHERE id = $1", job_id)
+            logger.info(f"Cross-source job matched canonical posting {job_id}: {fp}")
 
     # Find or create HR contact.
     #
@@ -1106,13 +1589,15 @@ async def insert_lead(sql: asyncpg.Connection, normalized: dict[str, Any]) -> st
         )
 
     # Insert new job_posting if fingerprint is new
-    if not old_existing:
+    if not old_existing and not job_id:
         job_id = await sql.fetchval(
             """INSERT INTO job_postings
                (company_id, hr_contact_id, title, description, experience_level,
                 salary_range, job_url, source_site, fingerprint, raw_payload,
-                parser_version, content_hash)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                parser_version, content_hash, location, location_type, employment_type,
+                apply_url, posted_at, skills, salary_min, salary_max, salary_currency, salary_period)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                       NULLIF($13, ''), $14, $15, NULLIF($16, ''), $17, $18, $19, $20, $21, $22)
                RETURNING id""",
             company_id,
             hr_id,
@@ -1126,7 +1611,23 @@ async def insert_lead(sql: asyncpg.Connection, normalized: dict[str, Any]) -> st
             json.dumps(normalized["raw_payload"]),
             PARSER_VERSION,
             content_hash_of(normalized["raw_payload"]),
+            normalized.get("location") or "",
+            normalized.get("location_type"),
+            normalized.get("employment_type"),
+            normalized.get("apply_url") or "",
+            normalized.get("posted_at"),
+            normalized.get("skills") or [],
+            normalized.get("salary_min"),
+            normalized.get("salary_max"),
+            normalized.get("salary_currency"),
+            normalized.get("salary_period"),
         )
+
+    if job_id:
+        await _record_job_source(sql, str(job_id), normalized)
+        existing_lead = await sql.fetchval("SELECT id FROM leads WHERE job_posting_id = $1 LIMIT 1", job_id)
+        if existing_lead:
+            return None
 
     # Insert lead (legal_basis/purpose default at DB level: legitimate-interest B2B outreach)
     lead_id = await sql.fetchval(
@@ -1174,6 +1675,7 @@ async def _normalize_worker(
     """One normalizer consumer. Multiple run concurrently (see run_normalizer)."""
     inserted = 0
     processed = 0
+    legacy_pipeline = legacy_outreach_enabled()
 
     while True:
         raw_data: Any = None
@@ -1187,14 +1689,13 @@ async def _normalize_worker(
 
             normalized = normalize_lead(raw_data)
 
-            if not normalized["is_fresher"]:
+            if legacy_pipeline and not normalized["is_fresher"]:
                 logger.info(f"Skipping non-fresher job: {normalized['job_title']}")
                 await ack(redis_client, "raw_leads_queue:requests", raw_msg)
                 continue
 
-            # Product correction: India-only. Discard out-of-scope (non-India)
-            # records at the filter stage, analogous to the experience filter.
-            if not normalized.get("is_india", True):
+            # The legacy India-only filter remains opt-in with the B2B workflow.
+            if legacy_pipeline and not normalized.get("is_india", True):
                 logger.info(
                     f"Skipping non-India job: {normalized['job_title']} "
                     f"[{normalized.get('source_site')}] loc='{normalized.get('location')}'"
@@ -1202,14 +1703,22 @@ async def _normalize_worker(
                 await ack(redis_client, "raw_leads_queue:requests", raw_msg)
                 continue
 
-            # Enrich HR data with LinkedIn cross-reference and OSINT per SRS §4.5
-            normalized = await enrich_hr_data(normalized, db_pool)
+            if legacy_pipeline:
+                # The original recruiter workflow is retained for operators who explicitly opt in.
+                normalized = await enrich_hr_data(normalized, db_pool)
+            else:
+                # Candidate discovery keeps the safe job pipeline, but still
+                # checks the job's public listing page for directly published
+                # HR contact details. It never runs the legacy OSINT cascade.
+                normalized = await enrich_public_job_contact(normalized, db_pool)
 
             async with db_pool.acquire() as conn:
-                lead_id = await insert_lead(conn, normalized)
-                if lead_id:
+                record_id = await (insert_lead(conn, normalized) if legacy_pipeline else insert_job_posting(conn, normalized))
+                if record_id and legacy_pipeline:
                     inserted += 1
-                    await chain_lead(redis_client, "enrichment_queue:requests", lead_id, provider="auto", requested_by=normalized.get("requested_by", "system"))
+                    await chain_lead(redis_client, "enrichment_queue:requests", record_id, provider="auto", requested_by=normalized.get("requested_by", "system"))
+                elif record_id:
+                    inserted += 1
                 await ack(redis_client, "raw_leads_queue:requests", raw_msg)
 
         except json.JSONDecodeError as e:
@@ -1242,6 +1751,7 @@ async def process_batch(redis_client: redis.Redis, db_pool: asyncpg.Pool, max_it
     deduped = 0
     skipped = 0
     errors = 0
+    legacy_pipeline = legacy_outreach_enabled()
 
     for _ in range(max_items):
         try:
@@ -1252,22 +1762,26 @@ async def process_batch(redis_client: redis.Redis, db_pool: asyncpg.Pool, max_it
             raw_data = json.loads(raw_msg[1])
             normalized = normalize_lead(raw_data)
 
-            if not normalized["is_fresher"]:
+            if legacy_pipeline and not normalized["is_fresher"]:
                 skipped += 1
                 continue
 
-            if not normalized.get("is_india", True):
+            if legacy_pipeline and not normalized.get("is_india", True):
                 skipped += 1
                 continue
 
-            # Enrich HR data with LinkedIn cross-reference and OSINT per SRS §4.5
-            normalized = await enrich_hr_data(normalized, db_pool)
+            if legacy_pipeline:
+                normalized = await enrich_hr_data(normalized, db_pool)
+            else:
+                normalized = await enrich_public_job_contact(normalized, db_pool)
 
             async with db_pool.acquire() as conn:
-                lead_id = await insert_lead(conn, normalized)
-                if lead_id:
+                record_id = await (insert_lead(conn, normalized) if legacy_pipeline else insert_job_posting(conn, normalized))
+                if record_id and legacy_pipeline:
                     inserted += 1
-                    await chain_lead(redis_client, "enrichment_queue:requests", lead_id, provider="auto", requested_by=normalized.get("requested_by", "system"))
+                    await chain_lead(redis_client, "enrichment_queue:requests", record_id, provider="auto", requested_by=normalized.get("requested_by", "system"))
+                elif record_id:
+                    inserted += 1
                 else:
                     deduped += 1
 

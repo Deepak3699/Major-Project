@@ -66,6 +66,14 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# --- Base schema (idempotent; required before incremental migrations) --------
+Step 'Applying base database schema (idempotent)...'
+& docker compose run --rm pg-migrator
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'X Base schema could not be applied. See output above.' -ForegroundColor Red
+    exit 1
+}
+
 # --- Migrations (idempotent; postgres/api may still be warming up) -----------
 Step 'Applying database migrations (idempotent)...'
 $migrated = $false
@@ -111,10 +119,10 @@ if (-not $adminEmail) { $adminEmail = 'ADMIN_EMAIL not set in .env' }
 
 Write-Host ''
 Write-Host 'Stack is up.' -ForegroundColor Green
-Write-Host "  CRM UI    : http://localhost:5173"
+Write-Host "  CRM UI    : http://localhost:5174"
 Write-Host "  Login     : $adminEmail  /  (the ADMIN_PASSWORD value in .env)"
-Write-Host '  API       : http://localhost:3000/health'
-Write-Host '  n8n       : http://localhost:5678'
+Write-Host '  API       : http://localhost:3001/health'
+Write-Host '  n8n       : http://localhost:5679'
 Write-Host ''
 Write-Host 'Next commands:'
 Write-Host '  docker compose ps                # status'

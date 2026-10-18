@@ -74,6 +74,10 @@ const ALL_SOURCES = [
   { name: 'whatsapp', label: 'WhatsApp Listener' },
   { name: 'college_portals', label: 'College Portals' },
 ];
+const PERMITTED_SOURCE_DEFAULTS = new Set([
+  'greenhouse','lever','workday','ashby','smartrecruiters','recruitee','teamtailor','breezy',
+  'bamboohr','personio','remoteok','arbeitnow','remotive','adzuna','jooble','usajobs',
+]);
 
 const DEFAULT_SCORING_WEIGHTS = {
   hr_name_found: 20,
@@ -388,7 +392,7 @@ const Settings: React.FC = () => {
         </CardHeader>
         <CardContent>
           <p className="mb-5 text-[13px] text-muted-foreground">
-            Enable or disable individual scrapers for the daily scrape run.
+            Only official ATS pages and public feeds on the permitted-source allowlist can run. Other connectors require an approved access path and SCRAPE_PERMITTED_SOURCES configuration; a toggle alone does not authorize access. Browser stealth, proxy rotation, and CAPTCHA solving are off by default.
           </p>
           <form id="source-toggles-form" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {ALL_SOURCES.map((src) => (
@@ -401,7 +405,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     name={src.name}
-                    defaultChecked={sourcesEnabled[src.name] !== false}
+                    defaultChecked={sourcesEnabled[src.name] !== undefined ? sourcesEnabled[src.name] : PERMITTED_SOURCE_DEFAULTS.has(src.name)}
                     onChange={() => setSourcesDirty(true)}
                     className="peer sr-only"
                   />

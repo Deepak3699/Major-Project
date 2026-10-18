@@ -18,13 +18,6 @@ from .utils.robots_checker import RobotsChecker
 
 logger = logging.getLogger(__name__)
 
-_UA_ROTATOR: Optional[Any] = None
-try:
-    from fake_useragent import UserAgent
-    _UA_ROTATOR = UserAgent()
-except Exception:
-    _UA_ROTATOR = None
-
 _FREE_PROXY_CLIENT: Optional[Any] = None
 try:
     from fp.fp import FreeProxy
@@ -241,7 +234,7 @@ class BaseScraper(abc.ABC):
         Returns (status, data_or_None). Never raises on decode issues.
         """
         async with session.get(
-            url, headers={"User-Agent": "HireGen-LeadGen/1.0"},
+            url, headers={"User-Agent": "JobPilotAI/1.0"},
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
             if resp.status != 200:
@@ -259,14 +252,13 @@ class BaseScraper(abc.ABC):
             db=db,
         )
         self._logger = logging.getLogger(f"scraper.{self.source_name}")
-        self._proxies: list[str] = proxies or self._load_proxies()
+        self._proxies: list[str] = (proxies or self._load_proxies()) if os.environ.get("SCRAPER_ALLOW_ADVANCED_FETCH") == "1" else []
 
     @staticmethod
     def _load_proxies() -> list[str]:
-        """Load proxy URLs from the ROTATING_PROXIES env var (comma-separated).
-
-        If not set, attempts to fetch free proxies via the free-proxy library (SRS §3.4).
-        """
+        """Load configured proxies only for an explicitly permitted workflow."""
+        if os.environ.get("SCRAPER_ALLOW_ADVANCED_FETCH") != "1":
+            return []
         raw = os.environ.get("ROTATING_PROXIES", "")
         proxies = [p.strip() for p in raw.split(",") if p.strip()]
         if proxies:
@@ -282,16 +274,8 @@ class BaseScraper(abc.ABC):
 
     @staticmethod
     def _get_user_agent() -> str:
-        """Return a random User-Agent string via fake-useragent (SRS §3.4).
-
-        Falls back to a static UA if the library is unavailable.
-        """
-        if _UA_ROTATOR:
-            try:
-                return _UA_ROTATOR.random
-            except Exception:
-                pass
-        return "Mozilla/5.0 (compatible; HireGen-LeadGen/1.0; +https://your-domain.com)"
+        """Use a stable, identifiable product user-agent."""
+        return "JobPilotAI/1.0"
 
     def _get_proxy(self) -> Optional[str]:
         """Round-robin select a proxy if configured, else None."""
@@ -306,18 +290,18 @@ class BaseScraper(abc.ABC):
         jitter = random.uniform(0.5, 1.5)
         return base * jitter
 
-    async def _check_robots_txt(self, url: str, user_agent: str = "HireGen-LeadGen/1.0") -> bool:
+    async def _check_robots_txt(self, url: str, user_agent: str = "JobPilotAI/1.0") -> bool:
         """Check robots.txt compliance per SRS §13 before scraping a URL.
 
         Returns True if the URL is allowed, False if disallowed.
-        Defaults to allowed if robots.txt cannot be fetched.
+        Fails closed if robots.txt cannot be fetched.
         """
         try:
             checker = get_robot_checker()
             return await checker.is_allowed(url, user_agent)
         except Exception as e:
             self._logger.debug(f"Robots check skipped for {url}: {e}")
-            return True
+            return False
 
     @abc.abstractmethod
     async def scrape(self) -> list[dict[str, Any]]:

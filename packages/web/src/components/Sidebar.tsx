@@ -138,20 +138,40 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   const openPalette = () => window.dispatchEvent(new Event("hiregen:open-palette"));
 
   const Header = ({ compact }: { compact: boolean }) => (
-    <div className={cn("flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-3", compact && "justify-center px-2")}>
-      <button type="button" onClick={() => setCollapsed((c) => !c)} title={compact ? "Expand sidebar" : "Collapse sidebar"} aria-label={compact ? "Expand sidebar" : "Collapse sidebar"} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground">
-        <PanelLeft className={cn("h-[18px] w-[18px] transition-transform duration-200", compact && "rotate-180")} />
-      </button>
-      <div className={cn("min-w-0 overflow-hidden", compact && "w-0 opacity-0")}>
-        <Logo />
-      </div>
+    <div className={cn("flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-3.5", compact && "justify-center px-2")}>
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          title="Expand sidebar (Hiregen)"
+          aria-label="Expand sidebar"
+          className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform hover:scale-110"
+        >
+          <Logo showText={false} size="sm" />
+        </button>
+      ) : (
+        <>
+          <div className="min-w-0 flex-1 overflow-hidden pr-2">
+            <Logo size="md" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground"
+          >
+            <PanelLeft className="h-[18px] w-[18px]" />
+          </button>
+        </>
+      )}
     </div>
   );
 
   return (
     <>
       {/* Desktop rail */}
-      <aside className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 68 : 232 }}>
+      <aside className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 72 : 248 }}>
         <Header compact={collapsed} />
         <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
         <Footer collapsed={collapsed} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
@@ -161,9 +181,9 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
       {drawerOpen && (
         <div className="fixed inset-0 z-overlay md:hidden">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-overlay-in" onClick={onDrawerClose} aria-hidden />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-sidebar-border bg-sidebar shadow-float animate-drawer-in">
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
-              <Logo />
+          <aside className="absolute inset-y-0 left-0 flex w-68 flex-col border-r border-sidebar-border bg-sidebar shadow-float animate-drawer-in">
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4">
+              <Logo size="md" />
               <button type="button" onClick={onDrawerClose} aria-label="Close menu" className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"><Radar className="h-4 w-4 opacity-0" /><span className="-ml-4 text-xl leading-none">×</span></button>
             </div>
             <Nav collapsed={false} isAdmin={isAdmin} isCandidate={isCandidate} onNavigate={onDrawerClose} />

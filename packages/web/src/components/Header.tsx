@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth";
 import { admin } from "@/lib/api";
 import { Bell, Menu, CheckCircle2, Loader2, XCircle, ChevronDown, Search, Sun, Moon } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
 import { formatDateTime } from "@/lib/format";
 
@@ -30,7 +31,7 @@ function usePageTitle(pathname: string): string {
   for (const t of TITLES) {
     if (t.match.test(pathname)) return t.title;
   }
-  return "JobPilot";
+  return "Hiregen";
 }
 
 interface Run {
@@ -99,14 +100,17 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/85 px-4 backdrop-blur-md sm:px-6">
-      <button
-        type="button"
-        onClick={onMenuClick}
-        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
-        aria-label="Open menu"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-2 md:hidden">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <Logo size="sm" showText={false} />
+      </div>
 
       <div className="min-w-0">
         <p className="text-gradient text-[15px] font-semibold tracking-tight sm:text-base">

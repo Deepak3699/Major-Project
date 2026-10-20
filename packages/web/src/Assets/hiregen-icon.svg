@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 90 650 500" width="650" height="500" role="img" aria-label="HireGen">
+  <title>HireGen Icon</title>
+  <style>
+    .spark { transform-box: fill-box; transform-origin: center; animation: hiregen-twinkle 1.8s ease-in-out infinite; }
+    .spark-small { animation-duration: 2.2s; animation-delay: .45s; }
+    .speed { transform-box: fill-box; transform-origin: right center; animation: hiregen-speed 1.3s ease-in-out infinite; }
+    .speed-2 { animation-delay: .18s; }
+    .speed-3 { animation-delay: .36s; }
+    @keyframes hiregen-twinkle {
+      0%, 100% { transform: scale(.65) rotate(-10deg); opacity: .5; }
+      50% { transform: scale(1.15) rotate(14deg); opacity: 1; }
+    }
+    @keyframes hiregen-speed {
+      0% { transform: translateX(18px) scaleX(.80); opacity: .20; }
+      35% { opacity: 1; }
+      70% { opacity: 1; }
+      100% { transform: translateX(-22px) scaleX(1.10); opacity: .20; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spark, .speed { animation: none; }
+    }
+  </style>
+
+  <defs>
+    <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1598FF"/>
+      <stop offset="48%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="headGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2196FF"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E40AF"/>
+      <stop offset="100%" stop-color="#07163D"/>
+    </linearGradient>
+    <linearGradient id="speedGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#9333EA"/>
+    </linearGradient>
+    <clipPath id="innerGlass">
+      <circle cx="450" cy="318" r="156"/>
+    </clipPath>
+  </defs>
+
+  <!-- Speed lines - animated -->
+  <g class="speed speed-1">
+    <circle cx="176" cy="276" r="11" fill="#2EA8FF"/>
+    <rect x="202" y="266" width="88" height="20" rx="10" fill="url(#speedGrad)"/>
+  </g>
+  <g class="speed speed-2">
+    <circle cx="158" cy="320" r="11" fill="#258CFF"/>
+    <rect x="184" y="310" width="108" height="20" rx="10" fill="url(#speedGrad)"/>
+  </g>
+  <g class="speed speed-3">
+    <circle cx="176" cy="364" r="11" fill="#2E7CFF"/>
+    <rect x="202" y="354" width="88" height="20" rx="10" fill="url(#speedGrad)"/>
+  </g>
+
+  <!-- Magnifying glass + avatar - FIXED -->
+  <line x1="578" y1="452" x2="662" y2="544" stroke="url(#glassGrad)" stroke-width="44" stroke-linecap="round"/>
+  <circle cx="450" cy="318" r="172" fill="#FFFFFF" stroke="url(#glassGrad)" stroke-width="30"/>
+  <g clip-path="url(#innerGlass)">
+    <rect x="294" y="162" width="312" height="312" fill="#FFFFFF"/>
+    <path d="M352 474 C352 386 396 352 450 352 C504 352 548 386 548 474 L548 486 L352 486 Z" fill="url(#bodyGrad)"/>
+    <polygon points="450,362 466,384 457,430 450,444 443,430 434,384" fill="#FFFFFF"/>
+  </g>
+  <circle cx="450" cy="282" r="56" fill="url(#headGrad)"/>
+
+  <!-- Stars - animated -->
+  <g transform="translate(658,168)">
+    <g class="spark">
+      <path d="M0,-46 C5,-12 12,-5 46,0 C12,5 5,12 0,46 C-5,12 -12,5 -46,0 C-12,-5 -5,-12 0,-46 Z" fill="url(#sparkGrad)"/>
+    </g>
+  </g>
+  <g transform="translate(700,242)">
+    <g class="spark spark-small">
+      <path d="M0,-30 C3,-8 8,-3 30,0 C8,3 3,8 0,30 C-3,8 -8,3 -30,0 C-8,-3 -3,-8 0,-30 Z" fill="url(#sparkGrad)"/>
+    </g>
+  </g>
+</svg>

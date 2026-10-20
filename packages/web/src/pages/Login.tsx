@@ -44,7 +44,7 @@ const Login: React.FC = () => {
 
   return (
     <AuthShell
-      title="Welcome to Take It"
+      title="Welcome to Hiregen"
       subtitle="Select your role and sign in to access your workspace"
     >
       <form onSubmit={handleSubmit} className="space-y-4">

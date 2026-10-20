@@ -15,7 +15,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
     <div className="relative flex min-h-screen overflow-hidden bg-background">
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden border-r border-border p-12 lg:flex">
         <div className="pointer-events-none absolute inset-0" style={{ background: 'var(--grad-mesh)' }} />
-        <div className="relative z-10"><Logo /></div>
+        <div className="relative z-10"><Logo size="lg" /></div>
         <div className="relative z-10 max-w-md">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground">
             <BriefcaseBusiness className="h-3.5 w-3.5 text-primary" /> A clearer job search
@@ -35,12 +35,12 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
             ))}
           </div>
         </div>
-        <p className="relative z-10 text-xs text-muted-foreground/70">© {new Date().getFullYear()} JobPilot · Career Workspace</p>
+        <p className="relative z-10 text-xs text-muted-foreground/70">© {new Date().getFullYear()} Hiregen · Career Workspace</p>
       </div>
 
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="w-full max-w-[380px]">
-          <div className="mb-8 flex flex-col items-center gap-3 text-center lg:hidden"><Logo /></div>
+          <div className="mb-8 flex flex-col items-center gap-3 text-center lg:hidden"><Logo size="lg" /></div>
           <div className="mb-8">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>

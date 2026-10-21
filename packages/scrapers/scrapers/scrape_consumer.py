@@ -20,6 +20,14 @@ from .queue import requeue_or_dlq, reliable_brpop, ack
 
 logger = logging.getLogger(__name__)
 
+
+def _source_concurrency() -> int:
+    """Limit simultaneous source adapters to avoid burst traffic on boot runs."""
+    try:
+        return max(1, int(os.environ.get("SCRAPER_MAX_CONCURRENCY", "5")))
+    except (TypeError, ValueError):
+        return 5
+
 SCRAPER_MAP = {
     "remoteok": ("scrapers.remoteok", "RemoteOkScraper"),
     "arbeitnow": ("scrapers.arbeitnow", "ArbeitnowScraper"),
@@ -104,6 +112,13 @@ PERMITTED_DEFAULT_SOURCES = [
     "remoteok", "arbeitnow", "remotive", "adzuna", "jooble", "usajobs",
 ]
 
+# Keep these public-site connectors disabled in every execution path until an
+# owner supplies a permitted partner/API/feed path. LinkedIn's terms prohibit
+# scraping and Apna explicitly prohibits automated collection. The current
+# Naukri adapter falls back to anti-bot browser automation and has no confirmed
+# permitted API/feed contract, so it is blocked for the same reason.
+BLOCKED_AUTOMATED_SOURCES = {"linkedin", "apna", "naukri"}
+
 
 def resolve_sources(job_sources):
     """Choose an explicitly permitted source set for a discovery run.
@@ -115,7 +130,10 @@ def resolve_sources(job_sources):
     permitted = set(PERMITTED_DEFAULT_SOURCES)
     configured = os.environ.get("SCRAPE_PERMITTED_SOURCES", "").strip()
     if configured:
-        permitted.update(x.strip() for x in configured.split(",") if x.strip() in SCRAPER_MAP)
+        permitted.update(
+            x.strip() for x in configured.split(",")
+            if x.strip() in SCRAPER_MAP and x.strip() not in BLOCKED_AUTOMATED_SOURCES
+        )
     requested = list(job_sources) if job_sources is not None else []
     override = os.environ.get("SCRAPE_SOURCES", "").strip()
     if job_sources is None and override:
@@ -124,11 +142,14 @@ def resolve_sources(job_sources):
         requested = PERMITTED_DEFAULT_SOURCES
     unknown = sorted(set(requested) - set(SCRAPER_MAP))
     blocked = sorted(set(requested) - permitted - set(unknown))
+    restricted = sorted(set(requested) & BLOCKED_AUTOMATED_SOURCES)
     if unknown:
         logger.warning("Ignoring unknown job source(s): %s", unknown)
     if blocked:
         logger.warning("Source(s) excluded because no permitted access path is configured: %s", blocked)
-    return list(dict.fromkeys(x for x in requested if x in SCRAPER_MAP and x in permitted))
+    if restricted:
+        logger.warning("Source(s) blocked because automated access is not authorized/configured: %s", restricted)
+    return list(dict.fromkeys(x for x in requested if x in SCRAPER_MAP and x in permitted and x not in BLOCKED_AUTOMATED_SOURCES))
 
 
 async def run_scraper(source: str, redis_client: redis.Redis, db=None, requested_by: str | None = None) -> tuple[int, str | None]:
@@ -160,7 +181,7 @@ async def run_scraper(source: str, redis_client: redis.Redis, db=None, requested
                        VALUES ($1, 0, NULL, NOW(), NULL)
                        ON CONFLICT (source_name) DO UPDATE SET
                          consecutive_failures = 0, circuit_open_until = NULL,
-                         last_success_at = NOW()""",
+                         last_success_at = NOW(), last_failure_reason = NULL""",
                     source,
                 )
             except Exception as he:  # noqa: BLE001
@@ -198,6 +219,7 @@ async def consume_scrape_queue(
       - triggered_by: user ID
     """
     processed = 0
+    source_semaphore = asyncio.Semaphore(_source_concurrency())
 
     while True:
         job = None
@@ -225,20 +247,21 @@ async def consume_scrape_queue(
             per_source_counts: dict[str, int] = {}
 
             async def scrape_source(src: str):
-                db = None
-                if db_pool:
-                    db = await db_pool.acquire()
-                try:
-                    count, err = await run_scraper(src, redis_client, db, requested_by=triggered_by)
-                    if err:
-                        results["sources_failed"].append({"source": src, "error": err})
-                    else:
-                        results["sources_succeeded"] += 1
-                    results["leads_found"] += count
-                    per_source_counts[src] = count
-                finally:
-                    if db and db_pool:
-                        await db_pool.release(db)
+                async with source_semaphore:
+                    db = None
+                    if db_pool:
+                        db = await db_pool.acquire()
+                    try:
+                        count, err = await run_scraper(src, redis_client, db, requested_by=triggered_by)
+                        if err:
+                            results["sources_failed"].append({"source": src, "error": err})
+                        else:
+                            results["sources_succeeded"] += 1
+                        results["leads_found"] += count
+                        per_source_counts[src] = count
+                    finally:
+                        if db and db_pool:
+                            await db_pool.release(db)
 
             await asyncio.gather(*[scrape_source(s) for s in sources])
 
@@ -262,6 +285,8 @@ async def consume_scrape_queue(
                             "sources": sources,
                             "run_type": run_type,
                             "triggered_by": triggered_by,
+                            "per_source_counts": per_source_counts,
+                            "empty_sources": [name for name, count in per_source_counts.items() if count == 0],
                             "errors": results["sources_failed"],
                         }),
                     )

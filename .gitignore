@@ -2,10 +2,13 @@
 /dist
 /build
 /.env
+/.pnpm-store/
 /.env.local
 /packages/*/node_modules
 /packages/*/dist
 /packages/*/build
+/packages/api/data/raw/*.csv
+/packages/api/data/processed/*.csv
 /packages/api/.env
 /packages/web/.env
 /.venv
@@ -32,6 +35,21 @@ playwright-report/
 # Local runtime state written by the scraper fleet; not config, do not commit.
 packages/scrapers/source_health.json
 
+# Isolated local PostgreSQL data and manual startup diagnostics.
+.local-runtime/
+
 # Screenshots are documentation assets; drop them in docs/ explicitly with
 # `git add -f` if a README really needs one.
 /*.png
+
+# Local presentation build outputs and temporary artifact previews.
+/.presentation-build/
+/.chart-data-*/
+/output/imagegen/
+/.jest-cache/
+/packages/.jest-cache/
+
+# Manual local diagnostics and runtime logs.
+/tmp/
+/code.py
+/packages/scrapers/logs/*.log

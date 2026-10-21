@@ -190,7 +190,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
 
       await sql.unsafe(
         `UPDATE users SET api_keys = $1::jsonb, updated_at = NOW() WHERE id = $2`,
-        [JSON.stringify(encryptedKeys), (req.user as { id: string }).id],
+        [sql.json(encryptedKeys), (req.user as { id: string }).id],
       );
 
       await logAuditEvent({
@@ -299,7 +299,11 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
       return { key, value: null };
     }
 
-    return { key, value: result?.[0]?.value ?? null };
+    const value = result?.[0]?.value ?? null;
+    if (typeof value === 'string') {
+      try { return { key, value: JSON.parse(value) }; } catch { /* keep legacy scalar strings */ }
+    }
+    return { key, value };
   });
 
   fastify.put('/settings', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
@@ -323,7 +327,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         `INSERT INTO settings (key, value, updated_by, updated_at)
          VALUES ($1, $2::jsonb, $3, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
-        [key, JSON.stringify(value), (req.user as { id: string }).id],
+        [key, sql.json(value), (req.user as { id: string }).id],
       );
       results[key] = value;
     }

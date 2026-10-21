@@ -8,7 +8,9 @@ import * as path from 'path';
 // Idempotent: safe to re-run.
 
 function load(rel: string): string {
-  return fs.readFileSync(path.join(__dirname, '..', 'schema', rel), 'utf8');
+  // node-pg-migrate imports TypeScript migrations as ES modules, where
+  // __dirname is not defined. The API scripts always set cwd to the package root.
+  return fs.readFileSync(path.resolve(process.cwd(), 'database', 'schema', rel), 'utf8');
 }
 
 export const up = (pgm: MigrationContext) => {

@@ -206,6 +206,7 @@ export interface CandidateJob {
   trust_band: 'very_high' | 'high' | 'review' | 'low';
   trust_evidence?: JobTrustEvidence[];
   match_score?: number;
+  model_score?: number;
   score_breakdown?: Record<string, { score: number; weight: number; contribution: number }>;
   match_reasons?: string[];
   missing_skills?: string[];

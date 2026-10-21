@@ -28,23 +28,25 @@ class StubRedis:
 
 class TestCompensate:
     def test_siblings_cover_same_class(self):
-        sibs = compensate(["naukri"])
-        assert "foundit" in sibs and "naukri" not in sibs
+        sibs = compensate(["lever"])
+        assert "greenhouse" in sibs and "lever" not in sibs
 
     def test_ats_stays_in_ats_family(self):
         sibs = compensate(["greenhouse"])
         assert set(sibs) <= {"lever", "ashby", "greenhouse"}
 
     def test_depth_cap_kills_chains(self):
-        assert compensate(["naukri"], depth=1) == []
-        assert compensate(["naukri"], depth=9) == []
+        assert compensate(["lever"], depth=1) == []
+        assert compensate(["lever"], depth=9) == []
 
     def test_unknown_source_falls_back_to_discovery(self):
-        assert compensate(["mystery-board-xyz"]) == ["duckduckgo"]
+        # Discovery endpoints stay disabled until a permitted integration is configured.
+        assert compensate(["mystery-board-xyz"]) == []
 
     def test_output_capped(self):
-        sibs = compensate(["naukri", "internshala", "greenhouse", "indeed", "apna"])
+        sibs = compensate(["greenhouse", "lever", "ashby", "personio"])
         assert len(sibs) <= MAX_COMPENSATION_SOURCES
+        assert set(sibs) <= {"lever", "ashby", "workday", "bamboohr"}
 
     def test_corps_mapping(self):
         assert corps_of("naukri") == "scouts"
@@ -56,46 +58,46 @@ class TestFallbackWave:
     async def test_failed_source_enqueues_bounded_wave(self):
         r: Any = StubRedis()
         job = {"run_id": "r1", "triggered_by": "qa"}
-        results = {"sources_failed": [{"source": "naukri", "error": "boom"}],
+        results = {"sources_failed": [{"source": "greenhouse", "error": "boom"}],
                    "sources_succeeded": 0, "leads_found": 0}
-        sibs = await maybe_fallback_wave(r, job, ["naukri"], results, {"naukri": 0})
+        sibs = await maybe_fallback_wave(r, job, ["greenhouse"], results, {"greenhouse": 0})
         assert sibs, "a failed Tier-1 must trigger compensation"
         assert len(sibs) <= MAX_COMPENSATION_SOURCES
         payload = json.loads(r.lists["scrape_queue:requests"][0])
         assert payload["run_type"] == "fallback-wave"
         assert payload["compensation_depth"] == 1
-        assert payload["compensated_for"] == ["naukri"]
+        assert payload["compensated_for"] == ["greenhouse"]
 
     async def test_healthy_wave_enqueues_nothing(self):
         r: Any = StubRedis()
         results = {"sources_failed": [], "sources_succeeded": 5, "leads_found": 40}
         assert await maybe_fallback_wave(
-            r, {"run_id": "r1"}, ["naukri", "apna"], results,
-            {"naukri": 20, "apna": 20}) == []
+            r, {"run_id": "r1"}, ["greenhouse", "lever"], results,
+            {"greenhouse": 20, "lever": 20}) == []
         assert r.lists == {}
 
     async def test_compensation_never_chains(self):
         r: Any = StubRedis()
         job = {"run_id": "fallback-x", "compensation_depth": 1}
-        results = {"sources_failed": [{"source": "naukri", "error": "x"}],
+        results = {"sources_failed": [{"source": "lever", "error": "x"}],
                    "sources_succeeded": 0, "leads_found": 0}
-        assert await maybe_fallback_wave(r, job, ["naukri"], results, {}) == []
+        assert await maybe_fallback_wave(r, job, ["lever"], results, {}) == []
         assert r.lists == {}
 
     async def test_barren_tier1_triggers_but_quiet_niche_does_not(self):
         r: Any = StubRedis()
         results = {"sources_failed": [], "sources_succeeded": 2, "leads_found": 0}
-        # barren Tier-1 (naukri silent) -> compensate
+        # barren permitted Tier-1 source -> compensate within the approved ATS family
         sibs = await maybe_fallback_wave(
-            r, {"run_id": "r1"}, ["naukri", "remotive"], results,
-            {"naukri": 0, "remotive": 0})
+            r, {"run_id": "r1"}, ["greenhouse", "remotive"], results,
+            {"greenhouse": 0, "remotive": 0})
         assert sibs, "barren Tier-1 is a coverage hole"
         # quiet niche board with some success elsewhere -> no wave
         r2: Any = StubRedis()
         results2 = {"sources_failed": [], "sources_succeeded": 2, "leads_found": 12}
         assert await maybe_fallback_wave(
-            r2, {"run_id": "r2"}, ["remotive", "naukri"], results2,
-            {"remotive": 0, "naukri": 12}) == []
+            r2, {"run_id": "r2"}, ["remotive", "greenhouse"], results2,
+            {"remotive": 0, "greenhouse": 12}) == []
 
 
 class TestFlywheel:

@@ -5,7 +5,8 @@ ALTER TABLE job_postings
   ADD COLUMN IF NOT EXISTS skills TEXT[] NOT NULL DEFAULT '{}',
   ADD COLUMN IF NOT EXISTS trust_score SMALLINT NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS trust_band TEXT NOT NULL DEFAULT 'review',
-  ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'published';
+  ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'published',
+  ADD COLUMN IF NOT EXISTS india_confirmed BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS job_sources (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS candidate_feedback (
 
 CREATE INDEX IF NOT EXISTS candidate_profiles_skills_gin_idx ON candidate_profiles USING GIN (skills);
 CREATE INDEX IF NOT EXISTS job_postings_candidate_feed_idx ON job_postings (review_status, is_active, first_seen_at DESC);
+CREATE INDEX IF NOT EXISTS job_postings_india_feed_idx ON job_postings (india_confirmed, review_status, is_active, first_seen_at DESC);
 CREATE INDEX IF NOT EXISTS job_postings_skills_gin_idx ON job_postings USING GIN (skills);
 CREATE INDEX IF NOT EXISTS job_sources_job_idx ON job_sources (job_posting_id, source_site);
 CREATE INDEX IF NOT EXISTS job_recommendations_user_score_idx ON job_recommendations (user_id, match_score DESC);

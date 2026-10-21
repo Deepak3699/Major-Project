@@ -1,0 +1,32 @@
+{
+  "created_at": "2026-10-20T19:10:53.449Z",
+  "source": "0xnbk/resume-domain-classifier-v1-en · cleaned text-pair relevance labels",
+  "license": "Apache-2.0",
+  "dataset_url": "https://huggingface.co/datasets/0xnbk/resume-domain-classifier-v1-en",
+  "task": "same-domain vs cross-domain resume/job pair classification",
+  "limitations": [
+    "The dataset author describes resume text as synthetic and job text as derived from a public job-posting dataset.",
+    "Held-out metrics measure domain-pair classification, not interview probability, hiring success, or this platform users’ outcomes.",
+    "The user-facing match percentage combines learned relevance with the transparent profile/job fit score."
+  ],
+  "cleaned_rows": 37739,
+  "removed_rows": 1,
+  "duplicate_rows": 0,
+  "class_counts": {
+    "negative": 18856,
+    "positive": 18883
+  },
+  "training_examples": 30192,
+  "validation_examples": 7547,
+  "architecture": "9-16-8-1 feed-forward neural ranker (ReLU, sigmoid)",
+  "validation_metrics": {
+    "threshold": 0.5,
+    "accuracy": 0.6133563005167616,
+    "precision": 0.7603155339805825,
+    "recall": 0.3318326271186441,
+    "f1": 0.4620206489675517,
+    "roc_auc": 0.6410959853633214,
+    "log_loss": 0.6448815846048351
+  },
+  "processed_features_file": "resume-job-features.csv"
+}

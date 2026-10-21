@@ -4,7 +4,7 @@ import { getDB } from '../utils/db';
 import { authenticate, authorize } from '../middleware/auth';
 import { prepareApplicationDocuments } from '../utils/application-prep';
 import { scoreJobMatch, scoreJobTrust } from '../utils/job-intelligence';
-import { createBootstrapSamples, loadRecommendationModel, recommendationFeatures, scoreRecommendation, trainRecommendationModel } from '../utils/recommendation-model';
+import { loadRecommendationModel, recommendationFeatures, recommendationModelStatus, scoreRecommendation, setRecommendationModelEnabled, trainRecommendationModel } from '../utils/recommendation-model';
 import { logAuditEvent } from '../utils/audit';
 import { comparePassword } from '../utils/crypto';
 
@@ -62,7 +62,8 @@ function profileCompletion(profile: any): number {
 }
 
 async function fetchJob(sql: ReturnType<typeof getDB>, id: string, includeUnpublished = false) {
-  const gate = includeUnpublished ? '' : "AND jp.review_status = 'published' AND jp.is_active = true AND jp.trust_score > 70";
+  const gate = includeUnpublished ? '' : `AND jp.review_status = 'published' AND jp.is_active = true AND jp.trust_score >= 70
+    AND jp.india_confirmed = true AND length(btrim(COALESCE(NULLIF(jp.description,''),jp.about_job,''))) >= 80`;
   const candidateColumns = `
     jp.id, jp.title, jp.description, jp.about_job, jp.experience_level, jp.salary_range,
     jp.location, jp.location_type, jp.employment_type, jp.apply_url, jp.job_url,
@@ -92,11 +93,50 @@ function withTrust(job: any) {
 
 async function loadProfile(sql: ReturnType<typeof getDB>, userId: string) {
   const rows = await sql.unsafe('SELECT * FROM candidate_profiles WHERE user_id = $1', [userId]);
-  return rows[0] as any;
+  const profile = rows[0] as any;
+  if (!profile) return null;
+  return {
+    ...profile,
+    experience: parseJsonArray(profile.experience),
+    projects: parseJsonArray(profile.projects),
+  };
+}
+
+function parseJsonArray(value: unknown): any[] {
+  let parsed = value;
+  // Older saves were JSON strings inside JSONB. Parse those once on read so
+  // Resume Studio and matching still receive arrays instead of string values.
+  for (let attempt = 0; attempt < 2 && typeof parsed === 'string'; attempt += 1) {
+    try { parsed = JSON.parse(parsed); } catch { return []; }
+  }
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function scoreCandidateJob(profile: any, job: any) {
+  const match = scoreJobMatch(profile, job);
+  const trustedJob = withTrust(job);
+  const modelScore = scoreRecommendation(recommendationFeatures(match.breakdown, trustedJob.trust_score));
+  const matchScore = Math.round(match.score * 0.75 + modelScore * 0.25);
+  return {
+    ...trustedJob,
+    match_score: matchScore,
+    model_score: modelScore,
+    score_breakdown: match.breakdown,
+    match_reasons: match.reasons,
+    missing_skills: match.missing_skills,
+    matched_skills: match.matched_skills,
+  };
 }
 
 export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('preHandler', authenticate);
+
+  // Restore the administrator's model switch whenever the API process starts.
+  try {
+    const persisted = await getDB().unsafe("SELECT value FROM settings WHERE key='recommendation_model_runtime'");
+    const enabled = (persisted[0] as any)?.value?.enabled;
+    if (enabled === false) setRecommendationModelEnabled(false);
+  } catch { /* older installations may not have the settings table until migrations run */ }
 
   fastify.get('/profile', async (request, reply) => {
     if (!isCandidate(request, reply)) return;
@@ -133,10 +173,15 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
       userId, profile.full_name, profile.headline, profile.contact_email || null, profile.phone || null,
       profile.location, profile.summary, profile.skills, profile.preferred_roles, profile.preferred_locations,
       profile.remote_preference, profile.experience_years, profile.education_level, profile.salary_min ?? null,
-      profile.salary_currency, JSON.stringify(profile.experience), JSON.stringify(profile.projects), profile.certifications,
+      profile.salary_currency, sql.json(profile.experience), sql.json(profile.projects), profile.certifications,
       profile.resume_filename || null,
     ]);
-    return { profile: rows[0], completion: profileCompletion(rows[0]), confirmed_at: rows[0]?.profile_confirmed_at };
+    const savedProfile = {
+      ...(rows[0] as any),
+      experience: parseJsonArray((rows[0] as any)?.experience),
+      projects: parseJsonArray((rows[0] as any)?.projects),
+    };
+    return { profile: savedProfile, completion: profileCompletion(savedProfile), confirmed_at: savedProfile?.profile_confirmed_at };
   });
 
   fastify.delete('/account', async (request, reply) => {
@@ -199,7 +244,7 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parsed.success) return reply.status(400).send({ error: 'Invalid search filters', details: parsed.error.issues });
     const q = parsed.data;
     const values: any[] = [q.days];
-    const where = ["jp.is_active = true", "jp.review_status = 'published'", "jp.trust_score > 70", "COALESCE(jp.posted_at, jp.first_seen_at) >= NOW() - ($1 * INTERVAL '1 day')"];
+    const where = ["jp.is_active = true", "jp.review_status = 'published'", "jp.trust_score >= 70", "jp.india_confirmed = true", "length(btrim(COALESCE(NULLIF(jp.description,''),jp.about_job,''))) >= 80", "COALESCE(jp.posted_at, jp.first_seen_at) >= NOW() - ($1 * INTERVAL '1 day')"];
     if (q.q) {
       values.push(`%${q.q}%`);
       where.push(`(jp.title ILIKE $${values.length} OR c.name ILIKE $${values.length} OR COALESCE(jp.description,'') ILIKE $${values.length} OR array_to_string(jp.skills, ' ') ILIKE $${values.length})`);
@@ -229,7 +274,8 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
        ORDER BY ${order}
        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
     `, [...values, q.limit, offset]);
-    const data = (jobs as any[]).map(withTrust);
+    const profile = await loadProfile(getDB(), currentUser(request).id);
+    const data = (jobs as any[]).map((job) => profile ? scoreCandidateJob(profile, job) : withTrust(job));
     if (q.sort === 'trust') data.sort((left, right) => right.trust_score - left.trust_score || new Date(right.posted_at || right.first_seen_at).getTime() - new Date(left.posted_at || left.first_seen_at).getTime());
     return { data, pagination: { page: q.page, limit: q.limit, total, pages: Math.ceil(total / q.limit) }, filters: q };
   });
@@ -245,7 +291,8 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
         FROM job_postings jp JOIN companies c ON c.id=jp.company_id
         LEFT JOIN hr_contacts h ON h.id=jp.hr_contact_id AND h.contact_source='direct_extracted'
           AND h.confidence_score>=85 AND h.contact_url ~* '^https://'
-       WHERE jp.is_active=true AND jp.review_status='published' AND jp.trust_score > 70
+       WHERE jp.is_active=true AND jp.review_status='published' AND jp.trust_score >= 70
+         AND jp.india_confirmed=true AND length(btrim(COALESCE(NULLIF(jp.description,''),jp.about_job,''))) >= 80
        ORDER BY jp.id,COALESCE(jp.posted_at,jp.first_seen_at) DESC
        LIMIT 300
     `);
@@ -258,7 +305,8 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
     if (!params.success) return reply.status(400).send({ error: 'Invalid job ID' });
     const job = await fetchJob(getDB(), params.data.id);
     if (!job) return reply.status(404).send({ error: 'Job not found' });
-    return { job: withTrust(job) };
+    const profile = await loadProfile(getDB(), currentUser(request).id);
+    return { job: profile ? scoreCandidateJob(profile, job) : withTrust(job) };
   });
 
   fastify.get('/recommendations', async (request, reply) => {
@@ -275,27 +323,19 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
              c.name AS company_name, c.domain AS company_domain, c.website_url AS company_website,
              c.industry AS company_industry
         FROM job_postings jp JOIN companies c ON c.id = jp.company_id
-       WHERE jp.is_active = true AND jp.review_status = 'published' AND jp.trust_score > 70
+       WHERE jp.is_active = true AND jp.review_status = 'published' AND jp.trust_score >= 70
+         AND jp.india_confirmed = true AND length(btrim(COALESCE(NULLIF(jp.description,''),jp.about_job,''))) >= 80
        ORDER BY COALESCE(jp.posted_at, jp.first_seen_at) DESC LIMIT 250
     `);
-    const data = (rows as any[]).map((job) => {
-      const match = scoreJobMatch(profile, job);
-      const trustedJob = withTrust(job);
-      const modelFeatures = recommendationFeatures(match.breakdown, trustedJob.trust_score);
-      // Keep the trained DNN as the personalized ranker while anchoring its
-      // bootstrap score to the transparent profile/job fit calculation. Until
-      // real application outcomes are available, the neural score alone can be
-      // overconfident or too compressed around the 70-point display cutoff.
-      const neuralScore = scoreRecommendation(modelFeatures);
-      const matchScore = Math.round(neuralScore * 0.6 + match.score * 0.4);
-      return { ...trustedJob, match_score: matchScore, neural_score: neuralScore, score_breakdown: match.breakdown, match_reasons: match.reasons, missing_skills: match.missing_skills, matched_skills: match.matched_skills };
-    }).sort((a, b) => b.match_score - a.match_score || new Date(b.posted_at || b.first_seen_at).getTime() - new Date(a.posted_at || a.first_seen_at).getTime());
+    const data = (rows as any[]).map((job) => scoreCandidateJob(profile, job))
+      .sort((a, b) => b.match_score - a.match_score || new Date(b.posted_at || b.first_seen_at).getTime() - new Date(a.posted_at || a.first_seen_at).getTime());
     const top = data.filter((job) => job.match_score >= 70).slice(0, 50);
     if (top.length) {
       const values: any[] = [userId];
       const tuples = top.map((job, index) => {
         const base = index * 5 + 2;
-        values.push(job.id, job.match_score, JSON.stringify(job.score_breakdown), JSON.stringify(job.match_reasons), job.missing_skills);
+        const sql = getDB();
+        values.push(job.id, job.match_score, sql.json(job.score_breakdown), sql.json(job.match_reasons), job.missing_skills);
         return `($1,$${base},$${base + 1},$${base + 2}::jsonb,$${base + 3}::jsonb,$${base + 4},now())`;
       });
       await getDB().unsafe(`
@@ -306,7 +346,7 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
           reasons = EXCLUDED.reasons, missing_skills = EXCLUDED.missing_skills, calculated_at = now()
       `, values);
     }
-    let modelName = 'jobpilot-dnn-v1';
+    let modelName = 'hiregen-dnn-v2';
     try { modelName = loadRecommendationModel().format; } catch { modelName = 'weighted_fallback'; }
     return { needs_profile: false, model: modelName, threshold: 70, data: top };
   });
@@ -317,7 +357,7 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
     const sql = getDB();
     const profile = await loadProfile(sql, userId);
     const applications = await sql.unsafe('SELECT status, COUNT(*) AS count FROM applications WHERE user_id = $1 GROUP BY status', [userId]);
-    const fresh = await sql.unsafe("SELECT COUNT(*) AS count FROM job_postings WHERE is_active = true AND review_status = 'published' AND trust_score > 70 AND COALESCE(posted_at,first_seen_at) >= NOW() - INTERVAL '7 days'");
+    const fresh = await sql.unsafe("SELECT COUNT(*) AS count FROM job_postings WHERE is_active = true AND review_status = 'published' AND trust_score >= 70 AND india_confirmed = true AND length(btrim(COALESCE(NULLIF(description,''),about_job,''))) >= 80 AND COALESCE(posted_at,first_seen_at) >= NOW() - INTERVAL '7 days'");
     const totalApps = (applications as any[]).reduce((sum, row) => sum + Number(row.count), 0);
     const byStatus = (applications as any[]).reduce((out: Record<string, number>, row) => { out[row.status] = Number(row.count); return out; }, {});
     return { profile_completion: profileCompletion(profile), has_profile: Boolean(profile), fresh_jobs_7d: Number((fresh[0] as any)?.count || 0), application_total: totalApps, application_statuses: byStatus };
@@ -462,12 +502,41 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
       sql.unsafe('SELECT COUNT(*) AS total FROM candidate_feedback WHERE moderation_status=\'pending\''),
     ]);
     const stages = (results[2] as any[]).reduce((acc: Record<string, number>, row) => { acc[row.status] = Number(row.count); return acc; }, {});
-    let recommendationModel: any = { status: 'fallback', architecture: '9-14-8-1' };
+    let recommendationModel: any = recommendationModelStatus();
     try {
       const model = loadRecommendationModel();
-      recommendationModel = { status: 'ready', architecture: '9-14-8-1', created_at: model.created_at, training_source: model.training_source, training_examples: model.training_examples };
+      recommendationModel = { ...recommendationModel, created_at: model.created_at, training_source: model.training_source, training_task: model.training_task };
     } catch { /* keep the dashboard healthy if an artifact is missing */ }
     return { jobs: results[0][0], candidates: Number((results[1][0] as any)?.total || 0), applications: stages, sources: results[3], feedback_pending: Number((results[4][0] as any)?.total || 0), recommendation_model: recommendationModel };
+  });
+
+  fastify.get('/admin/recommendation-model', { preValidation: [authorize(['admin'])] }, async (_request, reply) => {
+    const saved = await getDB().unsafe("SELECT value FROM settings WHERE key='recommendation_model_runtime'");
+    const enabled = (saved[0] as any)?.value?.enabled;
+    if (typeof enabled === 'boolean' && enabled !== recommendationModelStatus().enabled) {
+      try { setRecommendationModelEnabled(enabled); }
+      catch { /* status will report the artifact/load error */ }
+    }
+    return reply.send(recommendationModelStatus());
+  });
+
+  fastify.put('/admin/recommendation-model', { preValidation: [authorize(['admin'])] }, async (request, reply) => {
+    if (!isAdmin(request, reply)) return;
+    const parsed = z.object({ enabled: z.boolean() }).safeParse(request.body);
+    if (!parsed.success) return reply.status(400).send({ error: 'Expected enabled: true or false' });
+    const { enabled } = parsed.data;
+    try {
+      if (enabled) loadRecommendationModel();
+      const userId = currentUser(request).id;
+      await getDB().unsafe(`INSERT INTO settings (key,value,updated_by,updated_at)
+        VALUES ('recommendation_model_runtime',$1::jsonb,$2,NOW())
+        ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_by=EXCLUDED.updated_by,updated_at=NOW()`, [JSON.stringify({ enabled }), userId]);
+      setRecommendationModelEnabled(enabled);
+      await logAuditEvent({ user_id: userId, action: enabled ? 'recommendation_model_started' : 'recommendation_model_stopped', resource_type: 'recommendation_model', details: { enabled } });
+      return reply.send(recommendationModelStatus());
+    } catch (error) {
+      return reply.status(409).send({ error: error instanceof Error ? error.message : 'Could not change model state' });
+    }
   });
 
   fastify.post('/admin/recommendations/train', { preValidation: [authorize(['admin'])] }, async (request, reply) => {
@@ -483,22 +552,24 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
         JOIN candidate_profiles cp ON cp.user_id=a.user_id
         JOIN job_postings jp ON jp.id=a.job_posting_id
         JOIN companies c ON c.id=jp.company_id
-       WHERE a.status IN ('SAVED','RECOMMENDED','READY_TO_APPLY','APPLIED','SCREENING','INTERVIEW','OFFER','JOINED','WITHDRAWN')
+       WHERE a.status IN ('REJECTED','INTERVIEW','OFFER','JOINED')
        ORDER BY a.updated_at DESC LIMIT 5000
     `);
-    const outcomes = (rows as any[]).filter((row) => row.application_status === 'WITHDRAWN' || ['INTERVIEW','OFFER','JOINED'].includes(row.application_status));
-    const labels = new Set(outcomes.map((row) => row.application_status === 'WITHDRAWN' ? 0 : 1));
-    if (outcomes.length < 20 || labels.size < 2) {
-      return reply.status(409).send({ error: `The model needs at least 20 interview/offer/joined or withdrawn outcomes before it can learn from real platform activity. Current usable outcomes: ${outcomes.length}.` });
+    const outcomes = (rows as any[]).filter((row) => row.application_status === 'REJECTED' || ['INTERVIEW','OFFER','JOINED'].includes(row.application_status));
+    const labels = new Set(outcomes.map((row) => row.application_status === 'REJECTED' ? 0 : 1));
+    const positiveCount = outcomes.filter((row) => row.application_status !== 'REJECTED').length;
+    const negativeCount = outcomes.length - positiveCount;
+    if (outcomes.length < 30 || labels.size < 2 || positiveCount < 5 || negativeCount < 5) {
+      return reply.status(409).send({ error: `The model needs at least 30 reviewed outcomes and at least 5 examples each of REJECTED and INTERVIEW/OFFER/JOINED. Current usable outcomes: ${outcomes.length} (${negativeCount} rejected, ${positiveCount} positive).` });
     }
     const outcomeSamples = outcomes.map((row) => {
       const job = { ...row, skills: row.job_skills, location: row.job_location, salary_min: row.job_salary_min, salary_currency: row.job_salary_currency };
       const fit = scoreJobMatch(row, job);
       const trust = scoreJobTrust(job);
-      return { features: recommendationFeatures(fit.breakdown, trust.score), label: (row.application_status === 'WITHDRAWN' ? 0 : 1) as 0 | 1 };
+      return { features: recommendationFeatures(fit.breakdown, trust.score), label: (row.application_status === 'REJECTED' ? 0 : 1) as 0 | 1 };
     });
-    const model = trainRecommendationModel([...createBootstrapSamples(1200), ...outcomeSamples], `bootstrap_plus_${outcomeSamples.length}_real_application_outcomes`);
-    return { trained: true, model: model.format, training_examples: model.training_examples, training_source: model.training_source, created_at: model.created_at };
+    const model = trainRecommendationModel(outcomeSamples, `platform_application_outcomes_${outcomeSamples.length}`, undefined, 'REJECTED vs INTERVIEW/OFFER/JOINED application outcomes');
+    return { trained: true, model: model.format, architecture: model.architecture, training_examples: model.training_examples, validation_examples: model.validation_examples, metrics: model.metrics, training_source: model.training_source, training_task: model.training_task, created_at: model.created_at };
   });
 
   fastify.get('/admin/jobs', { preValidation: [authorize(['admin'])] }, async (request, reply) => {
@@ -526,7 +597,7 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
     const trust = scoreJobTrust(job);
     const result = await sql.begin(async (tx: any) => {
       const rows = await tx.unsafe('UPDATE job_postings SET review_status=$2,trust_score=$3,trust_band=$4 WHERE id=$1 RETURNING id,review_status,trust_score,trust_band', [job.id,body.data.review_status,trust.score,trust.band]);
-      await tx.unsafe('INSERT INTO job_verifications (job_posting_id,verifier_id,trust_score,trust_band,evidence,review_status) VALUES ($1,$2,$3,$4,$5::jsonb,$6)', [job.id,currentUser(request).id,trust.score,trust.band,JSON.stringify(trust.evidence),body.data.review_status]);
+      await tx.unsafe('INSERT INTO job_verifications (job_posting_id,verifier_id,trust_score,trust_band,evidence,review_status) VALUES ($1,$2,$3,$4,$5::jsonb,$6)', [job.id,currentUser(request).id,trust.score,trust.band,getDB().json(trust.evidence),body.data.review_status]);
       return rows[0];
     });
     await logAuditEvent({

@@ -1,7 +1,11 @@
-# Candidate-to-job ranker
+# HireGen recommendation model
 
-`model.json` is the trained bootstrap artifact for the `jobpilot-dnn-v1` dense neural ranker. It accepts nine normalized fit dimensions (skills, experience, education, location, preferred role, projects, salary, work preferences, and listing quality) and passes them through two hidden layers (14 and 8 units) before producing a 0–100 ranking score.
+model.json is a trained dense neural ranker with the architecture 9 → 16 → 8 → 1. It consumes the same nine normalized dimensions produced by HireGen's profile-to-job matcher: skills, experience, education, location, role, projects, salary, preferences, and listing quality.
 
-The bootstrap model is trained from generated weak labels because a new installation does not yet have reliable application outcomes. Its metadata records that source. It must not be presented as a production-validated predictor. The admin retraining endpoint adds real interview/offer/joined and withdrawn outcomes only after there are at least 20 examples from both classes; those features contain fit scores, not resume text or contact details.
+Training uses cleaned resume/job pairs from the Apache-2.0 0xnbk/resume-domain-classifier-v1-en dataset. The training script holds out a deterministic, stratified 20% split and records accuracy, precision, recall, F1, ROC-AUC, and log loss in the artifact. These metrics describe same-domain vs cross-domain pair classification. They are not hiring probability or user-match accuracy.
 
-Regenerate the bootstrap artifact with `npm run model:train` from `packages/api`. The runtime model artifact is persisted in this directory by Docker Compose.
+HireGen's user-facing match score combines the transparent fit score (75%) and model score (25%). The For You page shows jobs at 70% match or higher; Discover jobs retains other trusted Indian listings and displays their scores as well. The 70% value is a profile/job match threshold, not the model's held-out classification accuracy. When enough platform outcomes exist, an administrator can retrain from rejected and interview/offer/joined applications. A user withdrawing an application is not treated as evidence that the job was a poor fit.
+
+From packages/api, run npm run model:train. The first run downloads the public CSV to the ignored data/raw/ directory, writes cleaned numeric features and a training report into the ignored data/processed/ directory, and updates this model artifact.
+
+See packages/api/data/README.md for provenance, cleaning details, and limitations.

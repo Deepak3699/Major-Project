@@ -39,6 +39,24 @@ const KNOWN_SKILLS = [
   'kubernetes', 'git', 'html', 'css', 'tailwind', 'next.js', 'fastapi', 'django', 'flask',
   'spring boot', 'machine learning', 'deep learning', 'data analysis', 'excel', 'power bi',
   'tableau', 'figma', 'ui/ux', 'communication', 'salesforce', 'linux', 'rest api', 'graphql',
+  'data science', 'data engineering', 'statistics', 'natural language processing', 'computer vision',
+  'pytorch', 'tensorflow', 'scikit-learn', 'pandas', 'numpy', 'spark', 'airflow', 'etl', 'data modeling',
+  'cybersecurity', 'network security', 'penetration testing', 'incident response', 'information security',
+  'project management', 'agile', 'scrum', 'product management', 'business analysis', 'requirements gathering',
+  'customer service', 'customer support', 'account management', 'lead generation', 'sales', 'sales operations',
+  'marketing', 'digital marketing', 'content marketing', 'social media', 'seo', 'sem', 'email marketing', 'copywriting',
+  'human resources', 'recruiting', 'talent acquisition', 'onboarding', 'employee relations', 'benefits administration',
+  'accounting', 'gaap', 'ifrs', 'financial analysis', 'financial modeling', 'budgeting', 'payroll', 'accounts payable',
+  'accounts receivable', 'auditing', 'audit', 'sox', 'tax preparation', 'compliance', 'investment', 'portfolio management',
+  'banking', 'credit analysis', 'quickbooks', 'healthcare administration', 'patient care', 'nursing', 'clinical research',
+  'medical records', 'electronic health records', 'ehr', 'emr', 'triage', 'infection control', 'care coordination',
+  'vital signs', 'hipaa', 'pharmacy', 'cpr', 'first aid', 'diagnosis', 'surgery', 'icu', 'emergency room',
+  'teaching', 'curriculum development', 'lesson planning', 'classroom management', 'student assessment',
+  'instructional design', 'learning management systems', 'legal research', 'contract drafting', 'litigation', 'paralegal',
+  'case management', 'supply chain', 'operations', 'manufacturing', 'quality control', 'safety', 'logistics',
+  'inventory management', 'cad', 'autocad', 'electrical engineering', 'mechanical engineering', 'blueprint reading',
+  'user research', 'prototyping', 'design systems', 'adobe photoshop', 'adobe illustrator', 'graphic design',
+  'figma', 'wireframing', 'usability testing', 'powerpoint', 'microsoft office', 'writing', 'research', 'documentation',
 ];
 
 function normalized(value: unknown): string {
@@ -56,8 +74,12 @@ function unique(values: string[]): string[] {
 function jobSkills(job: JobForMatching): string[] {
   const provided = list(job.skills);
   if (provided.length) return unique(provided);
-  const text = normalized(`${job.title || ''} ${job.description || ''} ${job.about_job || ''}`);
-  return KNOWN_SKILLS.filter((skill) => text.includes(normalized(skill)));
+  return extractKnownSkills(`${job.title || ''} ${job.description || ''} ${job.about_job || ''}`);
+}
+
+export function extractKnownSkills(text: string): string[] {
+  const value = normalized(text);
+  return unique(KNOWN_SKILLS.filter((skill) => value.includes(normalized(skill))));
 }
 
 function containsOne(text: string, values: string[]): boolean {
@@ -169,12 +191,27 @@ export function scoreJobTrust(job: any): TrustResult {
   const evidence: TrustResult['evidence'] = [];
   const source = normalized(job.source_site);
   const companyDomain = normalized(job.company_domain).replace(/^www\./, '');
-  const jobHost = normalized((() => { try { return new URL(job.apply_url || job.job_url).hostname; } catch { return ''; } })()).replace(/^www\./, '');
+  let jobHost = '';
+  let jobPath = '';
+  try {
+    const parsed = new URL(job.apply_url || job.job_url);
+    jobHost = normalized(parsed.hostname).replace(/^www\./, '');
+    jobPath = parsed.pathname.toLowerCase();
+  } catch { /* source URL is incomplete */ }
   const official = /greenhouse|lever|workday|ashby|smartrecruiters|bamboohr|teamtailor|recruitee|breezy|company career|official/.test(source) || Boolean(companyDomain && jobHost === companyDomain);
   evidence.push({ signal: 'Official source', points: official ? 30 : 0, detail: official ? 'Company career domain or recognized ATS source' : `Collected from ${job.source_site || 'an external source'}` });
 
   const domainMatches = Boolean(companyDomain && jobHost && (jobHost === companyDomain || jobHost.endsWith(`.${companyDomain}`)));
-  evidence.push({ signal: 'Company verification', points: domainMatches ? 20 : companyDomain ? 10 : 0, detail: domainMatches ? 'Application link matches the company domain' : companyDomain ? 'A company domain is available but the application host does not match' : 'Company domain is not available' });
+  const atsSourceSlug = source.match(/(?:greenhouse\.io|lever\.co|workday\.com|ashbyhq\.com|smartrecruiters\.com|bamboohr\.com|teamtailor\.com|recruitee\.com|breezy\.hr)\/([a-z0-9][a-z0-9-]*)/)?.[1] || '';
+  const atsHosts = ['greenhouse.io', 'lever.co', 'myworkdayjobs.com', 'workday.com', 'ashbyhq.com', 'smartrecruiters.com', 'bamboohr.com', 'teamtailor.com', 'recruitee.com', 'breezy.hr'];
+  const companySlug = normalized(job.company_name).replace(/[^a-z0-9]/g, '');
+  const atsCompanyVerified = Boolean(
+    atsSourceSlug && atsSourceSlug.replace(/[^a-z0-9]/g, '') === companySlug &&
+    atsHosts.some((suffix) => jobHost === suffix || jobHost.endsWith(`.${suffix}`)) &&
+    jobPath.split('/').includes(atsSourceSlug),
+  );
+  const companyVerified = domainMatches || atsCompanyVerified;
+  evidence.push({ signal: 'Company verification', points: companyVerified ? 20 : companyDomain ? 10 : 0, detail: domainMatches ? 'Application link matches the company domain' : atsCompanyVerified ? 'Official ATS board slug matches the company' : companyDomain ? 'A company domain is available but the application host does not match' : 'Company domain is not available' });
 
   const applyUrl = String(job.apply_url || job.job_url || '');
   let validUrl = false;

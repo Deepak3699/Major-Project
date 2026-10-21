@@ -28,7 +28,9 @@ REQUEST_QUEUE = "scrape_queue:requests"
 _ENABLED = os.environ.get("ENABLE_DAILY_SCHEDULER", "1") != "0"
 _HOUR = int(os.environ.get("DAILY_SCRAPE_HOUR", "3"))
 _MINUTE = int(os.environ.get("DAILY_SCRAPE_MINUTE", "0"))
-_CATCHUP_AT_BOOT = os.environ.get("DAILY_SCRAPE_CATCHUP", "0") == "1"
+# A fresh machine/container boot should enqueue the daily job once. Redis owns
+# the claim so a restart or a second worker cannot fan out duplicate fleets.
+_CATCHUP_AT_BOOT = os.environ.get("DAILY_SCRAPE_CATCHUP", "1") == "1"
 _LEGACY_OUTREACH_ENABLED = os.environ.get("ENABLE_LEGACY_OUTREACH_PIPELINE", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 # Source toggles (Settings UI -> settings.sources_enabled): the daily fleet and
@@ -216,9 +218,10 @@ async def _enqueue(redis_client, sources: list[str] | None = None) -> str:
 
 
 async def _claim_day(redis_client, when: datetime) -> bool:
-    """Exactly-once guard for the daily discovery run.
+    """Exactly-once guard for the India-local daily discovery run.
 
-    Uses a Redis SET-NX keyed by UTC date (TTL 48h). If the key already exists,
+    Uses a Redis SET-NX keyed by the Asia/Kolkata calendar date (TTL 48h). If
+    the key already exists,
     another worker (or a same-day restart) already claimed today, so we skip —
     running the daily job twice must not double-discover. Idempotency lives in
     Redis (shared across workers), not in-process state.
@@ -227,7 +230,8 @@ async def _claim_day(redis_client, when: datetime) -> bool:
     blind would risk two schedulers each running a full fleet; a skipped day is
     recoverable via the next tick / boot catch-up, a duplicate fleet is not.
     """
-    key = f"daily_scrape:claimed:{when:%Y-%m-%d}"
+    india_day = (when + timedelta(hours=5, minutes=30)).date()
+    key = f"daily_scrape:claimed:{india_day:%Y-%m-%d}"
     try:
         return bool(await redis_client.set(key, "1", nx=True, ex=48 * 3600))
     except Exception as e:  # noqa: BLE001
@@ -243,10 +247,21 @@ async def daily_scrape_scheduler(redis_client, sources: list[str] | None = None,
         return
 
     if _CATCHUP_AT_BOOT:
+        boot_day = datetime.now(timezone.utc)
         try:
-            run_id = await _enqueue(redis_client, await load_enabled_sources(db_pool))
-            logger.info(f"Boot catch-up scrape enqueued: {run_id}")
+            if await _claim_day(redis_client, boot_day):
+                run_id = await _enqueue(redis_client, await load_enabled_sources(db_pool))
+                logger.info(f"Boot catch-up scrape enqueued: {run_id}")
+            else:
+                logger.info("Boot catch-up skipped: today's daily scrape is already claimed")
         except Exception as e:  # noqa: BLE001
+            # The claim is only a deduplication lock. Release it if enqueueing
+            # failed so this process can recover on its next boot/run.
+            try:
+                india_day = (boot_day + timedelta(hours=5, minutes=30)).date()
+                await redis_client.delete(f"daily_scrape:claimed:{india_day:%Y-%m-%d}")
+            except Exception:  # noqa: BLE001
+                pass
             logger.warning(f"Boot catch-up enqueue failed: {e}")
 
     # Sweep once at boot too, so leads left under-enriched by a previous run (or

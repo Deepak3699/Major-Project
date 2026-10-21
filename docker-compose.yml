@@ -36,6 +36,11 @@ services:
     ports:
       - "${REDIS_PORT:-6381}:6379"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   api:
     build:
@@ -49,13 +54,22 @@ services:
       HOST: 0.0.0.0
       WORKERS_URL: http://workers:8000
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./packages/api/src/models/recommender:/app/src/models/recommender
+      - ./packages/api/data:/app/data
     ports:
       - "${API_PORT:-3001}:3000"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   web:
     build:
@@ -64,8 +78,14 @@ services:
     ports:
       - "${WEB_PORT:-5174}:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   workers:
     build:
@@ -77,14 +97,27 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/leads_db
       REDIS_URL: redis://redis:6379
       REACHER_URL: http://reacher:3000
+      ENABLE_DAILY_SCHEDULER: ${ENABLE_DAILY_SCHEDULER:-1}
+      DAILY_SCRAPE_CATCHUP: ${DAILY_SCRAPE_CATCHUP:-1}
+      DAILY_SCRAPE_HOUR: ${DAILY_SCRAPE_HOUR:-3}
+      DAILY_SCRAPE_MINUTE: ${DAILY_SCRAPE_MINUTE:-0}
+      SCRAPER_MAX_CONCURRENCY: ${SCRAPER_MAX_CONCURRENCY:-5}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "${WORKERS_PORT:-8011}:8000"
     restart: unless-stopped
     volumes:
       - ./packages/scrapers:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   reacher:
     image: reacherhq/check-if-email-exists:latest
@@ -110,7 +143,8 @@ services:
     ports:
       - "${N8N_PORT:-5679}:5678"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - n8n-data:/home/node/.n8n
     restart: unless-stopped

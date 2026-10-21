@@ -9,6 +9,7 @@ module.exports = {
     // Jest applies these in insertion order, so the exact-match stub for the
     // Vite-only `import.meta.env` reader has to precede the catch-all alias.
     '^@/lib/env$': '<rootDir>/src/test/env-stub.ts',
+    '^.+\\.svg$': '<rootDir>/src/test/svg-stub.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],

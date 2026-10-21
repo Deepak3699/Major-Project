@@ -5,6 +5,7 @@ import { WifiOff } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { CommandPalette } from "@/components/CommandPalette";
+import { useAuthStore } from "@/stores/auth";
 
 const Layout: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -12,6 +13,7 @@ const Layout: React.FC = () => {
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const location = useLocation();
+  const isCandidate = useAuthStore((state) => state.user?.role === "candidate");
 
   useEffect(() => {
     const goOffline = () => setOnline(false);
@@ -25,7 +27,7 @@ const Layout: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className={`flex h-screen overflow-hidden bg-background ${isCandidate ? "candidate-workspace" : ""}`}>
       <Sidebar drawerOpen={drawerOpen} onDrawerClose={() => setDrawerOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setDrawerOpen(true)} />

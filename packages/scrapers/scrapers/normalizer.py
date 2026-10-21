@@ -11,6 +11,8 @@ import asyncio
 import logging
 import hashlib
 import re
+from html import unescape
+from html.parser import HTMLParser
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlparse
@@ -21,7 +23,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Immutable-raw-snapshot versioning (Track 3): bump when normalize_lead's
 # output contract changes so reprocessing can tell stale snapshots apart.
-PARSER_VERSION = "5"
+PARSER_VERSION = "7"
 
 
 def content_hash_of(raw_payload: Any) -> str:
@@ -53,21 +55,112 @@ class NormalizationError(Exception):
     pass
 
 
+class _JobDescriptionHTMLParser(HTMLParser):
+    """Convert job-description markup into readable text without script/style noise."""
+    BLOCK_TAGS = {"p", "div", "br", "li", "ul", "ol", "h1", "h2", "h3", "h4", "section", "tr"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.hidden_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style", "noscript"}:
+            self.hidden_depth += 1
+        elif not self.hidden_depth and tag in self.BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style", "noscript"} and self.hidden_depth:
+            self.hidden_depth -= 1
+        elif not self.hidden_depth and tag in self.BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self.hidden_depth:
+            self.parts.append(data)
+
+
+def _description_text(value: Any) -> str:
+    if not isinstance(value, (str, int, float)):
+        return ""
+    source = unescape(str(value)).strip()
+    if not source:
+        return ""
+    parser = _JobDescriptionHTMLParser()
+    try:
+        parser.feed(source)
+        parser.close()
+        source = "".join(parser.parts)
+    except Exception:
+        source = re.sub(r"<[^>]+>", " ", source)
+    source = unescape(source).replace("\xa0", " ")
+    lines = [re.sub(r"\s+", " ", line).strip() for line in source.splitlines()]
+    return "\n".join(line for line in lines if line)
+
+
+def _extract_job_description(raw: dict[str, Any], job_title: str) -> str:
+    """Prefer genuine description fields and ignore scrapers' title-as-description placeholders."""
+    payload = raw.get("raw_payload") if isinstance(raw.get("raw_payload"), dict) else {}
+    nested = payload.get("job") if isinstance(payload.get("job"), dict) else {}
+    keys = ("description", "descriptionPlain", "description_plain", "jobDescription", "job_description", "content", "about_job")
+    candidates = [raw.get(key) for key in keys[:6]]
+    candidates += [payload.get(key) for key in keys]
+    candidates += [nested.get(key) for key in keys]
+    candidates += [raw.get("about_job")]
+    title_key = re.sub(r"[^a-z0-9]+", " ", job_title.lower()).strip()
+    for candidate in candidates:
+        text = _description_text(candidate)
+        if len(text) < 80:
+            continue
+        content_key = re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+        if title_key and (content_key == title_key or (len(content_key) < len(title_key) + 35 and content_key.startswith(title_key))):
+            continue
+        return text[:20000]
+    return ""
+
+
 def _candidate_job_quality(job: dict[str, Any]) -> tuple[int, str, list[dict[str, Any]]]:
     """Score public job-listing evidence with the same 100-point policy as the API."""
     source = str(job.get("source_site") or "").lower()
     company_domain = str(job.get("company_domain") or "").lower().removeprefix("www.").strip("./")
     apply_url = str(job.get("apply_url") or job.get("job_url") or "")
     try:
-        host = (urlparse(apply_url).hostname or "").lower().removeprefix("www.")
+        parsed_apply_url = urlparse(apply_url)
+        host = (parsed_apply_url.hostname or "").lower().removeprefix("www.")
     except ValueError:
+        parsed_apply_url = urlparse("")
         host = ""
     official = bool(re.search(r"greenhouse|lever|workday|ashby|smartrecruiters|bamboohr|teamtailor|recruitee|breezy|company career|official", source)) or bool(company_domain and host == company_domain)
+    # ATS postings live on a shared vendor host, so the employer's domain can
+    # never match the application URL. When the source label, ATS host, and
+    # board slug all agree with the company name, treat that as verified
+    # company identity. Without this, a complete, fresh, official ATS listing
+    # scores exactly 70 and is permanently hidden by the >70 candidate gate.
+    ats_source = re.search(
+        r"(?:greenhouse\.io|lever\.co|workday\.com|ashbyhq\.com|smartrecruiters\.com|"
+        r"bamboohr\.com|teamtailor\.com|recruitee\.com|breezy\.hr)/([a-z0-9][a-z0-9-]*)",
+        source,
+    )
+    ats_hosts = (
+        "greenhouse.io", "lever.co", "myworkdayjobs.com", "workday.com",
+        "ashbyhq.com", "smartrecruiters.com", "bamboohr.com", "teamtailor.com",
+        "recruitee.com", "breezy.hr",
+    )
+    ats_slug = ats_source.group(1) if ats_source else ""
+    company_slug = re.sub(r"[^a-z0-9]", "", str(job.get("company_name") or "").lower())
+    ats_company_verified = bool(
+        ats_slug
+        and re.sub(r"[^a-z0-9]", "", ats_slug) == company_slug
+        and any(host == suffix or host.endswith("." + suffix) for suffix in ats_hosts)
+        and ats_slug in [part.lower() for part in parsed_apply_url.path.split("/") if part]
+    )
     domain_matches = bool(company_domain and host and (host == company_domain or host.endswith("." + company_domain)))
+    company_verified = domain_matches or ats_company_verified
     secure_url = urlparse(apply_url).scheme.lower() == "https"
     evidence = [
         {"signal": "Official source", "points": 30 if official else 0, "detail": "Company career domain or recognized ATS source" if official else f"Collected from {source or 'an external source'}"},
-        {"signal": "Company verification", "points": 20 if domain_matches else (10 if company_domain else 0), "detail": "Application link matches the company domain" if domain_matches else ("A company domain is available but the application host does not match" if company_domain else "Company domain is not available")},
+        {"signal": "Company verification", "points": 20 if company_verified else (10 if company_domain else 0), "detail": "Application link matches the company domain" if domain_matches else ("Official ATS board slug matches the company" if ats_company_verified else ("A company domain is available but the application host does not match" if company_domain else "Company domain is not available"))},
         {"signal": "Application URL", "points": 15 if secure_url else 0, "detail": "A secure HTTPS listing or application link is available" if secure_url else "A secure application link could not be confirmed"},
     ]
     posted_at = job.get("posted_at") or job.get("first_seen_at")
@@ -115,7 +208,7 @@ async def _refresh_candidate_job_quality(sql: asyncpg.Connection, job_id: str) -
         return
     score, band, evidence = _candidate_job_quality(dict(row))
     current_status = row["review_status"]
-    next_status = "published" if current_status == "pending" and score > 70 else current_status
+    next_status = "published" if current_status == "pending" and score >= 70 else current_status
     await sql.execute("UPDATE job_postings SET trust_score=$2,trust_band=$3,review_status=$4 WHERE id=$1", job_id, score, band, next_status)
     if next_status == "published" and current_status == "pending":
         await sql.execute(
@@ -661,12 +754,23 @@ def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
     job_url = (raw.get("job_url") or raw.get("url") or "").strip()
 
     experience_required = raw.get("experience_required") or raw.get("experience", "")
-    about_job = raw.get("about_job") or raw.get("description", "")
+    about_job = _extract_job_description(raw, job_title)
 
-    # Capture location from whichever field the source populated. Do not infer
-    # a location from experience_required; it holds years of experience.
-    location = (raw.get("location") or raw.get("job_location")
-                or raw.get("city") or "").strip()
+    # Capture structured ATS locations as well as plain strings. Do not infer a
+    # location from experience_required; it holds years of experience.
+    raw_location = raw.get("location") or raw.get("job_location") or raw.get("city") or ""
+    if isinstance(raw_location, dict):
+        nested_country = raw_location.get("country") or {}
+        nested_country = nested_country.get("name") or nested_country.get("code") or "" if isinstance(nested_country, dict) else nested_country
+        location = ", ".join(str(value).strip() for value in (
+            raw_location.get("name"), raw_location.get("city"), raw_location.get("state"),
+            raw_location.get("province"), nested_country,
+        ) if value and str(value).strip())
+    else:
+        location = str(raw_location or "").strip()
+    raw_country = raw.get("country") or raw.get("country_code") or ""
+    if isinstance(raw_country, dict):
+        raw_country = raw_country.get("name") or raw_country.get("code") or ""
     apply_url = (raw.get("apply_url") or raw.get("applyUrl") or raw.get("application_url")
                  or raw.get("applicationUrl") or job_url).strip()
     posted_raw = (raw.get("posted_at") or raw.get("date_posted") or raw.get("posted_date")
@@ -789,8 +893,16 @@ def normalize_lead(raw: dict[str, Any]) -> dict[str, Any]:
         "fingerprint": fingerprint,
         "data_quality": data_quality,
         "is_fresher": is_fresher,
-        "is_india": is_india_relevant({"location": location, "about_job": about_job,
-                                       "source_site": source_site}) if legacy_pipeline else True,
+        "country": raw_country,
+        "is_india": is_india_relevant({
+            "location": location,
+            "city": raw.get("city"),
+            "state": raw.get("state"),
+            "country": raw_country,
+            "about_job": about_job,
+            "source_site": source_site,
+            "raw_payload": raw_payload,
+        }),
         "raw_payload": raw_payload,
         "hr_extraction_provenance": hr_extraction_provenance,
         # Who triggered the scrape, so downstream auto-chaining publishes SSE to
@@ -1331,6 +1443,9 @@ def _candidate_safe_payload(value: Any) -> Any:
 
 async def insert_job_posting(sql: asyncpg.Connection, normalized: dict[str, Any]) -> str | None:
     """Candidate-mode ingestion: persist jobs/sources without HR enrichment or leads."""
+    description = str(normalized.get("about_job") or normalized.get("description") or "").strip()
+    if not is_india_relevant(normalized) or len(description) < 80:
+        return None
     fp = normalized["fingerprint"]
     safe = dict(normalized)
     safe["raw_payload"] = _candidate_safe_payload(normalized.get("raw_payload") or {})
@@ -1345,9 +1460,14 @@ async def insert_job_posting(sql: asyncpg.Connection, normalized: dict[str, Any]
             """UPDATE job_postings jp SET last_seen_at=NOW(),
                  raw_payload=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.raw_payload ELSE $1::jsonb END,
                  content_hash=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.content_hash ELSE $2 END,
-                 hr_contact_id=COALESCE(jp.hr_contact_id,$4)
+                 description=CASE WHEN length($5) >= 80 THEN $5 ELSE jp.description END,
+                 about_job=CASE WHEN length($5) >= 80 THEN $5 ELSE jp.about_job END,
+                 hr_contact_id=COALESCE(jp.hr_contact_id,$4),
+                 country='India',india_confirmed=true,
+                 is_active=CASE WHEN NOT jp.india_confirmed AND jp.review_status='rejected' THEN true ELSE jp.is_active END,
+                 review_status=CASE WHEN NOT jp.india_confirmed AND jp.review_status='rejected' THEN 'pending' ELSE jp.review_status END
                WHERE jp.id=$3""",
-            json.dumps(safe["raw_payload"]), content_hash_of(safe["raw_payload"]), recent, contact_id,
+            json.dumps(safe["raw_payload"]), content_hash_of(safe["raw_payload"]), recent, contact_id, description,
         )
         await _record_job_source(sql, str(recent), safe)
         await _refresh_candidate_job_quality(sql, str(recent))
@@ -1362,9 +1482,14 @@ async def insert_job_posting(sql: asyncpg.Connection, normalized: dict[str, Any]
             """UPDATE job_postings jp SET first_seen_at=NOW(),last_seen_at=NOW(),
                  raw_payload=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.raw_payload ELSE $1::jsonb END,
                  content_hash=CASE WHEN EXISTS (SELECT 1 FROM leads l WHERE l.job_posting_id=jp.id) THEN jp.content_hash ELSE $2 END,
-                 hr_contact_id=COALESCE(jp.hr_contact_id,$4)
+                 description=CASE WHEN length($5) >= 80 THEN $5 ELSE jp.description END,
+                 about_job=CASE WHEN length($5) >= 80 THEN $5 ELSE jp.about_job END,
+                 hr_contact_id=COALESCE(jp.hr_contact_id,$4),
+                 country='India',india_confirmed=true,
+                 is_active=CASE WHEN NOT jp.india_confirmed AND jp.review_status='rejected' THEN true ELSE jp.is_active END,
+                 review_status=CASE WHEN NOT jp.india_confirmed AND jp.review_status='rejected' THEN 'pending' ELSE jp.review_status END
                WHERE jp.id=$3""",
-            json.dumps(safe["raw_payload"]), content_hash_of(safe["raw_payload"]), job_id, contact_id,
+            json.dumps(safe["raw_payload"]), content_hash_of(safe["raw_payload"]), job_id, contact_id, description,
         )
         await _record_job_source(sql, str(job_id), safe)
         await _refresh_candidate_job_quality(sql, str(job_id))
@@ -1398,7 +1523,12 @@ async def insert_job_posting(sql: asyncpg.Connection, normalized: dict[str, Any]
         contact_id = await save_public_hr_contact(sql, safe, str(company_id))
         if contact_id:
             await sql.execute("UPDATE job_postings SET hr_contact_id=$2 WHERE id=$1 AND hr_contact_id IS NULL", job_id, contact_id)
-        await sql.execute("UPDATE job_postings SET last_seen_at=NOW() WHERE id=$1", job_id)
+        await sql.execute(
+            """UPDATE job_postings SET last_seen_at=NOW(),
+                      description=CASE WHEN length($2) >= 80 THEN $2 ELSE description END,
+                      about_job=CASE WHEN length($2) >= 80 THEN $2 ELSE about_job END WHERE id=$1""",
+            job_id, description,
+        )
         await _record_job_source(sql, str(job_id), safe)
         await _refresh_candidate_job_quality(sql, str(job_id))
         return None
@@ -1408,9 +1538,10 @@ async def insert_job_posting(sql: asyncpg.Connection, normalized: dict[str, Any]
             """INSERT INTO job_postings
                (company_id,hr_contact_id,title,description,experience_level,salary_range,job_url,source_site,
                 fingerprint,raw_payload,parser_version,content_hash,location,location_type,
-                employment_type,apply_url,posted_at,skills,salary_min,salary_max,salary_currency,salary_period,review_status)
+                employment_type,apply_url,posted_at,skills,salary_min,salary_max,salary_currency,salary_period,
+                country,india_confirmed,review_status)
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,NULLIF($13,''),$14,$15,
-                       NULLIF($16,''),$17,$18,$19,$20,$21,$22,'pending')
+                       NULLIF($16,''),$17,$18,$19,$20,$21,$22,'India',true,'pending')
                ON CONFLICT (fingerprint) DO NOTHING RETURNING id""",
             company_id, contact_id, normalized["job_title"], normalized["about_job"], normalized["experience_required"],
             normalized["salary_range"], normalized["job_url"], normalized["source_site"], fp,
@@ -1694,12 +1825,18 @@ async def _normalize_worker(
                 await ack(redis_client, "raw_leads_queue:requests", raw_msg)
                 continue
 
-            # The legacy India-only filter remains opt-in with the B2B workflow.
-            if legacy_pipeline and not normalized.get("is_india", True):
+            # Candidate-mode data is strictly India-scoped as well: the old
+            # opt-in flag must not allow worldwide jobs into the candidate feed.
+            if not normalized.get("is_india", False):
                 logger.info(
                     f"Skipping non-India job: {normalized['job_title']} "
                     f"[{normalized.get('source_site')}] loc='{normalized.get('location')}'"
                 )
+                await ack(redis_client, "raw_leads_queue:requests", raw_msg)
+                continue
+
+            if not legacy_pipeline and len(str(normalized.get("about_job") or "").strip()) < 80:
+                logger.info(f"Skipping job without a usable description: {normalized['job_title']}")
                 await ack(redis_client, "raw_leads_queue:requests", raw_msg)
                 continue
 
@@ -1766,7 +1903,11 @@ async def process_batch(redis_client: redis.Redis, db_pool: asyncpg.Pool, max_it
                 skipped += 1
                 continue
 
-            if legacy_pipeline and not normalized.get("is_india", True):
+            if not normalized.get("is_india", False):
+                skipped += 1
+                continue
+
+            if not legacy_pipeline and len(str(normalized.get("about_job") or "").strip()) < 80:
                 skipped += 1
                 continue
 

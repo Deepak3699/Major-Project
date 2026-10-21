@@ -23,16 +23,14 @@ The function never mutates the record; the caller decides to discard.
 
 import re
 
-# Sources that publish ONLY India-region postings by their nature.
-# For these, a blank/absent location field still counts as India.
+# Sources that publish only India-region postings by their nature. Global
+# boards/APIs (for example Workday, Indeed, Adzuna, Jooble and Amazon) must
+# provide an explicit India location instead of inheriting an India default.
 INDIA_NATIVE_SOURCES = {
     "naukri", "shine", "internshala", "freshersworld", "instahyre",
-    "cutshort", "foundit", "adzuna", "jooble", "indeed", "workday",
-    "unstop", "jobinsider", "iimjobs", "timesjobs",
-    "apna", "workindia", "hirist", "classicjobs", "hackerearth",
-    "ambitionbox",
+    "cutshort", "foundit", "unstop", "jobinsider", "iimjobs", "timesjobs",
+    "apna", "workindia", "hirist", "classicjobs", "ambitionbox",
     "freshershunt", "offcampusjobs4u", "job4freshers", "jobbinge",
-    "hasjob", "amazon",
 }
 
 # Strong positive India location signals.
@@ -98,26 +96,39 @@ def _norm(text: str) -> str:
 def is_india_relevant(normalized: dict) -> bool:
     """Return True if the lead should be kept (India-relevant)."""
     source_site = (normalized.get("source_site") or "").lower()
-    location = _norm(normalized.get("location", ""))
+    raw_payload = normalized.get("raw_payload") or {}
+    if not isinstance(raw_payload, dict):
+        raw_payload = {}
+    country_value = normalized.get("country") or raw_payload.get("country") or raw_payload.get("country_code") or ""
+    if isinstance(country_value, dict):
+        country_value = country_value.get("name") or country_value.get("code") or country_value.get("country") or ""
+    country = str(country_value).strip().lower()
+    location = _norm(" ".join(str(normalized.get(key) or "") for key in ("location", "job_location", "city", "state")))
     about_job = _norm(normalized.get("about_job", ""))
 
     # Layered signals. location is authoritative when present; description is
     # the fallback used only to break ties / confirm ambiguous cases.
     loc_has_india = bool(_INDIA_RE.search(location))
     loc_has_foreign = bool(_FOREIGN_RE.search(location))
-    desc_has_india = bool(_INDIA_RE.search(about_job))
+    country_is_india = country in {"india", "in", "ind"}
+    country_is_foreign = bool(country) and not country_is_india
+    india_remote = bool(re.search(
+        r"\b(?:remote\s+(?:from|within|in)\s+india|india[ -]+based|based\s+in\s+india|"
+        r"eligible\s+in\s+india|located\s+in\s+india|india\s+only)\b",
+        about_job,
+    ))
 
     # 1. Explicit foreign location on the posting → reject, even if the
     #    description happens to mention India. Location wins over description.
-    if loc_has_foreign and not loc_has_india:
+    if country_is_foreign or (loc_has_foreign and not loc_has_india):
         return False
 
     # 2. Explicit India location signal → accept.
-    if loc_has_india:
+    if country_is_india or loc_has_india:
         return True
 
     # 3. Location blank/ambiguous → check description, then source nativeness.
-    if desc_has_india:
+    if india_remote:
         return True
 
     # 4. India-native source with no contradicting foreign signal → accept.

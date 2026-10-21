@@ -2,15 +2,20 @@ import { getPrometheusMetrics, resetMetrics, getMetricsSnapshot, log, logger } f
 
 describe('Logging & Metrics (SRS §3.17)', () => {
   let originalLog: typeof console.log;
+  let originalLogFormat: string | undefined;
 
   beforeEach(() => {
     originalLog = console.log;
+    originalLogFormat = process.env.LOG_FORMAT;
+    process.env.LOG_FORMAT = 'pretty';
     console.log = jest.fn();
     resetMetrics();
   });
 
   afterEach(() => {
     console.log = originalLog;
+    if (originalLogFormat === undefined) delete process.env.LOG_FORMAT;
+    else process.env.LOG_FORMAT = originalLogFormat;
   });
 
   describe('logger', () => {

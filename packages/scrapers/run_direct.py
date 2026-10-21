@@ -44,6 +44,9 @@ async def run_direct(sources: list[str] | None = None, limit_per_source: int = 5
         if source not in SCRAPER_MAP:
             logger.warning(f"Unknown source '{source}', skipping...")
             continue
+        if source not in PERMITTED_DEFAULT_SOURCES:
+            logger.warning(f"Source '{source}' has no configured permitted access path, skipping...")
+            continue
 
         mod_name, cls_name = SCRAPER_MAP[source]
         try:
@@ -52,7 +55,9 @@ async def run_direct(sources: list[str] | None = None, limit_per_source: int = 5
             scraper = scraper_cls()
             
             logger.info(f"▶ Scraping [{source}]...")
-            jobs = await scraper.scrape()
+            # Use the common runner so circuit-breaker, timeout/retry, and
+            # robots.txt checks apply to direct runs too.
+            jobs = await scraper.run()
             logger.info(f"  ✓ Fetched {len(jobs)} listings from {source}")
             total_scraped += len(jobs)
 

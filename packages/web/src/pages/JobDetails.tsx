@@ -46,8 +46,8 @@ const JobDetails: React.FC = () => {
 };
 
 function TrustBadge({ job }: { job: CandidateJob }) {
-  const tone = job.trust_band === 'low' ? 'border-destructive/30 bg-destructive-soft text-destructive' : job.trust_band === 'review' ? 'border-warning/30 bg-warning-soft text-warning' : 'border-success/30 bg-success-soft text-success';
-  const label = job.trust_band === 'very_high' ? 'Very high confidence' : job.trust_band === 'high' ? 'High confidence' : job.trust_band === 'review' ? 'Review recommended' : 'Low confidence';
+  const tone = job.trust_band === 'low' ? 'border-destructive/30 bg-destructive-soft text-destructive' : 'border-success/30 bg-success-soft text-success';
+  const label = job.trust_band === 'very_high' ? 'Trusted · very high confidence' : job.trust_band === 'high' ? 'Trusted · high confidence' : job.trust_band === 'review' ? 'Trust check' : 'Low trust';
   return <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${tone}`}><ShieldCheck className="mr-1 inline h-3.5 w-3.5" />{label} · {job.trust_score}/100</span>;
 }
 

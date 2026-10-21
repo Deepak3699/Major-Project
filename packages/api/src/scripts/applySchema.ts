@@ -7,12 +7,13 @@
  * and executes each SQL file idempotently.
  */
 import fs from 'fs';
-import path from 'path';
+import path from 'node:path';
 import { getDB, closeDB } from '../utils/db';
+import { resolveApiRoot } from '../utils/databasePaths';
 
 async function main() {
   const sql = getDB();
-  const baseDir = path.resolve(__dirname, '../../database/schema');
+  const baseDir = path.join(resolveApiRoot(), 'database', 'schema');
   const dirs = ['tables', 'constraints', 'functions', 'triggers', 'indexes'];
 
   console.info('🚀 Starting declarative schema application...');

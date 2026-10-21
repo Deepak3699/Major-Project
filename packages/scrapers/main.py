@@ -29,6 +29,7 @@ for env_candidate in [os.path.join(os.path.dirname(__file__), "..", "..", ".env"
 
 from scrapers.utils.redis import get_redis
 from scrapers.utils.db import get_db_pool
+from scrapers.utils.resume_parser import parse_resume_profile
 
 logger = logging.getLogger(__name__)
 
@@ -132,179 +133,16 @@ async def parse_resume(request: Request):
         raise HTTPException(status_code=422, detail="We could not read this resume file") from exc
 
     text = re.sub(r"\r\n?", "\n", text)
-    text = re.sub(r"[ \t]+", " ", text)
+    # Keep the original horizontal spacing until the resume parser has repaired
+    # PDF text where glyphs are spaced out. Collapsing here first merges names
+    # whose PDF text layer uses spacing to mark word boundaries.
     text = re.sub(r"\n{3,}", "\n\n", text).strip()[:120_000]
     if len(text) < 30:
         if extension == ".pdf":
             raise HTTPException(status_code=422, detail="This PDF has no readable text layer. Export an OCR-enabled PDF or upload a DOCX/TXT copy of the resume.")
         raise HTTPException(status_code=422, detail="The file contains too little readable text. Check that it is not empty or password protected.")
 
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    section_names = {
-        "experience": {"experience", "work experience", "professional experience", "employment history", "internship experience"},
-        "projects": {"projects", "personal projects", "academic projects"},
-        "certifications": {"certifications", "certificates", "licenses and certifications"},
-        "skills": {"skills", "technical skills", "core skills", "key skills", "competencies"},
-    }
-    all_headings = set().union(*section_names.values()) | {
-        "education", "academic background", "education and training", "summary",
-        "professional summary", "career summary", "objective", "profile",
-        "interests", "awards", "contact", "personal details", "career objective",
-    }
-    header_lines = []
-    for line in lines:
-        heading = re.sub(r"[^a-z ]", "", line.lower()).strip()
-        if heading in all_headings:
-            break
-        header_lines.append(line)
-    header_text = "\n".join(header_lines[:20])
-
-
-    def section_body(names: set[str]) -> str:
-        start = None
-        for index, line in enumerate(lines):
-            heading = re.sub(r"[^a-z ]", "", line.lower()).strip()
-            if heading in names:
-                start = index + 1
-                break
-        if start is None:
-            return ""
-        stop = len(lines)
-        other_headings = all_headings - names
-        for index in range(start, len(lines)):
-            heading = re.sub(r"[^a-z ]", "", lines[index].lower()).strip()
-            if heading in other_headings or heading in {"education", "skills", "technical skills", "summary", "objective", "profile", "interests", "awards"}:
-                stop = index
-                break
-        return "\n".join(lines[start:stop]).strip()
-
-    # Names belong in the header, before the first section. A loose "2–5 words"
-    # rule used to accept degree/institution lines such as "Bachelor of
-    # Technology" or "University of Delhi" as a candidate's full name.
-    section_heading_words = all_headings
-    name_block: list[str] = []
-    for line in lines[:16]:
-        heading = re.sub(r"[^a-z ]", "", line.lower()).strip()
-        if heading in section_heading_words:
-            break
-        if re.search(r"@|https?://|\b(?:phone|mobile|email|address|linkedin)\b", line, re.IGNORECASE):
-            continue
-        name_block.append(line)
-    name_exclusions = (
-        "resume", "curriculum", "profile", "portfolio", "experience", "education", "skills",
-        "bachelor", "master", "doctor", "ph.d", "b.tech", "b.e.", "b.sc", "bca", "mca",
-        "mba", "diploma", "degree", "university", "college", "institute", "engineering", "technology",
-        "computer science", "information technology", "commerce", "arts", "science",
-    )
-
-    def looks_like_person_name(value: str) -> bool:
-        normalized = re.sub(r"\s+", " ", value).strip(" |·,;:-")
-        words = normalized.split()
-        if not 1 <= len(words) <= 4 or len(normalized) > 64:
-            return False
-        role_words = ("developer", "engineer", "analyst", "manager", "designer", "scientist", "consultant", "specialist", "intern", "architect", "professional", "associate", "recruiter")
-        if any(term in normalized.lower() for term in name_exclusions) or any(term in normalized.lower() for term in role_words):
-            return False
-        if re.search(r"\d|[@:/|•]", normalized):
-            return False
-        # Permit common international name punctuation, but reject degree
-        # abbreviations, job titles and prose fragments.
-        return bool(re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ.'’-]*(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ.'’-]*){0,3}", normalized))
-
-    explicit_name = re.search(r"(?:full\s+name|candidate\s+name|name)\s*[:|-]\s*([^\n|]{2,64})", header_text, re.IGNORECASE)
-    explicit_candidate = explicit_name.group(1).strip() if explicit_name else ""
-    name = explicit_candidate if looks_like_person_name(explicit_candidate) else next((re.sub(r"\s+", " ", line).strip() for line in name_block if looks_like_person_name(line)), "")
-
-    known_skills = [
-        "JavaScript", "TypeScript", "React", "Node.js", "Python", "Java", "C++", "C#", ".NET",
-        "SQL", "PostgreSQL", "MySQL", "MongoDB", "Redis", "AWS", "Azure", "GCP", "Docker",
-        "Kubernetes", "Git", "HTML", "CSS", "Next.js", "FastAPI", "Django", "Flask",
-        "Machine Learning", "Deep Learning", "Data Analysis", "Excel", "Power BI", "Tableau",
-        "Figma", "Linux", "REST API", "GraphQL", "Tailwind CSS", "Spring Boot",
-    ]
-    skills_section = section_body(section_names["skills"])
-    skill_source = skills_section or "\n".join(name_block)
-    found_skills = [skill for skill in known_skills if re.search(r"(?<![A-Za-z0-9])" + re.escape(skill) + r"(?![A-Za-z0-9])", skill_source, re.IGNORECASE)]
-    for raw_skill in re.split(r"[,;|\n•]+", skills_section):
-        value = re.sub(r"^[-*\s]+", "", raw_skill).strip()
-        # Resume skill sections commonly use a bullet/list item per line. Do not
-        # treat whole descriptive sentences as one "skill" value.
-        if 1 < len(value) <= 40 and len(value.split()) <= 5 and value.lower() not in {item.lower() for item in found_skills}:
-            found_skills.append(value)
-    skills = found_skills[:80]
-    email_match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", header_text, re.IGNORECASE)
-    phone_match = re.search(r"(?:phone|mobile|tel|contact)\s*[:|-]?\s*(\+?\d[\d ()-]{8,}\d)", header_text, re.IGNORECASE)
-    if not phone_match:
-        phone_match = next((match for match in re.finditer(r"(?:\+?\d[\d ()-]{8,}\d)", header_text) if 10 <= len(re.sub(r"\D", "", match.group(0))) <= 15), None)
-    exp_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:\+|to|-)?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|work)", text, re.IGNORECASE)
-    years = float(exp_match.group(1)) if exp_match else 0
-    education_text = section_body({"education", "academic background", "education and training"}) or text
-    lower = education_text.lower()
-    education = next((level for key, level in (("ph.d", "PhD"), ("doctorate", "Doctorate"), ("master", "Master's"), ("m.tech", "Master's"), ("mba", "Master's"), ("bachelor", "Bachelor's"), ("b.tech", "Bachelor's"), ("b.e.", "Bachelor's"), ("b.sc", "Bachelor's"), ("bca", "Bachelor's"), ("diploma", "Diploma"), ("12th", "12th")) if key in lower), "")
-    location_match = re.search(r"(?:location|based in|address)\s*[:|-]\s*([^\n|]{2,80})", header_text, re.IGNORECASE)
-    summary_match = re.search(r"(?:professional summary|career summary|summary|career objective|objective|profile)\s*\n(.*?)(?=\n\s*(?:education|experience|work experience|skills|projects|certifications?)\b|\Z)", text, re.IGNORECASE | re.DOTALL)
-    experience_body = section_body(section_names["experience"])
-    projects_body = section_body(section_names["projects"])
-    certifications_body = section_body(section_names["certifications"])
-
-    def parse_entries(body: str, kind: str) -> list[dict[str, str]]:
-        entries: list[dict[str, str]] = []
-        for chunk in re.split(r"\n\s*\n", body):
-            lines = [line.strip(" \t-•*") for line in chunk.splitlines() if line.strip(" \t-•*")]
-            if not lines:
-                continue
-            header = lines[0]
-            period_match = re.search(r"((?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\s*(?:(?:[-–—]|to)\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:(?:19|20)\d{2}|present|current))?)", " ".join(lines[:4]), re.IGNORECASE)
-            period = period_match.group(1).strip() if period_match else ""
-            if period and period in header:
-                header = header.replace(period, "").strip(" -|—,:")
-            title, company = header, ""
-            for separator in (" | ", " — ", " at ", " @ "):
-                if separator in header:
-                    title, company = [part.strip() for part in header.split(separator, 1)]
-                    break
-            title = title.strip(" |—-,:;")
-            company = company.strip(" |—-,:;")
-            rest = [line for line in lines[1:] if not (period and period.lower() in line.lower())]
-            description = "\n".join(rest)[:3000]
-            if kind == "project":
-                project_text = description or "\n".join(lines[1:])
-                technologies = [skill for skill in known_skills if re.search(r"(?<![A-Za-z0-9])" + re.escape(skill) + r"(?![A-Za-z0-9])", project_text, re.IGNORECASE)]
-                entries.append({"name": title[:200], "description": project_text[:3000], "technologies": technologies[:30]})
-            else:
-                entries.append({"title": title[:200], "company": company[:200], "period": period[:100], "description": description})
-        return entries[:20]
-
-    experience_entries = parse_entries(experience_body, "experience")
-    project_entries = parse_entries(projects_body, "project")
-    headline = ""
-    if name:
-        name_index = next((index for index, line in enumerate(lines[:16]) if line.strip() == name), -1)
-        for possible in lines[name_index + 1:name_index + 9] if name_index >= 0 else []:
-            if not re.search(r"@|\b(?:resume|curriculum vitae|email|phone|mobile|bachelor|master|b\.tech|b\.e\.|university|college|institute|education|india|delhi|mumbai|bengaluru|bangalore|hyderabad|pune|chennai|kolkata|noida|gurgaon)\b", possible, re.IGNORECASE) and not re.search(r"\d{5,}", possible):
-                headline = possible[:200]
-                break
-
-    return {
-        "filename": os.path.basename(filename),
-        "text_characters": len(text),
-        "suggested_profile": {
-            "full_name": name,
-            "headline": headline,
-            "email": email_match.group(0) if email_match else "",
-            "phone": phone_match.group(1).strip() if phone_match and phone_match.lastindex else phone_match.group(0).strip() if phone_match else "",
-            "location": location_match.group(1).strip() if location_match else "",
-            "skills": skills,
-            "experience_years": years,
-            "education_level": education,
-            "summary": re.sub(r"\s+", " ", summary_match.group(1)).strip()[:1200] if summary_match else "",
-            "experience": experience_entries,
-            "projects": project_entries,
-            "certifications": [line.lstrip("-•* ").strip() for line in certifications_body.splitlines() if line.strip()][:30],
-        },
-        "review_required": True,
-    }
-
+    return parse_resume_profile(text, filename)
 
 async def _discover_public_hr_contacts(limit: int) -> None:
     """Find public HR details from listing, career and public search sources."""
@@ -396,6 +234,8 @@ def _get_tier(name: str) -> int:
 @app.post("/scrape/trigger")
 async def trigger_scrape(req: ScrapeRequest):
     redis_client = get_redis()
+    if redis_client is None:
+        raise HTTPException(status_code=503, detail="Scrape queue is unavailable. Configure Redis before starting a scrape.")
     run_id = str(uuid.uuid4())
     await redis_client.lpush(
         "scrape_queue:requests",
@@ -435,6 +275,8 @@ async def army_run(req: ScrapeRequest):
     the sweep are independent; chaining handles enrich→verify→draft after.
     """
     redis_client = get_redis()
+    if redis_client is None:
+        raise HTTPException(status_code=503, detail="Worker queues are unavailable. Configure Redis before starting a run.")
     run_id = str(uuid.uuid4())
     sources = req.sources
     if not sources:
@@ -474,30 +316,25 @@ async def startup_event():
     )
 
     # Friendly diagnostic banner
-    print("\n" + "=" * 68)
-    print("🚀 \033[1;36mTake It — Scraper Fleet & Background Workers Started!\033[0m")
-    print("=" * 68)
-    print("  • \033[1mWorkers API:\033[0m   http://localhost:8000")
-    print("  • \033[1mHealth Check:\033[0m  http://localhost:8000/health")
+    logger.info("Scraper fleet and background workers started")
+    logger.info("Workers API: http://localhost:8000")
+    logger.info("Health check: http://localhost:8000/health")
 
     try:
         r = get_redis()
         await r.ping()
-        print("  • \033[1mRedis:\033[0m         \033[32m✅ Connected (Queue workers active)\033[0m")
+        logger.info("Redis: connected; queue workers active")
     except Exception:
-        print("  • \033[1mRedis:\033[0m         \033[33m⚠️ Not connected (Port 6379)\033[0m")
-        print("    \033[90m-> Notice: Queue consumers paused. Start Redis or configure REDIS_URL in .env\033[0m")
+        logger.warning("Redis is not connected; queue consumers are paused. Start Redis or configure REDIS_URL.")
 
     try:
         pool = await get_db_pool()
         if pool:
-            print("  • \033[1mPostgreSQL:\033[0m    \033[32m✅ Connected\033[0m")
+            logger.info("PostgreSQL: connected")
         else:
-            print("  • \033[1mPostgreSQL:\033[0m    \033[33m⚠️ Not connected\033[0m")
+            logger.warning("PostgreSQL is not connected")
     except Exception:
-        print("  • \033[1mPostgreSQL:\033[0m    \033[33m⚠️ Not connected (Check DATABASE_URL in .env)\033[0m")
-
-    print("=" * 68 + "\n")
+        logger.warning("PostgreSQL is not connected; check DATABASE_URL in .env")
     asyncio.create_task(start_consumers())
 
 
@@ -508,11 +345,14 @@ async def shutdown_event():
 
 async def start_consumers():
     """Start discovery workers; start legacy contact/outreach queues only by opt-in."""
+    redis_client = get_redis()
+    if redis_client is None:
+        logging.getLogger(__name__).info("Queue consumers are idle because Redis is not configured")
+        return
+
     from scrapers.scrape_consumer import consume_scrape_queue
     from scrapers.normalizer import run_normalizer
     from scrapers.scheduler import daily_scrape_scheduler
-
-    redis_client = get_redis()
 
     try:
         db_pool = await get_db_pool()

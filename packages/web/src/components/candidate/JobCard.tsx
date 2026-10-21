@@ -6,12 +6,13 @@ import { CandidateJob } from '@/lib/types';
 function trustLabel(band: CandidateJob['trust_band']) {
   if (band === 'very_high') return 'Very high confidence';
   if (band === 'high') return 'High confidence';
-  if (band === 'low') return 'Low confidence';
-  return 'Needs review';
+  if (band === 'low') return 'Low trust';
+  if (band === 'review') return 'Trust check';
+  return 'Trust';
 }
 
 function trustColor(band: CandidateJob['trust_band']) {
-  if (band === 'very_high' || band === 'high') return 'border-success/30 bg-success-soft text-success';
+  if (band === 'very_high' || band === 'high' || band === 'review') return 'border-success/30 bg-success-soft text-success';
   if (band === 'low') return 'border-destructive/30 bg-destructive-soft text-destructive';
   return 'border-warning/30 bg-warning-soft text-warning';
 }

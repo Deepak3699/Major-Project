@@ -58,7 +58,10 @@ export const wsRoutes: FastifyPluginAsync = async (fastify) => {
 
       req.raw.on('close', async () => {
         clearInterval(heartbeat);
-        await subscriber.quit();
+        // Close the per-client pub/sub socket directly. Minimal local Redis
+        // emulators (used by the no-Docker Windows setup) may not implement
+        // QUIT; disconnect also avoids a late parser error during SSE teardown.
+        subscriber.disconnect();
         reply.raw.end();
       });
 
@@ -111,7 +114,7 @@ export const wsRoutes: FastifyPluginAsync = async (fastify) => {
 
         req.raw.on('close', async () => {
           clearInterval(heartbeat);
-          await subscriber.quit();
+          subscriber.disconnect();
           reply.raw.end();
         });
 

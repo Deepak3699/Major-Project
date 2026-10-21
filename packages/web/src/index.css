@@ -383,3 +383,43 @@
 .animate-fade-in { animation: fadeIn 0.4s ease both; }
 .animate-float { animation: float 6s ease-in-out infinite; }
 .animate-aurora { animation: aurora 18s ease-in-out infinite; }
+
+/* Candidate-facing workspace treatment; admin and legacy dashboards keep their own surface. */
+.candidate-workspace { background-color: hsl(var(--background)); }
+.candidate-workspace > aside { background-color: hsl(var(--surface)); }
+.candidate-sidebar { box-shadow: 2px 0 18px rgb(23 55 88 / 0.025); }
+.candidate-sidebar nav { padding-inline: 0.7rem; }
+.candidate-sidebar nav > div > div > a { min-height: 40px; }
+.candidate-workspace header { background-color: hsl(var(--surface) / 0.94); }
+.candidate-workspace main { background-color: hsl(var(--background)); }
+.candidate-workspace main .card {
+  border-radius: 1rem;
+  box-shadow: 0 3px 14px rgb(23 55 88 / 0.035);
+}
+.candidate-hero {
+  isolation: isolate;
+  background-color: hsl(var(--primary-soft) / 0.55);
+}
+.candidate-hero-shape {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid hsl(var(--primary) / 0.12);
+  border-radius: 9999px;
+}
+.candidate-hero-shape-one {
+  width: 300px;
+  height: 300px;
+  right: 10%;
+  top: -215px;
+  background-color: hsl(var(--primary) / 0.055);
+}
+.candidate-hero-shape-two {
+  width: 220px;
+  height: 220px;
+  right: 2%;
+  bottom: -165px;
+  background-color: hsl(var(--info) / 0.06);
+}
+.candidate-stat { transition: transform 160ms ease, border-color 160ms ease; }
+.candidate-stat:hover { transform: translateY(-2px); border-color: hsl(var(--primary) / 0.24); }

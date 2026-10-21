@@ -143,6 +143,12 @@ If you have **Docker Desktop** installed and running:
 
 Both launchers build the images, spin up all containers (Postgres, Redis, API, Web, Workers, Reacher, n8n), apply database migrations, and bootstrap the admin account automatically.
 
+### Start automatically after Windows sign-in
+
+Run `up.ps1` once first so the images, `.env`, and database are initialized. Then run `install-startup.ps1` once in PowerShell. At each sign-in, its scheduled task starts Docker Desktop if needed, waits for the engine, starts the stack, and checks the database migrations. Remove it with `Unregister-ScheduledTask -TaskName "HireGen Docker Stack" -Confirm:$false`.
+
+The scraper worker queues one catch-up scrape at boot (Redis prevents duplicate runs for the same India-local day), then schedules the daily scrape for **03:00 UTC / 08:30 IST**. Set `DAILY_SCRAPE_CATCHUP=0` in `.env` to disable the boot run. Dashboard job and recommendation data refreshes every 30 seconds while open. Scrapers use a bounded source concurrency, retries, circuit breakers, and robots/source-access checks; access-denied sources are left disabled rather than bypassed.
+
 ---
 
 ## 🔑 Login & First Access
@@ -186,7 +192,7 @@ Permitted sources → ingestion workers → normalization + deduplication
 
 The existing lead enrichment and outreach workers are available for the legacy admin workflow only when `ENABLE_LEGACY_OUTREACH_PIPELINE=1`. Candidate job discovery, recommendations and applications do not depend on them. A listing with an evidence-based quality score above 70 is published automatically; lower-quality listings stay in the admin review queue. Existing pending listings are re-scored by migration 009.
 
-Candidate recommendations use a small feed-forward neural ranker (9 inputs → 14 → 8 → 1). The committed bootstrap artifact is trained on generated weak-label examples; it does not claim to be trained on real applicant outcomes. Admin retraining requires at least 20 usable interview/offer/joined or withdrawn outcomes with both positive and negative examples. Recommendations show only model scores of 70% or higher. Resume Studio provides three fixed PDF layouts and uses profile facts; job tailoring can call Gemini when `GEMINI_API_KEY` is set. Uploaded resumes are processed in memory. Scanned PDFs without selectable text should be uploaded as OCR-enabled PDFs or as DOCX/TXT.
+Candidate recommendations use the trained neural artifact at `packages/api/src/models/recommender/model.json` (9 inputs → 16 → 8 → 1). It was trained on 37,739 cleaned resume/job pairs from the Apache-2.0 `0xnbk/resume-domain-classifier-v1-en` dataset: 30,192 training examples and 7,547 held-out validation examples. The dataset labels same-domain vs. cross-domain pairs; its 61.3% held-out accuracy is not a hiring or interview probability. Raw source data and cleaned feature/report files are under `packages/api/data/` and are excluded from Git. Re-train from Docker with `docker compose exec api npm run model:train`. The displayed job score remains a profile-to-job relevance score. Resume Studio provides three fixed PDF layouts and uses profile facts; job tailoring can call Gemini when `GEMINI_API_KEY` is set. Uploaded resumes are processed in memory. Scanned PDFs without selectable text should be uploaded as OCR-enabled PDFs or as DOCX/TXT.
 
 ---
 
@@ -208,6 +214,8 @@ packages/
     scrapers/             ← ATS/public-feed connectors and legacy integrations
 docker-compose.yml        ← Container orchestration stack
 up.ps1 / up.sh            ← One-shot Docker launchers
+install-startup.ps1       ← Register automatic Windows sign-in startup
+start-on-login.ps1        ← Docker stack startup task
 .env.example              ← Template configuration
 ```
 

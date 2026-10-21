@@ -86,19 +86,28 @@ def compensate(failed_sources: list[str], depth: int = 0) -> list[str]:
     if depth >= MAX_COMPENSATION_DEPTH:
         return []
     failed = {s for s in failed_sources if s}
-    out: list[str] = []
     try:
-        from .scrape_consumer import SCRAPER_MAP
+        from .scrape_consumer import SCRAPER_MAP, resolve_sources
         known = set(SCRAPER_MAP)
     except Exception:  # noqa: BLE001
         known = set()
+        resolve_sources = None
+    candidates: list[str] = []
     for src in failed_sources:
         for sib in FAILOVER.get(src, ["duckduckgo"]):
-            if sib not in failed and sib not in out and (not known or sib in known):
-                out.append(sib)
-            if len(out) >= MAX_COMPENSATION_SOURCES:
-                return out
-    return out
+            if sib not in failed and sib not in candidates and (not known or sib in known):
+                candidates.append(sib)
+            if len(candidates) >= MAX_COMPENSATION_SOURCES:
+                break
+        if len(candidates) >= MAX_COMPENSATION_SOURCES:
+            break
+    if not candidates:
+        return []
+    # The registry includes legacy and partner-only integrations. A fallback
+    # must not enqueue sources that the same worker will reject at execution;
+    # that used to create green, empty no-op runs (e.g. Indeed/DuckDuckGo).
+    permitted = set(resolve_sources(candidates)) if resolve_sources else set(candidates)
+    return [source for source in candidates if source in permitted]
 
 
 async def maybe_fallback_wave(

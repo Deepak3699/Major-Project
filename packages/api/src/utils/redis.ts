@@ -135,6 +135,9 @@ export function getRedis(): IORedis {
     client = new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
+      // The local TCP Redis emulator used for offline development does not
+      // implement INFO. Keep the normal Redis readiness check on by default.
+      enableReadyCheck: process.env.REDIS_READY_CHECK !== '0',
       retryStrategy: (times: number) => {
         if (times > 2) return null;
         return Math.min(times * 100, 500);
@@ -190,7 +193,13 @@ export async function connectRedis(): Promise<void> {
 
 export async function closeRedis(): Promise<void> {
   if (client) {
-    await client.quit();
-    client = null;
+    try {
+      // Close the socket directly instead of sending QUIT. Minimal local Redis
+      // emulators may not implement that command, and ioredis can emit its
+      // parser error independently of the rejected command promise.
+      if (typeof client.disconnect === 'function') client.disconnect();
+    } finally {
+      client = null;
+    }
   }
 }

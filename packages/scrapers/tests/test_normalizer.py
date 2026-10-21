@@ -5,6 +5,35 @@ from scrapers.normalizer import normalize_lead, generate_fingerprint, insert_lea
 
 
 class TestNormalizeLead:
+    def test_description_uses_payload_body_not_title_placeholder_and_strips_markup(self):
+        raw = {
+            "company_name": "Tech Corp",
+            "job_title": "Software Engineer",
+            "job_url": "https://careers.tech.com/job/1",
+            "source_site": "greenhouse.io/tech",
+            "about_job": "Software Engineer",
+            "raw_payload": {
+                "content": "<p>Build reliable software services with the engineering team.</p>"
+                "<ul><li>Develop Python APIs and automated tests.</li><li>Work with product and design.</li></ul>"
+                "<script>tracker()</script>",
+            },
+        }
+        description = normalize_lead(raw)["about_job"]
+        assert "Build reliable software services" in description
+        assert "Develop Python APIs" in description
+        assert "tracker" not in description
+
+    def test_title_only_is_not_promoted_to_job_description(self):
+        raw = {
+            "company_name": "Tech Corp",
+            "job_title": "Software Engineer",
+            "job_url": "https://careers.tech.com/job/1",
+            "source_site": "naukri.com",
+            "about_job": "Software Engineer",
+            "raw_payload": {"title": "Software Engineer"},
+        }
+        assert normalize_lead(raw)["about_job"] == ""
+
     def test_basic_normalization(self):
         raw = {
             "company_name": "Tech Corp",

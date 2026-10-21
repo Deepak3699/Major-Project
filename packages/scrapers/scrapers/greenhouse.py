@@ -29,7 +29,18 @@ class GreenhouseScraper(BaseScraper):
     tier = 3
     rate_limit_seconds = 0.5
 
-    API_URL_TEMPLATE = "https://boards-api.greenhouse.io/v1/boards/{company}/jobs"
+    # Greenhouse's public board list omits the full job body unless requested.
+    # Without this flag the listing cards have titles/locations but no usable
+    # description, so candidate jobs fail the quality and feed checks.
+    API_URL_TEMPLATE = "https://boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true"
+
+    @property
+    def API_URL(self) -> str:
+        # BaseScraper uses API_URL for its robots.txt pre-flight. This adapter
+        # previously exposed only API_URL_TEMPLATE, so the pre-flight was
+        # skipped entirely for Greenhouse.
+        company = self._companies[0] if getattr(self, "_companies", None) else "stripe"
+        return self.API_URL_TEMPLATE.format(company=company)
 
     def __init__(self, redis_client=None, db=None, companies: list[str] | None = None):
         super().__init__(redis_client, db)

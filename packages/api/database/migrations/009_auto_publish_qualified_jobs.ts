@@ -1,7 +1,7 @@
 import type { MigrationContext } from 'node-pg-migrate';
 
 // Re-score existing pending listings under the same evidence policy used by
-// the candidate API. Only listings scoring strictly above 70 are released.
+// the candidate API. Listings scoring 70 or more are released.
 export const up = async (pgm: MigrationContext) => {
   await pgm.sql(`
     WITH job_signals AS (
@@ -35,7 +35,7 @@ export const up = async (pgm: MigrationContext) => {
          SET trust_score=s.quality_score,
              trust_band=CASE WHEN s.quality_score>=94 THEN 'very_high' WHEN s.quality_score>=80 THEN 'high'
                              WHEN s.quality_score>=60 THEN 'review' ELSE 'low' END,
-             review_status=CASE WHEN s.quality_score>70 THEN 'published' ELSE jp.review_status END
+             review_status=CASE WHEN s.quality_score>=70 THEN 'published' ELSE jp.review_status END
         FROM scored s
        WHERE jp.id=s.id
        RETURNING jp.id,jp.trust_score,jp.trust_band,jp.review_status
@@ -43,7 +43,7 @@ export const up = async (pgm: MigrationContext) => {
     INSERT INTO job_verifications (job_posting_id,verifier_id,trust_score,trust_band,evidence,review_status)
     SELECT id,NULL,trust_score,trust_band,
            jsonb_build_array(jsonb_build_object('signal','Automatic quality review','points',trust_score,
-             'detail','Published automatically because verified listing quality is above 70')),
+             'detail','Published automatically because verified listing quality met the 70 point threshold')),
            review_status
       FROM updated WHERE review_status='published'
   `);

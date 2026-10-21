@@ -8,11 +8,12 @@
  * 4. Seeds the initial admin account (admin@example.com / change-me-please-32).
  */
 import fs from 'fs';
-import path from 'path';
+import path from 'node:path';
 import { getDB, closeDB } from '../utils/db';
 import { env } from '../utils/env';
 import { hashPassword } from '../utils/crypto';
 import { printDatabaseError } from '../utils/friendlyErrors';
+import { resolveApiRoot } from '../utils/databasePaths';
 // @ts-ignore - node-pg-migrate default export
 import runner from 'node-pg-migrate';
 
@@ -34,7 +35,8 @@ async function main() {
 
   // Step 2: Apply Declarative Base Schema
   console.info('\n📋 Step 2/4: Applying base database schema...');
-  const baseDir = path.resolve(__dirname, '../../database/schema');
+  const apiRoot = resolveApiRoot();
+  const baseDir = path.join(apiRoot, 'database', 'schema');
   const dirs = ['tables', 'constraints', 'functions', 'triggers', 'indexes'];
 
   for (const dir of dirs) {
@@ -63,7 +65,10 @@ async function main() {
   // Step 3: Run Migrations
   console.info('\n🔄 Step 3/4: Running database migrations...');
   try {
-    const migrationsDir = path.resolve(__dirname, '../../database/migrations');
+    // node-pg-migrate resolves TypeScript migrations relative to the process
+    // working directory, so normalize it even when this script runs from dist.
+    process.chdir(apiRoot);
+    const migrationsDir = path.join(apiRoot, 'database', 'migrations');
     await runner({
       databaseUrl: env.DATABASE_URL,
       dir: migrationsDir,
@@ -79,8 +84,8 @@ async function main() {
     });
     console.info('   ✅ Migrations completed successfully.');
   } catch (err: any) {
-    console.error('   ⚠️ Migration notice:', err.message || err);
-    // Continue even if migrations table already recorded
+    console.error('   ❌ Database migrations failed:', err.message || err);
+    throw err;
   }
 
   // Step 4: Bootstrap Admin Account
@@ -102,6 +107,7 @@ async function main() {
     }
   } catch (err: any) {
     console.error('   ❌ Could not seed admin account:', err.message);
+    throw err;
   }
 
   // Final Success Banner
@@ -109,7 +115,7 @@ async function main() {
   console.info('🎉 \x1b[1m\x1b[32mDATABASE READY TO USE!\x1b[0m');
   console.info('═'.repeat(68));
   console.info('  • \x1b[1mAdmin Login:\x1b[0m  ' + email);
-  console.info('  • \x1b[1mPassword:\x1b[0m     ' + password);
+  console.info('  • \x1b[1mPassword:\x1b[0m     configured in the local .env file');
   console.info('\n  \x1b[1m\x1b[36m👉 Next Step:\x1b[0m Run the backend API:');
   console.info('     \x1b[33mnpm run dev\x1b[0m (in packages/api)');
   console.info('═'.repeat(68) + '\n');

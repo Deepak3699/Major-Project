@@ -194,17 +194,28 @@ class BaseScraper(abc.ABC):
         async def _guard(item):
             async with sem:
                 try:
-                    return await fetch_one(session, item)
+                    return await fetch_one(session, item), None
                 except asyncio.CancelledError:
                     raise
                 except Exception as e:  # noqa: BLE001  (intentional: per-item isolation)
                     self._logger.debug(
                         f"{self.source_name}: item skipped ({type(e).__name__}: {e})"
                     )
-                    return []
+                    return [], e
 
         results = await asyncio.gather(*(_guard(i) for i in items))
-        return [lead for group in results for lead in (group or [])]
+        self.last_sweep_stats = {
+            "items_attempted": len(items),
+            "items_failed": sum(1 for _, error in results if error is not None),
+            "items_with_results": sum(1 for leads, _ in results if leads),
+        }
+        if items and self.last_sweep_stats["items_failed"] == len(items):
+            first_error = next(error for _, error in results if error is not None)
+            raise ScrapingError(
+                f"{self.source_name}: every board request failed "
+                f"({type(first_error).__name__}: {first_error})"
+            ) from first_error
+        return [lead for group, _ in results for lead in (group or [])]
 
     @staticmethod
     def _as_text(value: Any) -> str:
@@ -252,6 +263,11 @@ class BaseScraper(abc.ABC):
             db=db,
         )
         self._logger = logging.getLogger(f"scraper.{self.source_name}")
+        self.last_sweep_stats: dict[str, int] = {
+            "items_attempted": 0,
+            "items_failed": 0,
+            "items_with_results": 0,
+        }
         self._proxies: list[str] = (proxies or self._load_proxies()) if os.environ.get("SCRAPER_ALLOW_ADVANCED_FETCH") == "1" else []
 
     @staticmethod
@@ -322,14 +338,17 @@ class BaseScraper(abc.ABC):
         """
         if self._circuit_breaker.is_open():
             self._circuit_breaker.logger.warning(f"Circuit breaker open for {self.source_name}, skipping")
-            return []
+            raise ScrapingError(f"Circuit breaker is open for {self.source_name}")
 
         base_url = getattr(self, "API_URL", None) or getattr(self, "BASE_URL", None)
         if base_url:
             ua = self._get_user_agent()
             if not await self._check_robots_txt(base_url, ua):
                 self._logger.warning(f"Robots.txt disallows scraping {base_url} for {self.source_name}")
-                return []
+                self._circuit_breaker.record_failure("robots.txt disallows the configured endpoint")
+                raise SourceBlockedError(
+                    f"robots.txt disallows the configured endpoint for {self.source_name}"
+                )
 
         max_attempts = 3
         attempt = 0
@@ -343,7 +362,9 @@ class BaseScraper(abc.ABC):
                 if attempt >= max_attempts:
                     self._circuit_breaker.record_failure(str(e))
                     self._logger.error(f"Scrape failed for {self.source_name} after {max_attempts} attempts: {e}")
-                    return []
+                    raise ScrapingError(
+                        f"Scrape failed for {self.source_name} after {max_attempts} attempts: {e}"
+                    ) from e
                 wait = self._jittered_wait(attempt)
                 self._logger.warning(
                     f"Retry {attempt}/{max_attempts} for {self.source_name} after {e}, waiting {wait:.1f}s"
@@ -352,7 +373,7 @@ class BaseScraper(abc.ABC):
             except Exception as e:
                 self._circuit_breaker.record_failure(str(e))
                 self._logger.error(f"Scrape failed for {self.source_name}: {e}")
-                return []
+                raise ScrapingError(f"Scrape failed for {self.source_name}: {e}") from e
 
     async def enqueue_leads(self, leads: list[dict[str, Any]], requested_by: str | None = None):
         """Push raw lead dicts to the raw_leads_queue Redis list.

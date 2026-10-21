@@ -25,7 +25,7 @@ const Jobs: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Discover jobs" description="Recent roles collected from permitted company career pages, ATS platforms and job feeds." />
+      <PageHeader title="Discover jobs" description="Search all trusted recent listings. Your profile match score is shown on each job when your profile is available." />
       <form onSubmit={submit} className="card grid gap-3 p-4 md:grid-cols-[1fr_200px_170px_auto]">
         <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Role, company, or skill" className="input pl-9" /></label>
         <label className="relative"><span className="sr-only">Location</span><input value={String(filters.location || '')} onChange={(e) => setFilter('location', e.target.value || undefined)} placeholder="City or region" className="input" /></label>
@@ -35,7 +35,7 @@ const Jobs: React.FC = () => {
       </form>
       <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{data?.pagination.total ?? 0} matching jobs</p>{error && <span className="text-xs text-destructive">{(error as Error).message}</span>}</div>
       {isLoading ? <PageLoader label="Finding recent jobs…" /> : data?.data?.length ? <div className="space-y-3">{data.data.map((job) => <JobCard key={job.id} job={job} saving={savingId === job.id} onSave={(item) => saveMutation.mutate(item.id)} />)}</div> : <div className="card flex flex-col items-center p-10 text-center"><BriefcaseBusiness className="h-8 w-8 text-muted-foreground" /><h2 className="mt-3 font-semibold">No roles found in this window</h2><p className="mt-1 max-w-md text-sm text-muted-foreground">Try a broader search or a longer date window. New listings appear when an enabled source run completes.</p></div>}
-      {data && data.pagination.pages > 1 && <div className="flex items-center justify-center gap-3"><button disabled={Number(filters.page) <= 1} onClick={() => setFilter('page', Number(filters.page) - 1)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-40">Previous</button><span className="text-xs text-muted-foreground">Page {filters.page} of {data.pagination.pages}</span><button disabled={Number(filters.page) >= data.pagination.pages} onClick={() => setFilter('page', Number(filters.page) + 1)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-40">Next</button></div>}
+      {data && data.pagination.pages > 1 && <div className="flex items-center justify-center gap-3"><button disabled={Number(filters.page) <= 1} onClick={() => setFilter('page', Number(filters.page) - 1)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-40">Previous</button><span className="text-xs text-muted-foreground">Page {Number(filters.page)} of {data.pagination.pages}</span><button disabled={Number(filters.page) >= data.pagination.pages} onClick={() => setFilter('page', Number(filters.page) + 1)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-40">Next</button></div>}
     </div>
   );
 };

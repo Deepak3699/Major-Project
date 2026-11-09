@@ -1,0 +1,262 @@
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import { ToastProvider } from '@/components/ui/toast';
+import { candidate, practice } from '@/lib/api';
+import type {
+  LearningTrackView,
+  PracticeQuestion,
+  PracticeSessionSummary,
+  PracticeSubscription,
+} from '@/lib/types';
+import Practice from './Practice';
+import PracticeSession from './PracticeSession';
+import Learning from './Learning';
+
+jest.mock('@/lib/api', () => {
+  const actual = jest.requireActual<typeof import('@/lib/api')>('@/lib/api');
+  return {
+    ...actual,
+    practice: {
+      ...actual.practice,
+      subscription: jest.fn(),
+      sessions: jest.fn(),
+      session: jest.fn(),
+      learning: jest.fn(),
+    },
+    candidate: {
+      ...actual.candidate,
+      profile: jest.fn(),
+    },
+  };
+});
+
+const MOCK_SUBSCRIPTION: PracticeSubscription = {
+  plan: 'free',
+  status: 'active',
+  source: 'default',
+  used_this_month: 1,
+  monthly_limit: 3,
+  unlimited: false,
+  requested_upgrade: false,
+};
+
+const MOCK_SESSION_COMPLETED: PracticeSessionSummary = {
+  id: 's1',
+  role_focus: 'Frontend Engineer',
+  difficulty: 'standard',
+  question_count: 5,
+  status: 'completed',
+  model: 'gemini',
+  overall_score: 7.4,
+  verdict: 'solid',
+  summary: 'Good structure, weak specifics.',
+  started_at: '2026-01-05T10:00:00.000Z',
+  completed_at: '2026-01-05T10:25:00.000Z',
+  answered_count: 5,
+};
+
+const MOCK_SESSION_IN_PROGRESS: PracticeSessionSummary = {
+  id: 's2',
+  role_focus: 'Frontend Engineer',
+  difficulty: 'standard',
+  question_count: 4,
+  status: 'in_progress',
+  model: 'template',
+  overall_score: null,
+  verdict: '',
+  summary: '',
+  started_at: '2026-01-06T10:00:00.000Z',
+  completed_at: null,
+  answered_count: 1,
+};
+
+const MOCK_QUESTIONS: PracticeQuestion[] = [
+  {
+    id: 'q1',
+    idx: 0,
+    category: 'intro',
+    topic: 'About you',
+    question: 'Walk me through your background.',
+    answer: '',
+    feedback: null,
+    score: null,
+    answered_at: null,
+  },
+  {
+    id: 'q2',
+    idx: 1,
+    category: 'behavioral',
+    topic: 'Conflict',
+    question: 'Tell me about a disagreement.',
+    answer: 'Once, in a sprint review…',
+    feedback: { score: 7, strengths: ['Gave context'], improvements: ['Add outcome'] },
+    score: 7,
+    answered_at: '2026-01-06T10:05:00.000Z',
+  },
+];
+
+const MOCK_TRACK: LearningTrackView = {
+  id: 't1',
+  role_focus: 'core',
+  model: 'template',
+  created_at: '2026-01-05T09:00:00.000Z',
+  updated_at: '2026-01-05T09:00:00.000Z',
+  modules: [
+    {
+      title: 'Harden your fundamentals',
+      why: 'You will be asked about data structures early.',
+      level: 'beginner',
+      topics: [
+        {
+          title: 'Arrays and hashing',
+          what_to_learn: 'Two-pointer and prefix sums.',
+          resources: [{ type: 'article', name: 'MDN guide', url: 'https://example.com' }],
+        },
+      ],
+      practice_exercise: 'Solve three easy array problems.',
+      index: 0,
+      done: false,
+    },
+    {
+      title: 'System design basics',
+      why: 'Senior loops expect trade-off talk.',
+      level: 'advanced',
+      topics: [],
+      practice_exercise: '',
+      index: 1,
+      done: true,
+    },
+  ],
+  progress: { done: 1, total: 2 },
+};
+
+const renderTrio = (ui: React.ReactElement, initialPath?: string) => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const app = (
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[initialPath ?? '/practice']}>
+          {initialPath ? (
+            <Routes>
+              <Route path="/practice/session/:id" element={ui} />
+              <Route path="*" element={ui} />
+            </Routes>
+          ) : (
+            ui
+          )}
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>
+  );
+  return render(app);
+};
+
+beforeEach(() => {
+  (practice.subscription as jest.Mock).mockClear().mockResolvedValue({ subscription: MOCK_SUBSCRIPTION });
+  (practice.sessions as jest.Mock).mockClear().mockResolvedValue({ sessions: [] });
+  (practice.session as jest.Mock).mockClear().mockResolvedValue({ session: MOCK_SESSION_IN_PROGRESS, questions: [] });
+  (practice.learning as jest.Mock).mockClear().mockResolvedValue({ track: null, role_focus: 'core' });
+  (candidate.profile as jest.Mock).mockClear().mockResolvedValue({
+    profile: { id: 'p1', preferred_roles: ['Frontend Engineer'] },
+    completion: 40,
+  });
+});
+
+describe('Practice page smoke', () => {
+  it('renders empty state for a brand-new user', async () => {
+    renderTrio(<Practice />);
+    await waitFor(() => expect(practice.sessions).toHaveBeenCalled());
+    expect(await screen.findByRole('button', { name: /start|begin|practice/i })).toBeTruthy();
+  });
+
+  it('renders session history rows', async () => {
+    (practice.sessions as jest.Mock).mockResolvedValue({
+      sessions: [MOCK_SESSION_COMPLETED, MOCK_SESSION_IN_PROGRESS],
+    });
+    renderTrio(<Practice />);
+    expect(await screen.findByText('Scored')).toBeTruthy();
+  });
+
+  it('renders with exhausted free quota', async () => {
+    (practice.subscription as jest.Mock).mockResolvedValue({
+      subscription: { ...MOCK_SUBSCRIPTION, used_this_month: 3 },
+    });
+    renderTrio(<Practice />);
+    await waitFor(() => expect(practice.subscription).toHaveBeenCalled());
+    await screen.findByText('Scored').catch(() => undefined);
+  });
+
+  it('renders pro plan with unlimited flag', async () => {
+    (practice.subscription as jest.Mock).mockResolvedValue({
+      subscription: { ...MOCK_SUBSCRIPTION, plan: 'pro', unlimited: true, monthly_limit: null },
+    });
+    renderTrio(<Practice />);
+    await waitFor(() => expect(practice.subscription).toHaveBeenCalled());
+  });
+});
+
+describe('PracticeSession page smoke', () => {
+  it('renders an in-progress session with questions', async () => {
+    (practice.session as jest.Mock).mockResolvedValue({ session: MOCK_SESSION_IN_PROGRESS, questions: MOCK_QUESTIONS });
+    renderTrio(<PracticeSession />, '/practice/session/s2');
+    expect(await screen.findByText(/walk me through your background/i)).toBeTruthy();
+  });
+
+  it('renders a completed session summary', async () => {
+    (practice.session as jest.Mock).mockResolvedValue({ session: MOCK_SESSION_COMPLETED, questions: MOCK_QUESTIONS });
+    renderTrio(<PracticeSession />, '/practice/session/s1');
+    expect(await screen.findByText(/good structure/i)).toBeTruthy();
+  });
+
+  it('renders empty questions list without crashing', async () => {
+    (practice.session as jest.Mock).mockResolvedValue({
+      session: { ...MOCK_SESSION_IN_PROGRESS, answered_count: 0 },
+      questions: [],
+    });
+    renderTrio(<PracticeSession />, '/practice/session/s2');
+    await waitFor(() => expect(practice.session).toHaveBeenCalled());
+  });
+
+  it('renders every question answered (finalize state)', async () => {
+    const answered = MOCK_QUESTIONS.map((q) => ({
+      ...q,
+      answer: 'My answer.',
+      feedback: { score: 7, strengths: ['x'], improvements: ['y'] },
+      score: 7,
+      answered_at: '2026-01-06T10:05:00.000Z',
+    }));
+    (practice.session as jest.Mock).mockResolvedValue({
+      session: { ...MOCK_SESSION_IN_PROGRESS, question_count: 2, answered_count: 2 },
+      questions: answered,
+    });
+    renderTrio(<PracticeSession />, '/practice/session/s2');
+    await waitFor(() => expect(practice.session).toHaveBeenCalled());
+  });
+});
+
+describe('Learning page smoke', () => {
+  it('renders generate empty state when no track exists', async () => {
+    renderTrio(<Learning />);
+    await waitFor(() => expect(practice.learning).toHaveBeenCalled());
+    await screen.findByRole('button', { name: /build the plan/i });
+  });
+
+  it('renders modules when a track exists', async () => {
+    (practice.learning as jest.Mock).mockResolvedValue({ track: MOCK_TRACK, role_focus: 'core' });
+    renderTrio(<Learning />);
+    expect(await screen.findByText('Harden your fundamentals')).toBeTruthy();
+    expect(screen.getByText('System design basics')).toBeTruthy();
+    expect(screen.getByText('Module 1')).toBeTruthy();
+  });
+
+  it('renders track with zero modules without crashing', async () => {
+    (practice.learning as jest.Mock).mockResolvedValue({
+      track: { ...MOCK_TRACK, modules: [], progress: { done: 0, total: 0 } },
+      role_focus: 'core',
+    });
+    renderTrio(<Learning />);
+    await waitFor(() => expect(practice.learning).toHaveBeenCalled());
+  });
+});

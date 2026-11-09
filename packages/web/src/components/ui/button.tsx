@@ -52,6 +52,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       "icon-sm": "h-8 w-8",
     }
     const Comp = asChild ? Slot : "button"
+    const content = asChild ? (
+      // Radix `Slot` merges onto a single child element — passing an array
+      // (e.g. `[false, <Link/>]`) throws "Slot failed to slot onto its
+      // children", so asChild buttons never render the spinner marker.
+      children
+    ) : (
+      <>
+        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+        {children}
+      </>
+    )
     return (
       <Comp
         className={cn(base, variants[variant], sizes[size], className)}
@@ -59,8 +70,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         {...props}
       >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {children}
+        {content}
       </Comp>
     )
   }

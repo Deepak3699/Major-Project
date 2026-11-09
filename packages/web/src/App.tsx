@@ -31,6 +31,7 @@ const Learning = lazy(() => import('@/pages/Learning'));
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminJobs = lazy(() => import('@/pages/AdminJobs'));
 const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
+const AdminPractice = lazy(() => import('@/pages/AdminPractice'));
 
 function RouteFallback() {
   return <div className="flex h-[60vh] items-center justify-center" role="status" aria-live="polite"><div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground/70" /><span className="sr-only">Loading…</span></div>;
@@ -84,6 +85,7 @@ function App() {
       <Route path="profile" element={isCandidate ? <Profile /> : <Navigate to="/dashboard" replace />} />
       <Route path="settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/feedback" element={isAdmin ? <AdminFeedback /> : <Navigate to="/dashboard" replace />} />
+      <Route path="admin/practice" element={isAdmin ? <AdminPractice /> : <Navigate to="/dashboard" replace />} />
       <Route path="leads" element={isAdmin ? <Leads /> : <Navigate to="/dashboard" replace />} />
       <Route path="leads/:id" element={isAdmin ? <LeadDetail /> : <Navigate to="/dashboard" replace />} />
       <Route path="companies" element={isAdmin ? <Companies /> : <Navigate to="/dashboard" replace />} />

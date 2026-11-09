@@ -239,6 +239,19 @@ export interface CandidateApplication {
   documents: Array<{ id: string; document_type: string; title: string; content: string; created_at: string }>;
 }
 
+export interface PracticeUpgradeRequest {
+  id: string;
+  user_id: string;
+  requested_plan: string;
+  note: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  user_email: string;
+  current_plan: string | null;
+}
+
 export interface LoginResponse {
   access_token: string;
   refresh_token?: string;

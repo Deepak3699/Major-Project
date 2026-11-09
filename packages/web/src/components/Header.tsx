@@ -21,6 +21,7 @@ const TITLES: Array<{ match: RegExp; title: string; section: string }> = [
   { match: /^\/learning/, title: "Learning tracks", section: "Practice" },
   { match: /^\/profile/, title: "Candidate profile", section: "Account" },
   { match: /^\/admin\/feedback/, title: "Candidate feedback", section: "Insights" },
+  { match: /^\/admin\/practice/, title: "Practice subscriptions", section: "Insights" },
   { match: /^\/leads\/[^/]+/, title: "Lead detail", section: "Pipeline" },
   { match: /^\/leads/, title: "Leads", section: "Pipeline" },
   { match: /^\/companies/, title: "Companies", section: "Data" },

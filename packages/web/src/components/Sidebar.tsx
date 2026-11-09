@@ -52,6 +52,7 @@ const ADMIN_SECTIONS = [
     { to: "/duplicates", label: "Duplicates", icon: GitMerge },
     { to: "/analytics", label: "Analytics", icon: TrendingUp },
     { to: "/admin/feedback", label: "Candidate feedback", icon: MessageCircle },
+    { to: "/admin/practice", label: "Practice subscriptions", icon: Mic },
     { to: "/settings", label: "System settings", icon: SettingsIcon },
   ] },
 ];

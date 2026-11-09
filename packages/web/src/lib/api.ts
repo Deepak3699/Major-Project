@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -447,6 +447,15 @@ export const practice = {
     (await api.post('/candidate/practice/learning/refresh', { role_focus: roleFocus })).data as { track: LearningTrackView },
   learningProgress: async (trackId: string, moduleIndex: number) =>
     (await api.post(`/candidate/practice/learning/${trackId}/progress`, { module_index: moduleIndex })).data as { ok: boolean; done: number; total: number; module_index: number; done_state: boolean },
+};
+
+export const practiceAdmin = {
+  upgrades: async (status: 'pending' | 'approved' | 'rejected' = 'pending') =>
+    (await api.get('/practice/upgrades', { params: { status } })).data as { requests: PracticeUpgradeRequest[] },
+  approve: async (id: string) => (await api.post(`/practice/upgrades/${id}/approve`)).data as { ok: boolean; user_id: string },
+  reject: async (id: string, note?: string) => (await api.post(`/practice/upgrades/${id}/reject`, { note })).data as { ok: boolean },
+  grant: async (values: { email: string; plan: 'free' | 'pro'; expires_in_days?: number }) =>
+    (await api.post('/practice/grant', values)).data as { ok: boolean; user_id: string; plan: string; expires_at: string | null },
 };
 
 export const health = {

@@ -2,12 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from 'react-query';
-import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, FileText, MapPin, Target, TrendingUp } from 'lucide-react';
-import { candidate } from '@/lib/api';
+import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, FileText, GraduationCap, MapPin, Mic, Target, TrendingUp } from 'lucide-react';
+import { candidate, practice } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { JobCard } from '@/components/candidate/JobCard';
 import { PageLoader } from '@/components/ui/spinner';
 import { StatCard } from '@/components/ui/stat-card';
+import { cn } from '@/components/ui/cn';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -25,6 +26,10 @@ const CandidateDashboard: React.FC = () => {
   const { data: recommendations } = useQuery('candidate-recommendations', candidate.recommendations, { enabled: !!summary?.has_profile, refetchInterval: 30000 });
   const { data: apps } = useQuery('candidate-applications', candidate.applications, { refetchInterval: 30000 });
   const { data: profileData } = useQuery('candidate-profile', candidate.profile, { enabled: !!summary?.has_profile, refetchInterval: 60000 });
+  // Practice space readout — shares cache keys with the Practice page, so this
+  // warms nothing new and stays in sync after a session is graded.
+  const { data: subData } = useQuery('practice-subscription', practice.subscription);
+  const { data: sessionsData } = useQuery('practice-sessions', practice.sessions);
   if (isLoading) return <PageLoader label="Loading your job workspace…" />;
 
   const profile = profileData?.profile;
@@ -41,6 +46,16 @@ const CandidateDashboard: React.FC = () => {
     { stage: 'Offers', roles: summary?.application_statuses?.OFFER || 0 },
   ];
   const strengthTone = completion >= 80 ? 'bg-success' : completion >= 50 ? 'bg-info' : 'bg-warning';
+
+  const pCompleted = (sessionsData?.sessions || []).filter((s) => s.status === 'completed');
+  const pLastScore = pCompleted[0]?.overall_score ?? null;
+  const pSub = subData?.subscription;
+  const pQuota = pSub && !pSub.unlimited && pSub.monthly_limit != null
+    ? { used: Math.min(pSub.used_this_month, pSub.monthly_limit), limit: pSub.monthly_limit }
+    : null;
+  const pScoreTone = pLastScore == null
+    ? 'text-muted-foreground'
+    : pLastScore >= 80 ? 'text-success' : pLastScore >= 55 ? 'text-warning' : 'text-destructive';
 
   return (
     <div className="space-y-4">
@@ -103,6 +118,43 @@ const CandidateDashboard: React.FC = () => {
         </motion.section>
 
         <motion.div {...rise(0.2)} className="space-y-4">
+          {/* Interview practice */}
+          <section className="card p-5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="eyebrow">Interview practice</p>
+              <Mic className="h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
+            </div>
+            <p className={cn('mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] tabular-nums', pScoreTone)}>
+              {pLastScore ?? '—'}
+            </p>
+            <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">
+              {pLastScore != null ? '/100 · last scored session' : 'no scored sessions yet'}
+            </p>
+            {pQuota ? (
+              <div className="mt-3">
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="presentation">
+                  <div
+                    className={cn('h-full rounded-full transition-all duration-500', pQuota.used >= pQuota.limit ? 'bg-warning' : 'bg-foreground')}
+                    style={{ width: `${(pQuota.used / pQuota.limit) * 100}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+                  {pQuota.used >= pQuota.limit
+                    ? 'Free quota used up — request Pro to keep rehearsing.'
+                    : `${pQuota.limit - pQuota.used} free session${pQuota.limit - pQuota.used === 1 ? '' : 's'} left this month.`}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+                {pSub ? 'Pro plan — unlimited rehearsals.' : 'AI mock interviews, graded question by question.'}
+              </p>
+            )}
+            <div className="mt-2 space-y-0.5">
+              <QuickAction to="/practice" icon={Mic} label="Rehearse a mock interview" />
+              <QuickAction to="/learning" icon={GraduationCap} label="Open learning tracks" />
+            </div>
+          </section>
+
           {/* Profile strength */}
           <section className="card p-5">
             <div className="flex items-start justify-between gap-2">

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LoginResponse } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -426,6 +426,27 @@ export const candidate = {
   trainRecommendationModel: async () => (await api.post('/candidate/admin/recommendations/train')).data as { trained: boolean; model: string; training_examples: number; validation_examples?: number; training_source: string; training_task?: string; created_at: string; metrics?: Record<string, number> },
   adminFeedback: async (status: 'pending' | 'approved' | 'rejected' = 'pending') => (await api.get('/candidate/admin/feedback', { params:{ status } })).data as { data:Array<any> },
   moderateFeedback: async (id:string, moderation_status:'approved'|'rejected') => (await api.patch(`/candidate/admin/feedback/${id}`, { moderation_status })).data,
+};
+
+export const practice = {
+  subscription: async () => (await api.get('/candidate/practice/subscription')).data as { subscription: PracticeSubscription },
+  sessions: async () => (await api.get('/candidate/practice/sessions')).data as { sessions: PracticeSessionSummary[] },
+  createSession: async (values: { role_focus?: string; difficulty?: PracticeDifficulty; question_count?: number }) =>
+    (await api.post('/candidate/practice/sessions', values)).data as { session: PracticeSessionSummary; subscription: PracticeSubscription },
+  session: async (id: string) => (await api.get(`/candidate/practice/sessions/${id}`)).data as { session: PracticeSessionSummary; questions: PracticeQuestion[] },
+  answer: async (sessionId: string, values: { question_id: string; answer: string }) =>
+    (await api.post(`/candidate/practice/sessions/${sessionId}/answer`, values)).data as PracticeAnswerResult,
+  finish: async (sessionId: string) =>
+    (await api.post(`/candidate/practice/sessions/${sessionId}/finish`)).data as PracticeFinishResult,
+  abandon: async (sessionId: string) => (await api.delete(`/candidate/practice/sessions/${sessionId}`)).data as { ok: boolean },
+  upgradeRequest: async (note?: string) =>
+    (await api.post('/candidate/practice/upgrade-request', { note })).data as { request_id: string; status: string; message: string },
+  learning: async (roleFocus?: string) =>
+    (await api.get('/candidate/practice/learning', { params: roleFocus ? { role_focus: roleFocus } : {} })).data as { track: LearningTrackView | null; role_focus: string },
+  learningRefresh: async (roleFocus?: string) =>
+    (await api.post('/candidate/practice/learning/refresh', { role_focus: roleFocus })).data as { track: LearningTrackView },
+  learningProgress: async (trackId: string, moduleIndex: number) =>
+    (await api.post(`/candidate/practice/learning/${trackId}/progress`, { module_index: moduleIndex })).data as { ok: boolean; done: number; total: number; module_index: number; done_state: boolean },
 };
 
 export const health = {

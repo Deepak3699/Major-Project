@@ -246,3 +246,87 @@ export interface LoginResponse {
   expires_in: number;
   user: { id: string; email: string; role: string };
 }
+
+/* ----------------------- AI practice (interviews + learning) ----------------------- */
+
+export type PracticeDifficulty = 'calm' | 'standard' | 'brutal';
+
+export interface PracticeSubscription {
+  plan: 'free' | 'pro';
+  status: string;
+  source: string;
+  used_this_month: number;
+  monthly_limit: number | null;
+  unlimited: boolean;
+  requested_upgrade: boolean;
+}
+
+export interface PracticeSessionSummary {
+  id: string;
+  role_focus: string;
+  difficulty: PracticeDifficulty;
+  question_count: number;
+  status: 'in_progress' | 'completed' | 'abandoned';
+  model: string;
+  overall_score: number | null;
+  verdict: string;
+  summary: string;
+  started_at: string;
+  completed_at: string | null;
+  answered_count?: number;
+}
+
+export interface PracticeQuestion {
+  id: string;
+  idx: number;
+  category: string;
+  topic: string;
+  question: string;
+  answer: string;
+  feedback: { score: number; strengths: string[]; improvements: string[] } | null;
+  score: number | null;
+  answered_at: string | null;
+}
+
+export interface PracticeAnswerResult {
+  question: PracticeQuestion;
+  grade: { score: number; strengths: string[]; improvements: string[] };
+}
+
+export interface PracticeFinishResult {
+  session: PracticeSessionSummary;
+  by_category?: Record<string, number>;
+  already_completed?: boolean;
+}
+
+export interface LearningResourceView {
+  type: string;
+  name: string;
+  url: string;
+}
+
+export interface LearningTopicView {
+  title: string;
+  what_to_learn: string;
+  resources: LearningResourceView[];
+}
+
+export interface LearningModuleView {
+  title: string;
+  why: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  topics: LearningTopicView[];
+  practice_exercise: string;
+  index: number;
+  done: boolean;
+}
+
+export interface LearningTrackView {
+  id: string;
+  role_focus: string;
+  model: string;
+  created_at: string;
+  updated_at: string;
+  modules: LearningModuleView[];
+  progress: { done: number; total: number };
+}

@@ -542,6 +542,157 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
     return { queue, purged: Number(depth) };
   });
 
+  // ---- AI practice: subscription upgrade approvals + manual grants ----
+  // Upgrade requests flow: candidate POSTs /candidate/practice/upgrade-request,
+  // admin approves here. Approval writes the practice_subscriptions row — the
+  // same row a payment webhook would write later, so no route changes when a
+  // provider is added.
+  const planSchema = z.enum(['free', 'pro']);
+
+  fastify.get('/practice/upgrades', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const status = z.enum(['pending', 'approved', 'rejected']).default('pending')
+      .safeParse((req.query as { status?: string }).status || {});
+    const sql = getDB();
+    const rows = await sql.unsafe(
+      `SELECT r.id, r.user_id, r.requested_plan, r.note, r.status, r.created_at,
+              r.decided_by, r.decided_at,
+              u.email AS user_email,
+              (SELECT p.plan FROM practice_subscriptions p WHERE p.user_id = r.user_id LIMIT 1) AS current_plan
+         FROM practice_upgrade_requests r
+         JOIN users u ON u.id = r.user_id
+        WHERE r.status = $1
+        ORDER BY r.created_at ASC
+        LIMIT 100`,
+      [status.success ? status.data : 'pending'],
+    );
+    return reply.send({ requests: rows });
+  });
+
+  const decisionSchema = z.object({ note: z.string().trim().max(500).optional() });
+
+  fastify.post('/practice/upgrades/:id/approve', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const idResult = z.string().uuid().safeParse((req.params as { id: string }).id);
+    if (!idResult.success) return reply.status(400).send({ error: 'Invalid request id' });
+    const adminId = (req.user as { id: string }).id;
+    const sql = getDB();
+
+    const requestRows = await sql.unsafe(
+      `SELECT r.id, r.user_id, r.status, u.email AS user_email
+         FROM practice_upgrade_requests r JOIN users u ON u.id = r.user_id
+        WHERE r.id = $1 LIMIT 1`,
+      [idResult.data],
+    );
+    const upgradeRequest = requestRows[0] as any;
+    if (!upgradeRequest) return reply.status(404).send({ error: 'Upgrade request not found' });
+    if (upgradeRequest.status !== 'pending') {
+      return reply.status(409).send({ error: `This request is already ${upgradeRequest.status}.` });
+    }
+
+    await sql.unsafe(
+      `UPDATE practice_upgrade_requests
+          SET status = 'approved', decided_by = $2, decided_at = now()
+        WHERE id = $1`,
+      [upgradeRequest.id, adminId],
+    );
+    // Pro is granted open-ended by default (expires_at NULL). A future payment
+    // webhook writes the same row with an expiry; lapse logic already handles it.
+    await sql.unsafe(
+      `INSERT INTO practice_subscriptions (user_id, plan, status, source, notes, updated_at)
+       VALUES ($1, 'pro', 'active', 'admin_grant', $2, now())
+       ON CONFLICT (user_id) DO UPDATE
+         SET plan = 'pro', status = 'active', source = 'admin_grant',
+             notes = EXCLUDED.notes, updated_at = now(), expires_at = NULL`,
+      [upgradeRequest.user_id, String((req.body as any)?.note || '').slice(0, 500)],
+    );
+    await logAuditEvent({
+      user_id: adminId,
+      action: 'practice_upgrade_approved',
+      resource_type: 'practice_subscription',
+      resource_id: upgradeRequest.user_id,
+      details: { request_id: upgradeRequest.id, user_email: upgradeRequest.user_email },
+    });
+    return { ok: true, user_id: upgradeRequest.user_id, plan: 'pro' };
+  });
+
+  fastify.post('/practice/upgrades/:id/reject', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const idResult = z.string().uuid().safeParse((req.params as { id: string }).id);
+    if (!idResult.success) return reply.status(400).send({ error: 'Invalid request id' });
+    const adminId = (req.user as { id: string }).id;
+    const parsed = decisionSchema.safeParse(req.body || {});
+    const sql = getDB();
+
+    const requestRows = await sql.unsafe(
+      `SELECT id, status FROM practice_upgrade_requests WHERE id = $1 LIMIT 1`,
+      [idResult.data],
+    );
+    const upgradeRequest = requestRows[0] as any;
+    if (!upgradeRequest) return reply.status(404).send({ error: 'Upgrade request not found' });
+    if (upgradeRequest.status !== 'pending') {
+      return reply.status(409).send({ error: `This request is already ${upgradeRequest.status}.` });
+    }
+
+    await sql.unsafe(
+      `UPDATE practice_upgrade_requests
+          SET status = 'rejected', decided_by = $2, decided_at = now()
+        WHERE id = $1`,
+      [upgradeRequest.id, adminId],
+    );
+    await logAuditEvent({
+      user_id: adminId,
+      action: 'practice_upgrade_rejected',
+      resource_type: 'practice_upgrade_request',
+      resource_id: upgradeRequest.id,
+      details: { note: parsed.success ? parsed.data.note : '' },
+    });
+    return { ok: true };
+  });
+
+  const grantSchema = z.object({
+    email: z.string().trim().toLowerCase().email(),
+    plan: planSchema.default('pro'),
+    expires_in_days: z.coerce.number().int().min(1).max(3650).optional(),
+  });
+
+  fastify.post('/practice/grant', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const parsed = grantSchema.safeParse(req.body || {});
+    if (!parsed.success) return reply.status(400).send({ error: 'Invalid grant', details: parsed.error.issues });
+    const adminId = (req.user as { id: string }).id;
+    const { email, plan, expires_in_days } = parsed.data;
+    const sql = getDB();
+
+    const users = await sql.unsafe(`SELECT id FROM users WHERE lower(email) = $1 LIMIT 1`, [email]);
+    const user = users[0] as any;
+    if (!user) return reply.status(404).send({ error: 'No account with that email' });
+
+    const expiresAt = expires_in_days ? new Date(Date.now() + expires_in_days * 86400_000) : null;
+    if (plan === 'pro') {
+      await sql.unsafe(
+        `INSERT INTO practice_subscriptions (user_id, plan, status, source, notes, expires_at, updated_at)
+         VALUES ($1, 'pro', 'active', 'admin_grant', 'manual grant', $2, now())
+         ON CONFLICT (user_id) DO UPDATE
+           SET plan = 'pro', status = 'active', source = 'admin_grant',
+               expires_at = EXCLUDED.expires_at, updated_at = now()`,
+        [user.id, expiresAt],
+      );
+    } else {
+      await sql.unsafe(
+        `INSERT INTO practice_subscriptions (user_id, plan, status, source, notes, updated_at)
+         VALUES ($1, 'free', 'active', 'admin_grant', 'manual downgrade', now())
+         ON CONFLICT (user_id) DO UPDATE
+           SET plan = 'free', updated_at = now()`,
+        [user.id],
+      );
+    }
+    await logAuditEvent({
+      user_id: adminId,
+      action: 'practice_plan_granted',
+      resource_type: 'practice_subscription',
+      resource_id: user.id,
+      details: { email, plan, expires_at: expiresAt ? expiresAt.toISOString() : null },
+    });
+    return { ok: true, user_id: user.id, plan, expires_at: expiresAt ? expiresAt.toISOString() : null };
+  });
+
   // ---- Prometheus metrics (Track 5, dependency-free exposition format) ----
   // Aggregates only — no PII. Admin-gated; point Prometheus at this target
   // with a bearer token (see docs/BACKUP_RESTORE.md companion note in README).

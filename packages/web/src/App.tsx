@@ -25,6 +25,9 @@ const Profile = lazy(() => import('@/pages/Profile'));
 const ResumeStudio = lazy(() => import('@/pages/ResumeStudio'));
 const SavedJobs = lazy(() => import('@/pages/SavedJobs'));
 const CandidateContacts = lazy(() => import('@/pages/CandidateContacts'));
+const Practice = lazy(() => import('@/pages/Practice'));
+const PracticeSession = lazy(() => import('@/pages/PracticeSession'));
+const Learning = lazy(() => import('@/pages/Learning'));
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminJobs = lazy(() => import('@/pages/AdminJobs'));
 const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
@@ -75,6 +78,9 @@ function App() {
       <Route path="saved" element={isCandidate ? <SavedJobs /> : <Navigate to="/dashboard" replace />} />
       <Route path="contacts" element={isCandidate ? <CandidateContacts /> : isAdmin ? <Contacts /> : <Navigate to="/dashboard" replace />} />
       <Route path="resume" element={isCandidate ? <ResumeStudio /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice" element={isCandidate ? <Practice /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice/session/:id" element={isCandidate ? <PracticeSession /> : <Navigate to="/dashboard" replace />} />
+      <Route path="learning" element={isCandidate ? <Learning /> : <Navigate to="/dashboard" replace />} />
       <Route path="profile" element={isCandidate ? <Profile /> : <Navigate to="/dashboard" replace />} />
       <Route path="settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/feedback" element={isAdmin ? <AdminFeedback /> : <Navigate to="/dashboard" replace />} />

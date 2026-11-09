@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings as SettingsIcon, LogOut, Search, PanelLeft, BriefcaseBusiness,
   Target, ClipboardList, UserRound, MessageCircle, Bookmark, FileText, X,
+  Mic, GraduationCap,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
@@ -33,6 +34,10 @@ const CANDIDATE_SECTIONS = [
     { to: "/contacts", label: "Employer contacts", icon: Contact },
     { to: "/resume", label: "Resume studio", icon: FileText },
     { to: "/profile", label: "My profile", icon: UserRound },
+  ] },
+  { label: "Practice space", items: [
+    { to: "/practice", label: "Interview practice", icon: Mic },
+    { to: "/learning", label: "Learning tracks", icon: GraduationCap },
   ] },
 ];
 const ADMIN_SECTIONS = [

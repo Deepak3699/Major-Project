@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings, LogOut, Zap, CornerDownLeft, Command, BriefcaseBusiness, Target,
-  ClipboardList, UserRound, MessageCircle,
+  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { admin } from '@/lib/api';
@@ -56,6 +56,8 @@ export function CommandPalette() {
       { id: 'jobs', label: 'Discover jobs', icon: <BriefcaseBusiness />, group: 'Navigate', run: () => go('/jobs') },
       { id: 'recommendations', label: 'Recommended jobs', icon: <Target />, group: 'Navigate', run: () => go('/recommendations') },
       { id: 'applications', label: 'Application tracker', icon: <ClipboardList />, group: 'Navigate', run: () => go('/applications') },
+      { id: 'practice', label: 'Interview practice', icon: <Mic />, group: 'Navigate', run: () => go('/practice') },
+      { id: 'learning', label: 'Learning tracks', icon: <GraduationCap />, group: 'Navigate', run: () => go('/learning') },
       { id: 'profile', label: 'Candidate profile', icon: <UserRound />, group: 'Navigate', run: () => go('/profile') },
     ];
     const legacyNav: Cmd[] = [

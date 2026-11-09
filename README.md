@@ -14,6 +14,7 @@ You can run this project **Without Docker** (pure local setup) or **With Docker*
 4. Review recommendations with weighted dimensions for skills, experience, education, location, role fit, projects, salary and preferences.
 5. Generate role-specific resume and email drafts from confirmed profile facts. Gemini is optional; a local template is used when no API key is configured. Review every draft before use.
 6. Open the employer's application page yourself, then track saved, applied, screening, interview, offer, rejection, withdrawal and joining milestones.
+7. Practice with the AI interviewer under **Practice**. The free plan includes a monthly interview quota (`PRACTICE_FREE_MONTHLY_LIMIT`, default 3); requesting a Pro upgrade unlocks unlimited sessions after admin approval, and saved learning tracks adapt to the profile and the selected target role. Learning tracks are unlimited on every plan.
 
 The app never submits applications automatically or attempts to bypass CAPTCHA, anti-bot checks, access controls or source terms. Scraping defaults to official ATS connectors and selected public feeds. Other connectors are filtered unless an operator has reviewed access permissions and adds them to `SCRAPE_PERMITTED_SOURCES`. See [the implementation alignment notes](docs/IMPLEMENTATION_ALIGNMENT.md) for the detailed mapping to the project blueprint.
 

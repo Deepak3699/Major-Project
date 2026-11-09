@@ -107,7 +107,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   className={cn("absolute inset-y-0 left-0 w-[3px]", variantBar[t.variant])}
                 />
                 <div className="flex items-start gap-2.5">
-                  <Icon className={cn("mt-0.5 h-[17px] w-[17px] shrink-0", variantTone[t.variant])} strokeWidth={1.9} />
+                  <Icon className={cn("mt-0.5 h-[17px] w-[17px] shrink-0", variantTone[t.variant])} />
                   <div className="min-w-0 space-y-0.5">
                     <p className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">{t.title}</p>
                     {t.description && (

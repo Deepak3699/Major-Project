@@ -16,6 +16,9 @@ const TITLES: Array<{ match: RegExp; title: string; section: string }> = [
   { match: /^\/applications/, title: "Application tracker", section: "Pipeline" },
   { match: /^\/saved/, title: "Saved jobs", section: "Pipeline" },
   { match: /^\/resume/, title: "Resume studio", section: "Documents" },
+  { match: /^\/practice\/session\/[^/]+/, title: "Interview session", section: "Practice" },
+  { match: /^\/practice/, title: "Interview practice", section: "Practice" },
+  { match: /^\/learning/, title: "Learning tracks", section: "Practice" },
   { match: /^\/profile/, title: "Candidate profile", section: "Account" },
   { match: /^\/admin\/feedback/, title: "Candidate feedback", section: "Insights" },
   { match: /^\/leads\/[^/]+/, title: "Lead detail", section: "Pipeline" },
@@ -49,7 +52,7 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const location = useLocation();
   const isAdmin = user?.role === "admin";
   const isPlatformUser = isAdmin || user?.role === "candidate";
-  const pageTitle = isAdmin && /^\/jobs/.test(location.pathname) ? 'Job review' : usePageTitle(location.pathname);
+  const pageTitle = isAdmin && /^\/jobs/.test(location.pathname) ? { title: 'Job review', section: 'Jobs' } : usePageTitle(location.pathname);
 
   const [runs, setRuns] = useState<Run[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);

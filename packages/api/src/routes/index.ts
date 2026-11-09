@@ -9,6 +9,7 @@ import { companiesRoutes } from './companies';
 import { contactsRoutes } from './contacts';
 import { complianceRoutes } from './compliance';
 import { candidateRoutes } from './candidate';
+import { practiceRoutes } from './practice';
 
 const routes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -24,6 +25,7 @@ const routes: FastifyPluginAsync = async (fastify) => {
   // Public self-service opt-out + admin right-to-erasure (compliance).
   fastify.register(complianceRoutes, { prefix: '' });
   fastify.register(candidateRoutes, { prefix: '/candidate' });
+  fastify.register(practiceRoutes, { prefix: '/candidate/practice' });
 };
 
 export default routes;

@@ -15,9 +15,6 @@ import {
   Key,
   Save,
   RefreshCw,
-  BarChart3,
-  ToggleLeft,
-  Calendar,
   Play,
   CheckCircle2,
   Activity,
@@ -305,13 +302,11 @@ const Settings: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Play className="h-5 w-5 text-success" />
-            Manual Scrape Trigger
-          </CardTitle>
+          <p className="eyebrow">Ingestion</p>
+          <CardTitle>Manual scrape trigger</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-[13px] text-muted-foreground">
+          <p className="mb-4 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">
             Manually trigger a scrape run across all enabled sources. This bypasses the cron schedule.
           </p>
           <Button onClick={handleTriggerRun} loading={triggerRunMutation.isLoading} variant="default">
@@ -328,15 +323,16 @@ const Settings: React.FC = () => {
 
       <Card>
         <CardHeader>
+          <p className="eyebrow">Credentials</p>
           <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-muted-foreground" />
-            API Keys & Credentials
+            <Key className="h-[15px] w-[15px] text-muted-foreground/70" strokeWidth={1.75} />
+            API keys &amp; credentials
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="mb-5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
             <Lock className="h-3.5 w-3.5" />
-            Configure API keys for third-party services. Keys are encrypted at rest.
+            Keys are stored for third-party services and encrypted at rest.
           </p>
 
           <form id="api-keys-form" className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -345,9 +341,13 @@ const Settings: React.FC = () => {
                 <label className="label" htmlFor={`key-${field.name}`}>
                   {field.label}
                   {apiKeys[field.name] ? (
-                    <span className="ml-2 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">configured</span>
+                    <span className="ml-2 inline-flex items-center rounded border border-success/25 px-1.5 py-px font-mono text-[10px] uppercase tracking-[0.06em] text-success">
+                      configured
+                    </span>
                   ) : (
-                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">not set</span>
+                    <span className="ml-2 inline-flex items-center rounded border border-border bg-muted px-1.5 py-px font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
+                      not set
+                    </span>
                   )}
                 </label>
                 <Input
@@ -385,20 +385,18 @@ const Settings: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-            Source Enable / Disable
-          </CardTitle>
+          <p className="eyebrow">Sources</p>
+          <CardTitle>Source enable / disable</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-5 text-[13px] text-muted-foreground">
+          <p className="mb-5 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">
             Only official ATS pages and public feeds on the permitted-source allowlist can run. Other connectors require an approved access path and SCRAPE_PERMITTED_SOURCES configuration; a toggle alone does not authorize access. Browser stealth, proxy rotation, and CAPTCHA solving are off by default.
           </p>
           <form id="source-toggles-form" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {ALL_SOURCES.map((src) => (
               <label
                 key={src.name}
-                className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3.5 py-2.5 transition-colors hover:border-foreground/20"
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3.5 py-2.5 transition-colors duration-150 hover:border-border-strong"
               >
                 <span className="text-[13px] font-medium text-foreground">{src.label}</span>
                 <span className="relative inline-flex shrink-0">
@@ -409,8 +407,8 @@ const Settings: React.FC = () => {
                     onChange={() => setSourcesDirty(true)}
                     className="peer sr-only"
                   />
-                  <span className="h-5 w-9 rounded-full bg-muted-foreground/25 transition-colors peer-checked:bg-success peer-focus-visible:ring-2 peer-focus-visible:ring-ring" />
-                  <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background shadow-sm transition-transform peer-checked:translate-x-4" />
+                  <span className="h-5 w-9 rounded-full bg-muted transition-colors peer-checked:bg-success peer-focus-visible:ring-2 peer-focus-visible:ring-ring" />
+                  <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-background ring-1 ring-border transition-transform peer-checked:translate-x-4" />
                 </span>
               </label>
             ))}
@@ -426,19 +424,17 @@ const Settings: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-muted-foreground" />
-            Scoring Weights
-          </CardTitle>
+          <p className="eyebrow">Scoring</p>
+          <CardTitle>Lead scoring weights</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-5 text-[13px] text-muted-foreground">
+          <p className="mb-5 text-[13px] leading-relaxed text-muted-foreground">
             Adjust lead scoring weights. Higher values increase the score contribution.
           </p>
           <form id="scoring-weights-form" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(DEFAULT_SCORING_WEIGHTS).map(([key, defaultVal]) => (
               <div key={key}>
-                <label className="label" htmlFor={`weight-${key}`}>
+                <label className="label font-mono text-[11px] uppercase tracking-[0.06em]" htmlFor={`weight-${key}`}>
                   {key.replace(/_/g, ' ')}
                 </label>
                 <Input
@@ -464,19 +460,17 @@ const Settings: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            Cron Schedule
-          </CardTitle>
+          <p className="eyebrow">Scheduler</p>
+          <CardTitle>Cron schedule</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-5 text-[13px] text-muted-foreground">
+          <p className="mb-5 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">
             The daily scrape runs on <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">DAILY_SCRAPE_HOUR</code> (env, default 03:00 UTC) plus n8n cron.
             This field is informational — the schedule is operator-managed, not stored here.
           </p>
           <form id="cron-form" className="flex flex-wrap items-end gap-4" onSubmit={(e) => e.preventDefault()}>
             <div className="min-w-[240px] flex-1">
-              <label className="label" htmlFor="cron_schedule">
+              <label className="label font-mono text-[11px] uppercase tracking-[0.06em]" htmlFor="cron_schedule">
                 Stored notes (informational only)
               </label>
               <Input
@@ -499,13 +493,11 @@ const Settings: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-muted-foreground" />
-            Source Health
-          </CardTitle>
+          <p className="eyebrow">Connectors</p>
+          <CardTitle>Source health</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-[13px] text-muted-foreground">
+          <p className="mb-4 text-[13px] leading-relaxed text-muted-foreground">
             Monitor scraper source status and circuit breaker state.
           </p>
           {healthSources.length > 0 ? (
@@ -513,9 +505,9 @@ const Settings: React.FC = () => {
               {healthSources.map((s: any) => (
                 <div
                   key={s.source_name}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3.5 py-2.5"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3.5 py-2.5 transition-colors duration-150 hover:border-border-strong"
                 >
-                  <span className="text-sm font-medium capitalize">{s.source_name}</span>
+                  <span className="font-mono text-[12.5px] font-medium capitalize">{s.source_name}</span>
                   {s.is_open ? (
                     <Badge variant="danger">Circuit open ({s.consecutive_failures} failures)</Badge>
                   ) : (

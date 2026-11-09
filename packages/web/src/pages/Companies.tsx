@@ -105,7 +105,7 @@ const Companies: React.FC = () => {
           const c = info.row.original;
           return (
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted text-sm font-bold text-muted-foreground">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted font-mono text-[14px] font-semibold text-muted-foreground">
                 {c.name?.charAt(0)?.toUpperCase() || '?'}
               </span>
               <div className="min-w-0">
@@ -115,7 +115,7 @@ const Companies: React.FC = () => {
                     href={c.website_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                    className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:decoration-signal hover:text-foreground hover:underline"
                   >
                     <Globe className="h-3 w-3" />
                     {domainFromUrl(c.website_url)}
@@ -130,7 +130,11 @@ const Companies: React.FC = () => {
         header: 'Industry',
         cell: (info) => {
           const v = info.getValue();
-          return v ? <Badge variant="secondary">{v}</Badge> : <span className="text-muted-foreground">—</span>;
+          return v ? (
+            <Badge variant="secondary">{v}</Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          );
         },
       }),
       columnHelper.accessor('size_estimate', {
@@ -141,17 +145,28 @@ const Companies: React.FC = () => {
         header: 'Email',
         cell: (info) => {
           const v = info.getValue();
-          return v ? <span className="text-[13px] text-muted-foreground">{v}</span> : <span className="text-muted-foreground">—</span>;
+          return v ? (
+            <span className="font-mono text-[12px] text-muted-foreground">{v}</span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          );
         },
       }),
       columnHelper.accessor('default_phone', {
         header: 'Phone',
-        cell: (info) => <span className="text-[13px] text-muted-foreground">{info.getValue() || '—'}</span>,
+        cell: (info) => {
+          const v = info.getValue();
+          return v ? (
+            <span className="font-mono text-[12px] tabular-nums text-muted-foreground">{v}</span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          );
+        },
       }),
       columnHelper.accessor('lead_count', {
         header: 'Leads',
         cell: (info) => (
-          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium tabular-nums">
+          <span className="inline-flex items-center gap-1.5 font-mono text-[13px] font-medium tabular-nums">
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
             {info.getValue() || 0}
           </span>
@@ -159,15 +174,15 @@ const Companies: React.FC = () => {
       }),
       columnHelper.accessor('created_at', {
         header: 'Added',
-        cell: (info) => <span className="text-[13px] text-muted-foreground">{formatDate(info.getValue())}</span>,
+        cell: (info) => <span className="font-mono text-[12px] tabular-nums text-muted-foreground">{formatDate(info.getValue())}</span>,
       }),
       columnHelper.display({
         id: 'actions',
-        header: 'Actions',
+        header: () => <span className="block text-right">Actions</span>,
         cell: ({ row }) => {
           const company = row.original;
           return (
-            <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -279,7 +294,7 @@ const Companies: React.FC = () => {
           <table className="w-full">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-border bg-muted/40">
+                <tr key={headerGroup.id} className="border-b border-border">
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
@@ -292,10 +307,10 @@ const Companies: React.FC = () => {
                         {header.column.getCanSort() && (
                           <span className="inline-flex flex-col">
                             <ChevronUp
-                              className={`-mb-1 h-3 w-3 ${header.column.getIsSorted() === 'asc' ? 'text-primary' : 'text-muted-foreground/40'}`}
+                              className={`-mb-1 h-3 w-3 ${header.column.getIsSorted() === 'asc' ? 'text-foreground' : 'text-muted-foreground/40'}`}
                             />
                             <ChevronDown
-                              className={`h-3 w-3 ${header.column.getIsSorted() === 'desc' ? 'text-primary' : 'text-muted-foreground/40'}`}
+                              className={`h-3 w-3 ${header.column.getIsSorted() === 'desc' ? 'text-foreground' : 'text-muted-foreground/40'}`}
                             />
                           </span>
                         )}
@@ -314,7 +329,7 @@ const Companies: React.FC = () => {
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border transition-colors last:border-0 hover:bg-accent/50">
+                  <tr key={row.id} className="border-b border-border transition-colors last:border-0 hover:bg-accent/60">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="table-td">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

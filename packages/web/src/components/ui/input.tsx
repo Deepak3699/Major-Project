@@ -10,7 +10,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, error, icon, ...props }, ref) => (
     <div className={cn("relative", className)}>
       {icon && (
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground [&_svg]:h-4 [&_svg]:w-4">
           {icon}
         </span>
       )}
@@ -19,7 +19,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         className={cn(
           "input",
           icon && "pl-9",
-          error && "border-destructive focus:border-destructive focus:ring-ring-error",
+          error && "border-destructive focus:border-destructive",
           className
         )}
         {...props}

@@ -16,7 +16,7 @@ export interface ModalProps {
 }
 
 const sizeMap = {
-  sm: "max-w-md",
+  sm: "max-w-sm",
   md: "max-w-lg",
   lg: "max-w-2xl",
 }
@@ -50,7 +50,7 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-modal flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm animate-overlay-in"
+        className="absolute inset-0 bg-zinc-950/45 animate-overlay-in"
         onClick={onClose}
         aria-hidden
       />
@@ -59,7 +59,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative w-full rounded-t-2xl border border-border bg-surface shadow-float animate-slide-up sm:rounded-2xl",
+          "relative w-full rounded-t-xl border border-border bg-surface shadow-float animate-slide-up sm:rounded-xl",
           sizeMap[size],
           className
         )}
@@ -67,7 +67,7 @@ export function Modal({
         {(title || description) && (
           <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
             <div className="min-w-0 space-y-0.5">
-              {title && <h2 className="text-[15px] font-semibold">{title}</h2>}
+              {title && <h2 className="text-[15px] font-semibold tracking-[-0.014em]">{title}</h2>}
               {description && (
                 <p className="text-[13px] leading-relaxed text-muted-foreground">
                   {description}
@@ -79,7 +79,7 @@ export function Modal({
               size="icon-sm"
               onClick={onClose}
               aria-label="Close dialog"
-              className="-mr-1 shrink-0 text-muted-foreground hover:text-foreground"
+              className="-mr-1 shrink-0 hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </Button>

@@ -9,9 +9,9 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const sizeMap = {
-  sm: "h-8 w-8 text-xs",
-  default: "h-9 w-9 text-[13px]",
-  lg: "h-12 w-12 text-base",
+  sm: "h-7 w-7 text-[11px]",
+  default: "h-8 w-8 text-[12px]",
+  lg: "h-11 w-11 text-sm",
 }
 
 const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
@@ -35,7 +35,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       <div
         ref={ref}
         className={cn(
-          "inline-flex shrink-0 select-none items-center justify-center rounded-full bg-primary-soft font-semibold text-primary-hover ring-1 ring-primary/20",
+          "inline-flex shrink-0 select-none items-center justify-center rounded-full border border-border bg-surface font-mono font-medium uppercase text-foreground",
           sizeMap[size],
           className
         )}

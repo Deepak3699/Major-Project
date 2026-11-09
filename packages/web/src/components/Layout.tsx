@@ -27,13 +27,13 @@ const Layout: React.FC = () => {
   }, []);
 
   return (
-    <div className={`flex h-screen overflow-hidden bg-background ${isCandidate ? "candidate-workspace" : ""}`}>
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar drawerOpen={drawerOpen} onDrawerClose={() => setDrawerOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onMenuClick={() => setDrawerOpen(true)} />
         {!online && (
-          <div role="alert" className="flex items-center justify-center gap-2 bg-warning-soft px-4 py-2 text-[13px] font-medium text-warning">
-            <WifiOff className="h-4 w-4" />
+          <div role="alert" className="flex items-center justify-center gap-2 border-b border-warning/25 bg-warning-soft px-4 py-2 text-[12.5px] font-medium text-warning">
+            <WifiOff className="h-3.5 w-3.5" />
             You are offline — showing cached data. Actions will retry when you reconnect.
           </div>
         )}
@@ -41,11 +41,11 @@ const Layout: React.FC = () => {
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
-              className="mx-auto w-full max-w-content space-y-phi4 p-phi2 sm:p-phi3 lg:p-phi4"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.08 } }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="mx-auto w-full max-w-content space-y-phi2 p-4 sm:p-6"
             >
               <Outlet />
             </motion.div>

@@ -1,10 +1,34 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { BriefcaseBusiness, Search, SlidersHorizontal } from 'lucide-react';
 import { candidate } from '@/lib/api';
 import { JobCard } from '@/components/candidate/JobCard';
 import { PageLoader } from '@/components/ui/spinner';
 import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+// Presentation only: the backend stores descriptions as raw HTML inside plain
+// text. Flatten tags to readable lines before previewing on cards.
+function cleanText(raw: string | null | undefined): string {
+  if (!raw) return '';
+  return raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6]|ul|ol)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#(?:39|8217);/gi, "'")
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 const Jobs: React.FC = () => {
   const queryClient = useQueryClient();
@@ -24,18 +48,73 @@ const Jobs: React.FC = () => {
   const setFilter = (key: string, value: unknown) => setFilters((current) => ({ ...current, [key]: value, page: 1 }));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader title="Discover jobs" description="Search all trusted recent listings. Your profile match score is shown on each job when your profile is available." />
-      <form onSubmit={submit} className="card grid gap-3 p-4 md:grid-cols-[1fr_200px_170px_auto]">
-        <label className="relative block"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Role, company, or skill" className="input pl-9" /></label>
-        <label className="relative"><span className="sr-only">Location</span><input value={String(filters.location || '')} onChange={(e) => setFilter('location', e.target.value || undefined)} placeholder="City or region" className="input" /></label>
-        <label><span className="sr-only">Work setup</span><select value={String(filters.work_type || '')} onChange={(e) => setFilter('work_type', e.target.value || undefined)} className="input"><option value="">Any work setup</option><option value="remote">Remote</option><option value="hybrid">Hybrid</option><option value="onsite">On-site</option></select></label>
-        <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"><Search className="h-4 w-4" />Search</button>
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 md:col-span-4"><SlidersHorizontal className="h-4 w-4 text-muted-foreground" /><span className="mr-1 text-xs text-muted-foreground">Posted within</span>{[7, 14, 30].map((days) => <button key={days} type="button" onClick={() => setFilter('days', days)} className={`rounded-full border px-3 py-1 text-xs transition ${filters.days === days ? 'border-primary/50 bg-primary-soft text-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}>{days} days</button>)}<span className="ml-auto text-xs text-muted-foreground">Sorted by recent</span></div>
+      <form onSubmit={submit} className="card grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_200px_170px_auto] md:items-end">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Role, company, or skill" className="input pl-9" />
+        </label>
+        <label className="relative">
+          <span className="sr-only">Location</span>
+          <input value={String(filters.location || '')} onChange={(e) => setFilter('location', e.target.value || undefined)} placeholder="City or region" className="input" />
+        </label>
+        <label>
+          <span className="sr-only">Work setup</span>
+          <select value={String(filters.work_type || '')} onChange={(e) => setFilter('work_type', e.target.value || undefined)} className="input">
+            <option value="">Any work setup</option>
+            <option value="remote">Remote</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="onsite">On-site</option>
+          </select>
+        </label>
+        <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"><Search className="h-4 w-4" />Search</button>
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 md:col-span-4">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
+          <span className="eyebrow">Posted within</span>
+          {[7, 14, 30].map((days) => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setFilter('days', days)}
+              className={`rounded-md border px-2.5 py-1 font-mono text-[11px] tabular-nums transition-colors ${filters.days === days ? 'border-signal/40 bg-signal-soft/50 text-foreground' : 'border-border text-muted-foreground hover:border-border-strong hover:text-foreground'}`}
+            >
+              {days} days
+            </button>
+          ))}
+          <span className="ml-auto font-mono text-[11px] text-muted-foreground/80">Sorted by recent</span>
+        </div>
       </form>
-      <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{data?.pagination.total ?? 0} matching jobs</p>{error && <span className="text-xs text-destructive">{(error as Error).message}</span>}</div>
-      {isLoading ? <PageLoader label="Finding recent jobs…" /> : data?.data?.length ? <div className="space-y-3">{data.data.map((job) => <JobCard key={job.id} job={job} saving={savingId === job.id} onSave={(item) => saveMutation.mutate(item.id)} />)}</div> : <div className="card flex flex-col items-center p-10 text-center"><BriefcaseBusiness className="h-8 w-8 text-muted-foreground" /><h2 className="mt-3 font-semibold">No roles found in this window</h2><p className="mt-1 max-w-md text-sm text-muted-foreground">Try a broader search or a longer date window. New listings appear when an enabled source run completes.</p></div>}
-      {data && data.pagination.pages > 1 && <div className="flex items-center justify-center gap-3"><button disabled={Number(filters.page) <= 1} onClick={() => setFilter('page', Number(filters.page) - 1)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-40">Previous</button><span className="text-xs text-muted-foreground">Page {Number(filters.page)} of {data.pagination.pages}</span><button disabled={Number(filters.page) >= data.pagination.pages} onClick={() => setFilter('page', Number(filters.page) + 1)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-40">Next</button></div>}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="flex items-center justify-between">
+        <p className="font-mono text-[11px] tabular-nums text-muted-foreground"><span className="text-foreground">{data?.pagination.total ?? 0}</span> matching jobs</p>
+        {error && <span className="text-xs text-destructive">{(error as Error).message}</span>}
+      </motion.div>
+      {isLoading ? (
+        <PageLoader label="Finding recent jobs…" />
+      ) : data?.data?.length ? (
+        <div className="space-y-4">
+          {data.data.map((job, i) => {
+            const preview = cleanText(job.description || job.about_job);
+            return (
+              <motion.div key={job.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE, delay: Math.min(i * 0.04, 0.24) }}>
+                <JobCard job={job} saving={savingId === job.id} onSave={(item) => saveMutation.mutate(item.id)} />
+                {preview && <p className="mt-1.5 whitespace-pre-line px-5 text-[12.5px] leading-relaxed text-muted-foreground/90 line-clamp-3">{preview}</p>}
+              </motion.div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="card">
+          <EmptyState icon={BriefcaseBusiness} title="No roles found in this window" description="Try a broader search or a longer date window. New listings appear when an enabled source run completes." />
+        </div>
+      )}
+      {data && data.pagination.pages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button disabled={Number(filters.page) <= 1} onClick={() => setFilter('page', Number(filters.page) - 1)} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-40">Previous</button>
+          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">Page <span className="text-foreground">{Number(filters.page)}</span> of <span className="text-foreground">{data.pagination.pages}</span></span>
+          <button disabled={Number(filters.page) >= data.pagination.pages} onClick={() => setFilter('page', Number(filters.page) + 1)} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-40">Next</button>
+        </div>
+      )}
     </div>
   );
 };

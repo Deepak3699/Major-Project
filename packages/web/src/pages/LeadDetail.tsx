@@ -30,11 +30,8 @@ import {
   XCircle,
   Loader2,
   Link2,
-  Briefcase,
   Mail,
-  Phone,
   Globe,
-  Building2,
 } from 'lucide-react';
 import {
   SCORE_BAND_META,
@@ -304,21 +301,39 @@ const LeadDetail: React.FC = () => {
           : 'Auto: ContactOut → Snov.io → OSINT. Paid providers run per-row on your click only — no credits consumed until you click Enrich.';
 
   return (
-    <div className="space-y-phi4">
+    <div className="space-y-4">
       <div>
-        <Link to="/leads" className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
+        <Link
+          to="/leads"
+          className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back to leads
         </Link>
 
+        {/* Hero: identity + the single action row */}
         <div className="card overflow-hidden">
-          <div className="border-b border-border bg-gradient-to-br from-primary-soft/60 via-transparent to-transparent p-5">
+          <div className="border-b border-border p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <Badge className={bandMeta.className}>
-                    Score {lead.lead_score} · {bandMeta.label}
-                  </Badge>
+                <p className="eyebrow">Lead record</p>
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-foreground">
+                    {lead.company_name || 'Untitled lead'}
+                  </h1>
+                  <span className="flex items-baseline gap-1">
+                    <span className="font-mono text-[22px] font-semibold leading-none tabular-nums tracking-[-0.02em] text-foreground">
+                      {lead.lead_score}
+                    </span>
+                    <span className={`h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full ${bandMeta?.dot ?? 'bg-muted-foreground'}`} />
+                    <span className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{bandMeta?.label ?? lead.score_band}</span>
+                  </span>
+                </div>
+                <p className="mt-1 max-w-phi-body text-sm leading-relaxed text-muted-foreground">
+                  {lead.job_title || 'Job title not available'}
+                  {lead.experience_level && <span className="text-muted-foreground/70"> · {lead.experience_level}</span>}
+                </p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                   <Badge className={stageMetaV.className}>
                     <span className="capitalize">{stageMetaV.label}</span>
                   </Badge>
@@ -329,13 +344,8 @@ const LeadDetail: React.FC = () => {
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-2xl font-semibold tracking-tight">{lead.company_name || 'Untitled lead'}</h1>
-                <p className="mt-1 text-[15px] text-muted-foreground">
-                  {lead.job_title || 'Job title not available'}
-                  {lead.experience_level && <span className="text-muted-foreground/70"> · {lead.experience_level}</span>}
-                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex shrink-0 flex-wrap gap-2">
                 <Button onClick={handleEnrich} loading={extracting || enrichMutation.isLoading} variant="secondary">
                   <Sparkles className="h-4 w-4" />
                   {extracting ? 'Extracting…' : 'Enrich'}
@@ -375,22 +385,23 @@ const LeadDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 text-[13px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <Briefcase className="h-3.5 w-3.5" />
-              {lead.source_site ? <span className="capitalize">{lead.source_site}</span> : 'Source unknown'}
+          {/* Factual strip: source, domain, owner, discovered */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
+              <Globe className="h-3.5 w-3.5" />
+              {lead.source_site ? <span className="font-mono capitalize">{lead.source_site}</span> : 'Source unknown'}
             </span>
             {lead.company_domain && (
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 font-mono text-[12px] text-muted-foreground">
                 <Globe className="h-3.5 w-3.5" />
                 {lead.company_domain}
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
               <User className="h-3.5 w-3.5" />
               {assignedLabel}
             </span>
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[12px] tabular-nums text-muted-foreground">
               <CheckCircle2 className="h-3.5 w-3.5 text-success" />
               Discovered {formatDateTime(lead.created_at)}
             </span>
@@ -398,12 +409,10 @@ const LeadDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* Extraction provider selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Extraction Settings
-          </CardTitle>
+          <CardTitle>Extraction Settings</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
@@ -422,15 +431,15 @@ const LeadDetail: React.FC = () => {
                   key={opt.label}
                   onClick={() => setExtractProvider(opt.value as never)}
                   title={needsKey && !ready ? `${opt.label} API key not configured — runs but cannot spend credits` : `${opt.label} — per-row, on-demand only`}
-                  className={`rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+                  className={`rounded-lg border px-3.5 py-1.5 transition-colors duration-150 ${
                     extractProvider === opt.value
-                      ? 'border-primary bg-primary-soft text-primary'
-                      : 'border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground'
+                      ? 'border-signal/40 bg-surface text-foreground'
+                      : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:text-foreground'
                   }`}
                 >
-                  {opt.label}
+                  <span className="text-[13px] font-medium">{opt.label}</span>
                   {needsKey && (
-                    <span className={`ml-1.5 text-[11px] font-semibold ${ready ? 'text-success' : 'text-warning'}`}>
+                    <span className={`ml-1.5 font-mono text-[11px] font-semibold ${ready ? 'text-success' : 'text-warning'}`}>
                       {ready ? '●' : '○'}
                     </span>
                   )}
@@ -438,14 +447,16 @@ const LeadDetail: React.FC = () => {
               );
             })}
           </div>
-          {providerNote && <p className="mt-3 text-[13px] text-muted-foreground">{providerNote}</p>}
+          {providerNote && (
+            <p className="mt-3 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">{providerNote}</p>
+          )}
           {extractProvider && (extractProvider === 'contactout' || extractProvider === 'snovio') && enrichmentReady?.[extractProvider] === false && (
-            <p className="mt-2 text-[13px] font-medium text-warning">
+            <p className="mt-2 border-l-2 border-l-warning pl-2.5 text-[13px] leading-relaxed text-warning">
               ACTION REQUIRED: no {extractProvider === 'contactout' ? 'ContactOut' : 'Snov.io'} key configured — enriching with it will fail honestly. Add a key in Settings or use Auto/OSINT.
             </p>
           )}
           {extracting && (
-            <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary-soft px-4 py-3 text-[13px] text-primary animate-fade-in">
+            <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-[13px] text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Extracting HR contact… This may take a few moments.
             </div>
@@ -453,39 +464,43 @@ const LeadDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-phi3 lg:grid-cols-3">
+      {/* Lead info + score breakdown + company narrative */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
+            <p className="eyebrow">Dossier</p>
             <CardTitle>Lead Info</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="divide-y divide-border text-[13px]">
               {[
-                ['Score', `${lead.lead_score} (${lead.score_band})`],
-                ['Stage', lead.pipeline_stage],
-                ['Data quality', dqMeta?.label || '—'],
-                ['Email', lead.hr_email || '—'],
-                ['Phone', lead.hr_mobile || '—'],
-                ['Experience', lead.experience_level || '—'],
-                ['Salary range', lead.salary_range || '—'],
-                ['Source site', lead.source_site || '—'],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-start justify-between gap-4 py-2.5">
-                  <dt className="text-muted-foreground">{k}</dt>
-                  <dd className="text-right font-medium text-foreground capitalize">{v}</dd>
+                ['Score', `${lead.lead_score} (${lead.score_band})`, 'mono'],
+                ['Stage', lead.pipeline_stage, 'plain'],
+                ['Data quality', dqMeta?.label || '—', 'plain'],
+                ['Email', lead.hr_email || '—', 'mono'],
+                ['Phone', lead.hr_mobile || '—', 'mono'],
+                ['Experience', lead.experience_level || '—', 'plain'],
+                ['Salary range', lead.salary_range || '—', 'mono'],
+                ['Source site', lead.source_site || '—', 'mono'],
+              ].map(([k, v, style]) => (
+                <div key={k as string} className="flex items-start justify-between gap-4 py-2.5">
+                  <dt className="shrink-0 text-muted-foreground">{k}</dt>
+                  <dd className={`min-w-0 break-all text-right capitalize text-foreground ${style === 'mono' ? 'font-mono text-[12px] tabular-nums' : 'font-medium'}`}>
+                    {v}
+                  </dd>
                 </div>
               ))}
             </dl>
             {lead.hr_name && (
-              <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3">
-                <p className="text-xs text-muted-foreground">HR Contact</p>
-                <p className="mt-1 text-sm font-medium">{lead.hr_name}</p>
+              <div className="mt-4 rounded-lg border border-border p-3">
+                <p className="eyebrow">HR Contact</p>
+                <p className="mt-1.5 text-sm font-medium text-foreground">{lead.hr_name}</p>
                 {lead.hr_linkedin_url && (
                   <a
                     href={lead.hr_linkedin_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-info hover:underline"
+                    className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-info hover:underline hover:decoration-signal"
                   >
                     <Link2 className="h-3.5 w-3.5" />
                     LinkedIn profile
@@ -504,9 +519,12 @@ const LeadDetail: React.FC = () => {
         {scoreData && Object.keys(scoreData.breakdown || {}).length > 0 && (
           <Card className="lg:col-span-1">
             <CardHeader>
+              <p className="eyebrow">Breakdown</p>
               <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />Why this score</span>
-                <span className="text-gradient text-lg font-semibold tabular-nums">{scoreData.score}</span>
+                <span>Why this score</span>
+                <span className="font-mono text-[20px] font-semibold tabular-nums leading-none tracking-[-0.02em] text-foreground">
+                  {scoreData.score}
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -514,27 +532,27 @@ const LeadDetail: React.FC = () => {
                 {Object.values(scoreData.breakdown).filter(Boolean).map((b: any) => (
                   <li key={b.reason} className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">{b.reason}</span>
-                    <span className="font-medium tabular-nums text-success">+{b.points}</span>
+                    <span className="font-mono font-medium tabular-nums text-success">+{b.points}</span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-[11px] text-muted-foreground/70">Score is deterministic from these fields; re-verifying or enriching updates it.</p>
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                Score is deterministic from these fields; re-verifying or enriching updates it.
+              </p>
             </CardContent>
           </Card>
         )}
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              About the Company & Role
-            </CardTitle>
+            <p className="eyebrow">Company record</p>
+            <CardTitle>About the Company & Role</CardTitle>
           </CardHeader>
           <CardContent>
             {lead.about_company && (
-              <p className="mb-4 text-[13px] leading-relaxed text-muted-foreground">{lead.about_company}</p>
+              <p className="mb-4 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">{lead.about_company}</p>
             )}
-            <h4 className="mb-2 text-[13px] font-semibold text-foreground">Job Description</h4>
+            <p className="eyebrow mb-2">Job Description</p>
             <div
               className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 text-[13px] leading-relaxed text-muted-foreground"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(lead.job_description || 'No description available') }}
@@ -543,15 +561,17 @@ const LeadDetail: React.FC = () => {
         </Card>
       </div>
 
+      {/* Outreach guardrail */}
       <Card>
         <CardHeader>
+          <p className="eyebrow">Guardrail</p>
           <CardTitle>Contact Preferences</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium">Do Not Contact</p>
-              <p className="text-[13px] text-muted-foreground">
+              <p className="text-[13px] font-medium text-foreground">Do Not Contact</p>
+              <p className="mt-0.5 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">
                 {lead.do_not_contact
                   ? 'This lead is excluded from all outreach.'
                   : 'This lead can receive emails and WhatsApp messages.'}
@@ -572,22 +592,20 @@ const LeadDetail: React.FC = () => {
       {lead.drafts && lead.drafts.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              Outreach Drafts
-            </CardTitle>
+            <p className="eyebrow">Outbound · {lead.drafts.length}</p>
+            <CardTitle>Outreach Drafts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {lead.drafts.map((draft: OutreachDraft) => {
               const isEditing = editing?.draftId === draft.id;
               return (
                 <div key={draft.id} className="rounded-lg border border-border">
-                  <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-2">
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="uppercase">{draft.channel}</Badge>
-                      <span className="text-xs text-muted-foreground">v{draft.version}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground">v{draft.version}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
                       {draft.is_edited ? 'Edited' : 'Auto-generated'}
                     </span>
                   </div>
@@ -595,7 +613,7 @@ const LeadDetail: React.FC = () => {
                   {isEditing ? (
                     <div className="space-y-3 p-4">
                       <div>
-                        <label className="mb-1 block text-[13px] font-medium text-foreground">Subject</label>
+                        <label className="label">Subject</label>
                         <Input
                           value={editing.subject}
                           onChange={(e) => updateEditing({ subject: e.target.value })}
@@ -603,7 +621,7 @@ const LeadDetail: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[13px] font-medium text-foreground">Body</label>
+                        <label className="label">Body</label>
                         <Textarea
                           value={editing.body}
                           onChange={(e) => updateEditing({ body: e.target.value })}
@@ -622,17 +640,20 @@ const LeadDetail: React.FC = () => {
                     </div>
                   ) : (
                     <div className="p-4">
-                      {draft.subject && <p className="mb-2 text-sm font-semibold text-foreground">{draft.subject}</p>}
+                      {draft.subject && (
+                        <p className="mb-2 text-[13px] font-semibold text-foreground">{draft.subject}</p>
+                      )}
                       <pre className="max-h-64 min-h-[80px] overflow-y-auto whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 font-sans text-[13px] leading-relaxed text-foreground">
                         {draft.body || 'No draft body available'}
                       </pre>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button onClick={() => startEditing(draft)} variant="outline" size="sm">
+                          <Mail className="h-3.5 w-3.5" />
                           Edit Draft
                         </Button>
                         <Button
                           onClick={() => setPendingSend({ channel: draft.channel, draftId: draft.id })}
-                          variant="soft"
+                          variant="outline"
                           size="sm"
                           disabled={!!sendBlockReason}
                           title={sendBlockReason || `Send via ${draft.channel} — you will confirm first`}
@@ -650,8 +671,10 @@ const LeadDetail: React.FC = () => {
         </Card>
       )}
 
+      {/* Event log */}
       <Card>
         <CardHeader>
+          <p className="eyebrow">Event log</p>
           <CardTitle>Timeline</CardTitle>
         </CardHeader>
         <CardContent>
@@ -669,23 +692,23 @@ const LeadDetail: React.FC = () => {
                       ? 'bg-destructive'
                       : event.status === 'success' || event.status === 'replied'
                         ? 'bg-success'
-                        : 'bg-primary'
+                        : 'bg-foreground'
                   }`} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[13px] font-medium text-foreground">
                         {TIMELINE_TYPE_LABELS[event.type] || event.type.replace(/_/g, ' ')}
                       </p>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                         {event.timestamp ? formatDateTime(event.timestamp) : '—'}
                       </span>
                     </div>
                     {(event.status || event.delivery_status || event.provider || event.channel) && (
-                      <p className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                        {event.status && <span className="capitalize">{event.status}</span>}
-                        {event.delivery_status && <span className="capitalize">delivery: {event.delivery_status}</span>}
-                        {event.channel && <span className="capitalize">via {event.channel}</span>}
-                        {event.provider && <span className="capitalize">via {event.provider}</span>}
+                      <p className="mt-0.5 flex flex-wrap gap-2 text-[11px] capitalize text-muted-foreground">
+                        {event.status && <span>{event.status}</span>}
+                        {event.delivery_status && <span>delivery: {event.delivery_status}</span>}
+                        {event.channel && <span>via {event.channel}</span>}
+                        {event.provider && <span>via {event.provider}</span>}
                       </p>
                     )}
                   </div>
@@ -713,7 +736,7 @@ const LeadDetail: React.FC = () => {
         <div className="space-y-2">
           <button
             onClick={() => handleAssign('')}
-            className="flex w-full items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent"
+            className="flex w-full items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left text-sm transition-colors duration-150 hover:bg-accent"
           >
             <User className="h-4 w-4 text-muted-foreground" />
             <span>Unassigned</span>
@@ -722,18 +745,18 @@ const LeadDetail: React.FC = () => {
             <button
               key={user.id}
               onClick={() => handleAssign(user.id)}
-              className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
+              className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors duration-150 ${
                 lead.assigned_to === user.id
-                  ? 'border-primary bg-primary-soft text-primary'
+                  ? 'border-foreground bg-accent text-foreground'
                   : 'border-border hover:bg-accent'
               }`}
             >
               <User className="h-4 w-4 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{user.email}</p>
-                <p className="text-xs capitalize text-muted-foreground">{user.role}</p>
+                <p className="text-[11px] capitalize text-muted-foreground">{user.role}</p>
               </div>
-              {lead.assigned_to === user.id && <CheckCircle2 className="h-4 w-4 text-primary" />}
+              {lead.assigned_to === user.id && <CheckCircle2 className="h-4 w-4 text-foreground" />}
             </button>
           ))}
         </div>

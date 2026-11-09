@@ -1,12 +1,23 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useQuery } from 'react-query';
-import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, Compass, FileText, MapPin, Target, TrendingUp, WandSparkles } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, FileText, MapPin, Target, TrendingUp } from 'lucide-react';
 import { candidate } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { JobCard } from '@/components/candidate/JobCard';
 import { PageLoader } from '@/components/ui/spinner';
+import { StatCard } from '@/components/ui/stat-card';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+// Shared entrance: fade + 8px rise.
+const rise = (delay = 0) => ({
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.3, ease: EASE, delay },
+});
 
 const CandidateDashboard: React.FC = () => {
   const user = useAuthStore((state) => state.user);
@@ -29,71 +40,172 @@ const CandidateDashboard: React.FC = () => {
     { stage: 'Interview', roles: summary?.application_statuses?.INTERVIEW || 0 },
     { stage: 'Offers', roles: summary?.application_statuses?.OFFER || 0 },
   ];
+  const strengthTone = completion >= 80 ? 'bg-success' : completion >= 50 ? 'bg-info' : 'bg-warning';
 
-  return <div className="candidate-dashboard space-y-6">
-    <section className="candidate-hero relative overflow-hidden rounded-[1.4rem] border border-primary/15 p-6 sm:p-8">
-      <div className="candidate-hero-shape candidate-hero-shape-one" aria-hidden="true" />
-      <div className="candidate-hero-shape candidate-hero-shape-two" aria-hidden="true" />
-      <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
-        <div className="max-w-2xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-surface/75 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-primary"><Compass className="h-3.5 w-3.5" />Your career space</div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-[2.6rem]">Good to see you, {firstName}.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Your job search, applications, and preparation tools are together here. Start with roles that fit the experience and skills you have confirmed.</p>
-          <div className="mt-6 flex flex-wrap gap-2.5">
-            <Link to="/jobs" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover">Explore jobs <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/profile" className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-surface/85 px-4 text-sm font-semibold transition hover:border-primary/35"><CircleUserRound className="h-4 w-4 text-primary" />Edit profile</Link>
+  return (
+    <div className="space-y-4">
+      {/* Page head */}
+      <motion.section {...rise(0)} className="min-w-0">
+        <p className="eyebrow">Your career space</p>
+        <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.022em] text-foreground text-balance">Good to see you, {firstName}.</h1>
+            <p className="mt-1.5 max-w-phi-body text-sm leading-relaxed text-muted-foreground">Your job search, applications, and preparation tools are together here. Start with roles that fit the experience and skills you have confirmed.</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Link to="/jobs" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover">Explore jobs <ArrowRight className="h-4 w-4" /></Link>
+            <Link to="/profile" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-foreground transition-colors hover:border-border-strong hover:bg-accent/60"><CircleUserRound className="h-4 w-4 text-muted-foreground" />Edit profile</Link>
           </div>
         </div>
-        <div className="relative mx-auto w-full max-w-[250px] rounded-2xl border border-primary/15 bg-surface/90 p-5 shadow-sm lg:mx-0">
-          <div className="flex items-center justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Profile strength</p><p className="mt-1 text-xs text-muted-foreground">More detail, closer matches</p></div><Target className="h-5 w-5 text-primary" /></div>
-          <div className="mt-5 flex items-center gap-4">
-            <div className="candidate-progress-ring relative grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full" style={{ background: 'conic-gradient(hsl(var(--primary)) ' + (completion * 3.6) + 'deg, hsl(var(--muted)) 0deg)' }}><div className="grid h-[62px] w-[62px] place-items-center rounded-full bg-surface text-lg font-bold tabular-nums">{completion}%</div></div>
-            <div><p className="text-sm font-semibold">{completion >= 80 ? 'Looking strong' : completion >= 50 ? 'Good progress' : 'Build your profile'}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{completion >= 100 ? 'Your profile is ready for matching.' : 'Add the missing details when you have a moment.'}</p></div>
+      </motion.section>
+
+      {/* Stat row */}
+      <motion.section {...rise(0.05)} className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatCard icon={BriefcaseBusiness} label="Fresh jobs" value={summary?.fresh_jobs_7d ?? 0} hint="Added in the last 7 days" />
+        <StatCard icon={Target} label="Profile strength" value={completion + '%'} hint="Used to personalize matches" />
+        <StatCard icon={TrendingUp} label="Applications" value={summary?.application_total ?? 0} hint={activeCount + ' currently active'} />
+        <StatCard icon={CheckCircle2} label="Offers & joined" value={(summary?.application_statuses?.OFFER || 0) + (summary?.application_statuses?.JOINED || 0)} hint="Your latest milestones" />
+      </motion.section>
+
+      {!summary?.has_profile && (
+        <motion.section {...rise(0.1)} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between card border-signal/30">
+          <div className="flex gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-dashed border-border-strong text-muted-foreground"><FileText className="h-4 w-4" strokeWidth={1.75} /></div>
+            <div>
+              <h2 className="text-[14px] font-semibold text-foreground">Start with your profile</h2>
+              <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">Add your skills and experience, or upload a resume to suggest profile details. You review and confirm everything before it is saved.</p>
+            </div>
           </div>
-          <Link to="/profile" className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">Review profile <ArrowUpRight className="h-3.5 w-3.5" /></Link>
+          <Link to="/profile" className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover">Set up profile</Link>
+        </motion.section>
+      )}
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(290px,0.8fr)]">
+        <motion.section {...rise(0.15)} className="min-w-0 space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="eyebrow">Picked for your profile</p>
+              <h2 className="mt-1 text-lg font-semibold tracking-[-0.014em] text-foreground">Recommended jobs</h2>
+            </div>
+            <Link to="/recommendations" className="group inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
+          </div>
+          {topJobs.length ? (
+            <div className="space-y-3">
+              {topJobs.map((job, i) => (
+                <motion.div key={job.id} {...rise(Math.min(i * 0.05, 0.2))}>
+                  <JobCard job={job} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="card p-6 text-[13px] leading-relaxed text-muted-foreground">{summary?.has_profile ? 'No roles have reached your profile match threshold yet. Browse all trusted jobs to explore more.' : 'Your tailored recommendations will appear after you save your profile.'}</div>
+          )}
+        </motion.section>
+
+        <motion.div {...rise(0.2)} className="space-y-4">
+          {/* Profile strength */}
+          <section className="card p-5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="eyebrow">Profile strength</p>
+              <Target className="h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
+            </div>
+            <p className="mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] text-foreground tabular-nums">{completion}%</p>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" role="presentation">
+              <div className={`h-full rounded-full ${strengthTone} transition-all duration-500`} style={{ width: `${completion}%` }} />
+            </div>
+            <p className="mt-3 text-[13px] font-medium text-foreground">{completion >= 80 ? 'Looking strong' : completion >= 50 ? 'Good progress' : 'Build your profile'}</p>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">More detail, closer matches. {completion >= 100 ? 'Your profile is ready for matching.' : 'Add the missing details when you have a moment.'}</p>
+            <Link to="/profile" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Review profile <ArrowUpRight className="h-3 w-3" /></Link>
+          </section>
+
+          {/* Application progress */}
+          <section className="card p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="eyebrow">Your activity</p>
+                <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Application progress</h2>
+              </div>
+              <TrendingUp className="mt-0.5 h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
+            </div>
+            <div className="mt-4 h-44 w-full">
+              {summary?.application_total ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={progressChart} margin={{ top: 8, right: 4, bottom: 0, left: -24 }}>
+                    <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                    <XAxis dataKey="stage" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                    <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))', background: 'hsl(var(--surface))', fontSize: 12 }} />
+                    <Bar dataKey="roles" fill="hsl(var(--foreground))" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-[12px] leading-relaxed text-muted-foreground">When you save or apply to a role, your progress will show here.</div>
+              )}
+            </div>
+            <Link to="/applications" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Open application tracker <ArrowRight className="h-3 w-3" /></Link>
+          </section>
+
+          {/* Quick actions */}
+          <section className="card p-5">
+            <p className="eyebrow">Quick actions</p>
+            <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Keep momentum</h2>
+            <div className="mt-3 space-y-0.5">
+              <QuickAction to="/saved" icon={Bookmark} label="Review saved jobs" />
+              <QuickAction to="/resume" icon={FileText} label="Prepare a role-specific resume" />
+              <QuickAction to="/applications" icon={Bell} label="Check application updates" />
+            </div>
+          </section>
+        </motion.div>
+      </div>
+
+      {/* Recent applications */}
+      <motion.section {...rise(0.25)} className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="eyebrow">Stay on top of replies</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-[-0.014em] text-foreground">Recent applications</h2>
+          </div>
+          <Link to="/applications" className="group inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Open tracker <ArrowRight className="h-3.5 w-3.5" /></Link>
         </div>
-      </div>
-    </section>
-
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Stat icon={BriefcaseBusiness} label="Fresh jobs" value={summary?.fresh_jobs_7d ?? 0} hint="Added in the last 7 days" />
-      <Stat icon={Target} label="Profile strength" value={completion + '%'} hint="Used to personalize matches" />
-      <Stat icon={TrendingUp} label="Applications" value={summary?.application_total ?? 0} hint={activeCount + ' currently active'} />
-      <Stat icon={CheckCircle2} label="Offers & joined" value={(summary?.application_statuses?.OFFER || 0) + (summary?.application_statuses?.JOINED || 0)} hint="Your latest milestones" />
-    </section>
-
-    {!summary?.has_profile && <section className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary-soft/45 p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface text-primary"><FileText className="h-5 w-5" /></div><div><h2 className="font-semibold">Start with your profile</h2><p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">Add your skills and experience, or upload a resume to suggest profile details. You review and confirm everything before it is saved.</p></div></div><Link to="/profile" className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">Set up profile</Link></section>}
-
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(290px,0.8fr)]">
-      <section className="min-w-0 space-y-3">
-        <div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">Picked for your profile</p><h2 className="mt-1 text-xl font-semibold">Recommended jobs</h2></div><Link to="/recommendations" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">See all <ArrowRight className="h-4 w-4" /></Link></div>
-        {topJobs.length ? <div className="space-y-3">{topJobs.map((job) => <JobCard key={job.id} job={job} />)}</div> : <div className="card rounded-2xl p-6 text-sm text-muted-foreground">{summary?.has_profile ? 'No roles have reached your profile match threshold yet. Browse all trusted jobs to explore more.' : 'Your tailored recommendations will appear after you save your profile.'}</div>}
-      </section>
-
-      <div className="space-y-5">
-        <section className="card rounded-2xl p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Your activity</p><h2 className="mt-1 text-lg font-semibold">Application progress</h2></div><span className="rounded-lg bg-primary-soft p-2 text-primary"><TrendingUp className="h-4 w-4" /></span></div><div className="mt-4 h-48 w-full">{summary?.application_total ? <ResponsiveContainer width="100%" height="100%"><BarChart data={progressChart} margin={{ top: 8, right: 4, bottom: 0, left: -24 }}><CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" /><XAxis dataKey="stage" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} /><Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: 10, border: '1px solid hsl(var(--border))', background: 'hsl(var(--surface))', fontSize: 12 }} /><Bar dataKey="roles" fill="hsl(var(--primary))" radius={[5, 5, 0, 0]} maxBarSize={36} /></BarChart></ResponsiveContainer> : <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border px-4 text-center text-xs leading-5 text-muted-foreground">When you save or apply to a role, your progress will show here.</div>}</div><Link to="/applications" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">Open application tracker <ArrowRight className="h-3.5 w-3.5" /></Link></section>
-        <section className="card rounded-2xl p-5"><div className="flex items-center gap-2"><span className="rounded-lg bg-success-soft p-2 text-success"><WandSparkles className="h-4 w-4" /></span><div><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-success">Quick actions</p><h2 className="text-base font-semibold">Keep momentum</h2></div></div><div className="mt-4 divide-y divide-border"><QuickAction to="/saved" icon={Bookmark} label="Review saved jobs" /><QuickAction to="/resume" icon={FileText} label="Prepare a role-specific resume" /><QuickAction to="/applications" icon={Bell} label="Check application updates" /></div></section>
-      </div>
+        {recentApps.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {recentApps.map((app, i) => (
+              <motion.div key={app.id} {...rise(Math.min(i * 0.04, 0.24))} className="h-full">
+                <Link to="/applications" className="card group flex h-full flex-col p-4 transition-colors duration-150 hover:border-border-strong">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="line-clamp-2 text-[13px] font-semibold leading-snug text-foreground">{app.job_title}</span>
+                    <Status status={app.status} />
+                  </div>
+                  <p className="mt-2 flex items-center gap-1 truncate text-[12px] text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" />{app.company_name}</p>
+                  <p className="mt-auto pt-4 font-mono text-[10.5px] text-muted-foreground/80">Updated {new Date(app.updated_at).toLocaleDateString()}</p>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-6 text-[13px] leading-relaxed text-muted-foreground">Save a role to start your application tracker.</div>
+        )}
+      </motion.section>
     </div>
-
-    <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Stay on top of replies</p><h2 className="mt-1 text-xl font-semibold">Recent applications</h2></div><Link to="/applications" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">Open tracker <ArrowRight className="h-4 w-4" /></Link></div>
-      {recentApps.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{recentApps.map((app) => <Link key={app.id} to="/applications" className="card group rounded-2xl p-4 transition hover:-translate-y-0.5 hover:border-primary/35"><div className="flex items-start justify-between gap-2"><span className="line-clamp-2 text-sm font-semibold leading-5 group-hover:text-primary">{app.job_title}</span><Status status={app.status} /></div><p className="mt-2 flex items-center gap-1 truncate text-xs text-muted-foreground"><MapPin className="h-3 w-3 shrink-0" />{app.company_name}</p><p className="mt-4 text-[10px] text-muted-foreground">Updated {new Date(app.updated_at).toLocaleDateString()}</p></Link>)}</div> : <div className="card rounded-2xl p-6 text-sm text-muted-foreground">Save a role to start your application tracker.</div>}
-    </section>
-  </div>;
+  );
 };
 
-function Stat({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string | number; hint: string }) {
-  return <div className="candidate-stat card rounded-2xl p-4"><div className="flex items-center justify-between"><span className="text-xs font-medium text-muted-foreground">{label}</span><span className="rounded-lg bg-primary-soft p-2 text-primary"><Icon className="h-4 w-4" /></span></div><p className="mt-3 text-2xl font-bold tabular-nums">{value}</p><p className="mt-1 text-[11px] text-muted-foreground">{hint}</p></div>;
-}
-
 function QuickAction({ to, icon: Icon, label }: { to: string; icon: any; label: string }) {
-  return <Link to={to} className="flex items-center justify-between gap-3 py-3 text-xs font-medium text-muted-foreground transition hover:text-primary"><span className="flex items-center gap-2.5"><Icon className="h-4 w-4 text-primary" />{label}</span><ArrowUpRight className="h-3.5 w-3.5" /></Link>;
+  return (
+    <Link to={to} className="group -mx-2 flex items-center justify-between gap-3 rounded-lg px-2 py-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-accent/60">
+      <span className="flex items-center gap-2.5"><Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={1.75} />{label}</span>
+      <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
+    </Link>
+  );
 }
 
 function Status({ status }: { status: string }) {
-  const color = status === 'OFFER' || status === 'JOINED' ? 'text-success bg-success-soft' : status === 'REJECTED' ? 'text-destructive bg-destructive-soft' : 'text-primary bg-primary-soft';
-  return <span className={'shrink-0 rounded-full px-2 py-1 text-[9px] font-semibold ' + color}>{status.replace(/_/g, ' ')}</span>;
+  const tone = status === 'OFFER' || status === 'JOINED'
+    ? 'border-success/25 bg-success-soft text-success'
+    : status === 'REJECTED'
+      ? 'border-destructive/25 bg-destructive-soft text-destructive'
+      : 'border-border bg-muted text-muted-foreground';
+  return <span className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.04em] ${tone}`}>{status.replace(/_/g, ' ')}</span>;
 }
 
 export default CandidateDashboard;

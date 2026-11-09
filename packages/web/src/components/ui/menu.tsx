@@ -82,7 +82,7 @@ export function Menu({ trigger, items, align = "start", triggerClassName, panelC
           ref={panelRef}
           role="menu"
           style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className={cn("z-dropdown min-w-[190px] max-w-[calc(100vw-16px)] overflow-hidden rounded-xl border border-border bg-surface/95 p-1 shadow-card backdrop-blur-xl animate-scale-in", panelClassName)}
+          className={cn("z-dropdown min-w-[190px] max-w-[calc(100vw-16px)] overflow-hidden rounded-lg border border-border bg-surface p-1.5 shadow-popover animate-scale-in", panelClassName)}
         >
           {items.map((it, i) => (
             <button
@@ -91,8 +91,8 @@ export function Menu({ trigger, items, align = "start", triggerClassName, panelC
               disabled={it.disabled}
               onClick={(e) => { e.stopPropagation(); setOpen(false); if (!it.disabled) it.onSelect(); }}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium transition-colors disabled:opacity-40",
-                it.danger ? "text-destructive hover:bg-destructive/10" : "text-foreground hover:bg-accent",
+                "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] font-medium transition-colors disabled:opacity-40",
+                it.danger ? "text-destructive hover:bg-destructive-soft" : "text-foreground hover:bg-accent",
               )}
             >
               {it.icon && <span className="shrink-0 text-muted-foreground [&_svg]:h-4 [&_svg]:w-4">{it.icon}</span>}

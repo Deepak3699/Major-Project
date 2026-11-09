@@ -3,8 +3,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import { dashboard, admin, CreditUsageResponse, RunLog } from '@/lib/api';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -22,7 +21,7 @@ import {
   Clock,
   AlertTriangle,
 } from 'lucide-react';
-import { formatDateTime, stageMeta } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 
 const STAGE_LABELS: Record<string, string> = {
   discovered: 'Discovered', enriching: 'Enriching', enriched: 'Enriched',
@@ -111,8 +110,8 @@ const Analytics: React.FC = () => {
   }
 
   return (
-    <div className="space-y-phi4">
-      <PageHeader title="Analytics" description="Deep dive into pipeline performance and resource usage" />
+    <div className="space-y-4">
+      <PageHeader title="Analytics" description="Pipeline performance, conversion and resource usage — measured, not estimated" />
 
       <StatCardGrid>
         <StatCard icon={Users} label="Total Leads" value={stats?.totals?.total_leads ?? 0} tone="primary" />
@@ -123,33 +122,33 @@ const Analytics: React.FC = () => {
         <StatCard icon={Zap} label="Send Success · 7d" value={outRate === null ? '—' : `${outRate}%`} tone="info" hint={outTotal > 0 ? `${outSent}/${outTotal} sends` : 'no sends yet'} />
       </StatCardGrid>
 
+      {/* Pipeline funnel */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Pipeline Conversion
-          </CardTitle>
+          <p className="eyebrow">Funnel</p>
+          <CardTitle>Pipeline Conversion</CardTitle>
+          <CardDescription>Leads per stage, largest stage first.</CardDescription>
         </CardHeader>
         <CardContent>
           {totalFunnel === 0 ? (
             <EmptyState icon={TrendingUp} title="No pipeline data yet." description="Funnel metrics will appear once leads are discovered." />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {funnelEntries.map(([stage, count]) => {
                 const pct = totalFunnel > 0 ? ((count as number) / totalFunnel) * 100 : 0;
                 const stageLabel = STAGE_LABELS[stage] || stage.replace(/_/g, ' ');
-                const meta = stageMeta(stage);
                 return (
                   <div key={stage} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-medium capitalize">{stageLabel}</span>
-                      <span className="text-[13px] font-medium tabular-nums">
-                        {count as number} <span className="text-xs text-muted-foreground">({pct.toFixed(1)}%)</span>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[13px] font-medium">{stageLabel}</span>
+                      <span className="font-mono text-[13px] tabular-nums text-muted-foreground">
+                        {(count as number).toLocaleString()}
+                        <span className="text-muted-foreground/70"> · {pct.toFixed(1)}%</span>
                       </span>
                     </div>
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-2.5 rounded-full bg-gradient-to-r from-primary to-indigo-400 transition-all duration-500"
+                        className="h-2 rounded-full bg-primary transition-all duration-500"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -161,49 +160,55 @@ const Analytics: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Stage-to-stage ratios */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Stage Conversion
-          </CardTitle>
+          <p className="eyebrow">Stage flow</p>
+          <CardTitle>Stage Conversion</CardTitle>
+          <CardDescription>Share of each stage relative to the previous one (snapshot shares, not tracked transitions).</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="mb-4 text-[13px] text-muted-foreground">
-            Share of each stage relative to the previous one (snapshot shares, not tracked transitions).
-          </p>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {conversions.map((c) => (
-              <div key={c.stage} className="rounded-lg border border-border bg-muted/40 p-3 text-center">
-                <p className="text-xs capitalize text-muted-foreground">→ {STAGE_LABELS[c.stage] || c.stage.replace(/_/g, ' ')}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{c.pct === null ? '—' : `${c.pct}%`}</p>
+              <div
+                key={c.stage}
+                className="rounded-lg border border-border bg-muted/40 p-3 text-center transition-colors duration-150 hover:border-border-strong"
+              >
+                <p className="text-[11px] text-muted-foreground">→ {STAGE_LABELS[c.stage] || c.stage.replace(/_/g, ' ')}</p>
+                <p className="mt-1 font-mono text-[18px] font-semibold tabular-nums tracking-[-0.02em]">
+                  {c.pct === null ? '—' : `${c.pct}%`}
+                </p>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {creditUsage && (        <Card>
+      {/* Credit usage */}
+      {creditUsage && (
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-warning" />
-              Credit Usage
-            </CardTitle>
+            <p className="eyebrow">Quota</p>
+            <CardTitle>Credit Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="rounded-lg border border-border bg-muted/40 p-4">
-                <p className="text-xs text-muted-foreground">Used</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{creditUsage.used.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">of {creditUsage.limit.toLocaleString()} total</p>
+                <p className="eyebrow">Used</p>
+                <p className="mt-1.5 font-mono text-[22px] font-semibold leading-none tabular-nums tracking-[-0.02em]">
+                  {creditUsage.used.toLocaleString()}
+                </p>
+                <p className="mt-1.5 text-[12px] text-muted-foreground">of {creditUsage.limit.toLocaleString()} total</p>
               </div>
               <div className="rounded-lg border border-border bg-muted/40 p-4">
-                <p className="text-xs text-muted-foreground">Remaining</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{creditUsage.remaining.toLocaleString()}</p>
+                <p className="eyebrow">Remaining</p>
+                <p className="mt-1.5 font-mono text-[22px] font-semibold leading-none tabular-nums tracking-[-0.02em]">
+                  {creditUsage.remaining.toLocaleString()}
+                </p>
               </div>
               <div className="rounded-lg border border-border bg-muted/40 p-4">
-                <p className="text-xs text-muted-foreground">Billing Period</p>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="eyebrow">Billing period</p>
+                <p className="mt-1.5 font-mono text-[13px] font-medium leading-snug tabular-nums">
                   {formatDateTime(creditUsage.period_start)} – {formatDateTime(creditUsage.period_end)}
                 </p>
               </div>
@@ -214,12 +219,12 @@ const Analytics: React.FC = () => {
                 {Object.entries(creditUsage.by_provider).map(([provider, usage]) => {
                   const pct = usage.limit > 0 ? Math.min((usage.used / usage.limit) * 100, 100) : 0;
                   return (
-                    <div key={provider} className="rounded-lg border border-border bg-muted/50 p-3">
-                      <p className="mb-1 text-xs text-muted-foreground capitalize">{provider}</p>
-                      <p className="text-sm font-medium tabular-nums">
+                    <div key={provider} className="rounded-lg border border-border bg-muted/40 p-3">
+                      <p className="text-[11px] capitalize text-muted-foreground">{provider}</p>
+                      <p className="mt-0.5 font-mono text-[13px] font-medium tabular-nums">
                         {usage.used}/{usage.limit}
                       </p>
-                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className={`h-1.5 rounded-full ${pct > 80 ? 'bg-destructive' : pct > 50 ? 'bg-warning' : 'bg-success'}`}
                           style={{ width: `${pct}%` }}
@@ -234,18 +239,21 @@ const Analytics: React.FC = () => {
         </Card>
       )}
 
+      {/* Run history */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-muted-foreground" />
-            Run History
-          </CardTitle>
+          <p className="eyebrow">Scrape runs · last 20</p>
+          <CardTitle>Run History</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {!isAdmin ? (
-            <EmptyState icon={BarChart3} title="Run history is admin-only." description="Ask an admin for scrape run details." />
+            <div className="px-5 pb-5">
+              <EmptyState icon={BarChart3} title="Run history is admin-only." description="Ask an admin for scrape run details." />
+            </div>
           ) : runList.length === 0 ? (
-            <EmptyState icon={BarChart3} title="No runs recorded yet." description="Scrape runs will appear here once triggered." />
+            <div className="px-5 pb-5">
+              <EmptyState icon={BarChart3} title="No runs recorded yet." description="Scrape runs will appear here once triggered." />
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -264,19 +272,22 @@ const Analytics: React.FC = () => {
                 </thead>
                 <tbody>
                   {runList.map((run: RunLog) => (
-                    <tr key={run.id} className="border-b border-border transition-colors last:border-0 hover:bg-accent/50">
+                    <tr
+                      key={run.id}
+                      className="border-b border-border transition-colors last:border-0 hover:bg-accent/60"
+                    >
                       <td className="table-td">{runStatusIcon(run)}</td>
-                      <td className="table-td font-mono text-xs">{run.id}</td>
-                      <td className="table-td tabular-nums">{run.sources_attempted}</td>
-                      <td className="table-td tabular-nums">{run.sources_succeeded}</td>
-                      <td className="table-td tabular-nums font-medium">{run.leads_found}</td>
-                      <td className="table-td tabular-nums">{run.leads_deduped}</td>
-                      <td className="table-td text-xs text-muted-foreground">{formatDateTime(run.started_at)}</td>
-                      <td className="table-td text-xs text-muted-foreground">
+                      <td className="table-td font-mono text-[12px] text-muted-foreground">{run.id}</td>
+                      <td className="table-td font-mono text-[13px] tabular-nums">{run.sources_attempted}</td>
+                      <td className="table-td font-mono text-[13px] tabular-nums">{run.sources_succeeded}</td>
+                      <td className="table-td font-mono text-[13px] font-medium tabular-nums">{run.leads_found}</td>
+                      <td className="table-td font-mono text-[13px] tabular-nums">{run.leads_deduped}</td>
+                      <td className="table-td font-mono text-[12px] text-muted-foreground">{formatDateTime(run.started_at)}</td>
+                      <td className="table-td font-mono text-[12px] text-muted-foreground">
                         {run.finished_at ? formatDateTime(run.finished_at) : '—'}
                       </td>
                       <td
-                        className="table-td max-w-[200px] truncate text-xs text-destructive"
+                        className="table-td max-w-[200px] truncate font-mono text-[12px] text-destructive"
                         title={run.sources_circuit_broken?.join(', ') || ''}
                       >
                         {run.sources_circuit_broken?.join(', ') || '—'}

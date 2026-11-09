@@ -99,19 +99,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <div
                 key={t.id}
                 className={cn(
-                  "pointer-events-auto relative overflow-hidden rounded-xl border border-border bg-surface p-4 pr-9 shadow-popover",
+                  "pointer-events-auto relative overflow-hidden rounded-lg border border-border bg-surface p-3.5 pr-9 shadow-popover",
                   isLeaving ? "animate-toast-out" : "animate-toast-in"
                 )}
               >
                 <span
-                  className={cn("absolute inset-y-0 left-0 w-1", variantBar[t.variant])}
+                  className={cn("absolute inset-y-0 left-0 w-[3px]", variantBar[t.variant])}
                 />
-                <div className="flex items-start gap-3">
-                  <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", variantTone[t.variant])} />
+                <div className="flex items-start gap-2.5">
+                  <Icon className={cn("mt-0.5 h-[17px] w-[17px] shrink-0", variantTone[t.variant])} strokeWidth={1.9} />
                   <div className="min-w-0 space-y-0.5">
-                    <p className="text-sm font-semibold text-foreground">{t.title}</p>
+                    <p className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">{t.title}</p>
                     {t.description && (
-                      <p className="text-[13px] leading-snug text-muted-foreground">
+                      <p className="text-[12.5px] leading-snug text-muted-foreground">
                         {t.description}
                       </p>
                     )}
@@ -120,7 +120,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => remove(t.id)}
-                  className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="absolute right-2 top-2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
                   aria-label="Dismiss notification"
                 >
                   <X className="h-3.5 w-3.5" />

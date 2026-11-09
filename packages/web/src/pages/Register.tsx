@@ -42,33 +42,90 @@ const Register: React.FC = () => {
   };
 
   return (
-    <AuthShell title="Create your account" subtitle="Start discovering roles that fit your profile">
+    <AuthShell
+      title="Create your account"
+      subtitle="Two fields to get started"
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Email */}
         <div className="space-y-1.5">
-          <label htmlFor="email" className="label">Email</label>
-          <Input id="email" type="email" icon={<Mail className="h-4 w-4" />} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email" />
+          <label htmlFor="email" className="label">
+            Email address
+          </label>
+          <Input
+            id="email"
+            type="email"
+            icon={<Mail />}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            autoComplete="email"
+          />
         </div>
+
+        {/* Password */}
         <div className="space-y-1.5">
-          <label htmlFor="password" className="label">Password</label>
-          <Input id="password" type="password" icon={<Lock className="h-4 w-4" />} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" required minLength={8} autoComplete="new-password" />
+          <label htmlFor="password" className="label">
+            Password
+          </label>
+          <Input
+            id="password"
+            type="password"
+            icon={<Lock />}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 8 characters"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
         </div>
+
+        {/* Confirm password */}
         <div className="space-y-1.5">
-          <label htmlFor="confirm-password" className="label">Confirm Password</label>
-          <Input id="confirm-password" type="password" icon={<ShieldCheck className="h-4 w-4" />} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter your password" required minLength={8} autoComplete="new-password" />
+          <label htmlFor="confirm-password" className="label">
+            Confirm password
+          </label>
+          <Input
+            id="confirm-password"
+            type="password"
+            icon={<ShieldCheck />}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Re-enter your password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
         </div>
+
+        {/* Error message */}
         {error && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/25 bg-destructive-soft px-3 py-2.5 text-[13px] text-destructive animate-fade-in">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span>
+          <div
+            role="alert"
+            className="flex items-start gap-2.5 rounded-lg border border-destructive/25 bg-destructive-soft px-3 py-2.5 text-[13px] text-destructive"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
-        <Button type="submit" className="w-full" loading={loading} size="lg">
-          {loading ? 'Creating account…' : 'Sign Up'}
+
+        {/* Submit */}
+        <Button type="submit" size="lg" className="w-full" loading={loading}>
+          {loading ? 'Creating account…' : 'Create account'}
           {!loading && <ArrowRight className="h-4 w-4" />}
         </Button>
       </form>
+
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-primary transition-colors hover:text-primary-hover">Sign in</Link>
+        <Link
+          to="/login"
+          className="font-medium text-foreground underline-offset-4 transition-colors hover:underline hover:decoration-signal"
+        >
+          Sign in
+        </Link>
       </p>
     </AuthShell>
   );

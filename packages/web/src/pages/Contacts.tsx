@@ -133,9 +133,9 @@ const Contacts: React.FC = () => {
         cell: (info) => {
           const v = info.getValue();
           return v ? (
-            <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              <Mail className="h-3.5 w-3.5" />
-              {v}
+            <span className="inline-flex max-w-[220px] items-center gap-1.5 font-mono text-[12px] text-muted-foreground">
+              <Mail className="h-3.5 w-3.5 shrink-0" />
+              <span className="break-all">{v}</span>
             </span>
           ) : (
             <span className="text-muted-foreground">—</span>
@@ -147,7 +147,7 @@ const Contacts: React.FC = () => {
         cell: (info) => {
           const v = info.getValue();
           return v ? (
-            <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[12px] tabular-nums text-muted-foreground">
               <Phone className="h-3.5 w-3.5" />
               {v}
             </span>
@@ -182,7 +182,7 @@ const Contacts: React.FC = () => {
       columnHelper.display({
         id: 'source',
         header: 'Source',
-        cell: ({ row }) => row.original.contact_url ? <a href={row.original.contact_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-info hover:underline"><Link2 className="h-3.5 w-3.5" />{row.original.contact_source === 'direct_extracted' ? 'Public job page' : 'View source'}</a> : <span className="text-xs text-muted-foreground">Not recorded</span>,
+        cell: ({ row }) => row.original.contact_url ? <a href={row.original.contact_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-[12px] text-info hover:underline"><Link2 className="h-3.5 w-3.5" />{row.original.contact_source === 'direct_extracted' ? 'Public job page' : 'View source'}</a> : <span className="text-[12px] text-muted-foreground">Not recorded</span>,
       }),
       columnHelper.accessor('confidence_score', {
         header: 'Confidence',
@@ -193,7 +193,7 @@ const Contacts: React.FC = () => {
               <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                 <div className={`h-1.5 rounded-full ${confidenceColor(score)}`} style={{ width: `${score}%` }} />
               </div>
-              <span className="text-[13px] font-medium tabular-nums text-muted-foreground">{score}%</span>
+              <span className="font-mono text-[12px] font-medium tabular-nums text-muted-foreground">{score}%</span>
             </div>
           );
         },
@@ -203,29 +203,47 @@ const Contacts: React.FC = () => {
         header: 'Verification',
         cell: ({ row }) => {
           const result = row.original.verification;
-          if (!result?.checked_at) return <span className="text-xs text-muted-foreground">Not checked</span>;
+          if (!result?.checked_at) return <span className="text-[12px] text-muted-foreground">Not checked</span>;
           const states = [
             { label: 'Email', value: result.email_status },
             { label: 'Phone', value: result.phone_status },
           ].filter((entry) => entry.value && entry.value !== 'not_provided');
-          return <div className="space-y-1.5" title={`Last checked ${formatDate(result.checked_at)}`}><div className="flex flex-wrap gap-1">{states.map(({ label, value }) => {
-            const good = value === 'valid' || value === 'catch_all' || value === 'registered';
-            const bad = value === 'invalid' || value === 'disposable' || value === 'not_registered';
-            return <span key={label} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${good ? 'border-success/20 bg-success-soft text-success' : bad ? 'border-destructive/20 bg-destructive-soft text-destructive' : 'border-warning/20 bg-warning-soft text-warning'}`}><ShieldCheck className="h-3 w-3" />{label}: {value?.replace(/_/g, ' ')}</span>;
-          })}</div><span className="block text-[10px] text-muted-foreground">Checked {formatDate(result.checked_at)}</span></div>;
+          return (
+            <div className="space-y-1.5" title={`Last checked ${formatDate(result.checked_at)}`}>
+              <div className="flex flex-wrap gap-1">
+                {states.map(({ label, value }) => {
+                  const good = value === 'valid' || value === 'catch_all' || value === 'registered';
+                  const bad = value === 'invalid' || value === 'disposable' || value === 'not_registered';
+                  return (
+                    <Badge
+                      key={label}
+                      variant={good ? 'success' : bad ? 'danger' : 'warning'}
+                      className="gap-1 px-1.5 text-[10px]"
+                    >
+                      <ShieldCheck className="h-3 w-3" />
+                      {label}: {value?.replace(/_/g, ' ')}
+                    </Badge>
+                  );
+                })}
+              </div>
+              <span className="block font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground">
+                Checked {formatDate(result.checked_at)}
+              </span>
+            </div>
+          );
         },
       }),
       columnHelper.accessor('created_at', {
         header: 'Added',
-        cell: (info) => <span className="text-[13px] text-muted-foreground">{formatDate(info.getValue())}</span>,
+        cell: (info) => <span className="font-mono text-[12px] tabular-nums text-muted-foreground">{formatDate(info.getValue())}</span>,
       }),
       columnHelper.display({
         id: 'actions',
-        header: 'Actions',
+        header: () => <span className="block text-right">Actions</span>,
         cell: ({ row }) => {
           const contact = row.original;
           return (
-            <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -345,7 +363,7 @@ const Contacts: React.FC = () => {
           <table className="w-full">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="border-b border-border bg-muted/40">
+                <tr key={headerGroup.id} className="border-b border-border">
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
@@ -358,10 +376,10 @@ const Contacts: React.FC = () => {
                         {header.column.getCanSort() && (
                           <span className="inline-flex flex-col">
                             <ChevronUp
-                              className={`-mb-1 h-3 w-3 ${header.column.getIsSorted() === 'asc' ? 'text-primary' : 'text-muted-foreground/40'}`}
+                              className={`-mb-1 h-3 w-3 ${header.column.getIsSorted() === 'asc' ? 'text-foreground' : 'text-muted-foreground/40'}`}
                             />
                             <ChevronDown
-                              className={`h-3 w-3 ${header.column.getIsSorted() === 'desc' ? 'text-primary' : 'text-muted-foreground/40'}`}
+                              className={`h-3 w-3 ${header.column.getIsSorted() === 'desc' ? 'text-foreground' : 'text-muted-foreground/40'}`}
                             />
                           </span>
                         )}
@@ -380,7 +398,7 @@ const Contacts: React.FC = () => {
                 </tr>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border transition-colors last:border-0 hover:bg-accent/50">
+                  <tr key={row.id} className="border-b border-border transition-colors last:border-0 hover:bg-accent/60">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="table-td">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

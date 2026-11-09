@@ -30,7 +30,7 @@ const AdminJobs = lazy(() => import('@/pages/AdminJobs'));
 const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
 
 function RouteFallback() {
-  return <div className="flex h-[60vh] items-center justify-center" role="status" aria-live="polite"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/70" /><span className="sr-only">Loading…</span></div>;
+  return <div className="flex h-[60vh] items-center justify-center" role="status" aria-live="polite"><div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground/70" /><span className="sr-only">Loading…</span></div>;
 }
 
 function App() {
@@ -42,7 +42,24 @@ function App() {
   const isAdmin = user?.role === 'admin';
   const isCandidate = user?.role === 'candidate';
   if (!isAdmin && !isCandidate) {
-    return <ErrorBoundary><Suspense fallback={<RouteFallback />}><Routes><Route path="/login" element={<Navigate to="/dashboard" replace />} /><Route path="/register" element={<Navigate to="/dashboard" replace />} /><Route path="/" element={<Layout />}><Route index element={<Navigate to="/dashboard" replace />} /><Route path="dashboard" element={<LegacyDashboard />} /><Route path="leads" element={<Leads />} /><Route path="leads/:id" element={<LeadDetail />} /><Route path="companies" element={<Companies />} /><Route path="contacts" element={<Contacts />} /><Route path="duplicates" element={<Duplicates />} /><Route path="analytics" element={<Analytics />} /><Route path="settings" element={<Navigate to="/dashboard" replace />} /></Route><Route path="*" element={<Navigate to="/dashboard" replace />} /></Routes></Suspense></ErrorBoundary>;
+    return (
+      <ErrorBoundary><Suspense fallback={<RouteFallback />}><Routes>
+        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/register" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<LegacyDashboard />} />
+          <Route path="leads" element={<Leads />} />
+          <Route path="leads/:id" element={<LeadDetail />} />
+          <Route path="companies" element={<Companies />} />
+          <Route path="contacts" element={<Contacts />} />
+          <Route path="duplicates" element={<Duplicates />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="settings" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes></Suspense></ErrorBoundary>
+    );
   }
 
   return <ErrorBoundary><Suspense fallback={<RouteFallback />}><Routes>

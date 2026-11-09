@@ -19,19 +19,19 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 px-6 py-14 text-center animate-fade-in ${className ?? ""}`}
+      className={`flex flex-col items-center justify-center gap-2 px-6 py-14 text-center animate-fade-in ${className ?? ""}`}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive-soft ring-1 ring-destructive/20">
-        <AlertCircle className="h-6 w-6 text-destructive" />
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-destructive/25 bg-destructive-soft">
+        <AlertCircle className="h-[18px] w-[18px] text-destructive" strokeWidth={1.75} />
       </div>
-      <div className="space-y-1">
-        <h3 className="text-[15px] font-semibold">{title}</h3>
+      <div className="mt-1 space-y-1">
+        <h3 className="text-[14px] font-semibold">{title}</h3>
         <p className="mx-auto max-w-sm text-[13px] leading-relaxed text-muted-foreground">
           {message}
         </p>
       </div>
       {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry} className="mt-1">
+        <Button variant="outline" size="sm" onClick={onRetry} className="mt-2">
           <RefreshCw className="h-3.5 w-3.5" />
           {retryLabel}
         </Button>

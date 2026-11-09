@@ -51,6 +51,11 @@ module.exports = {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
+        signal: {
+          DEFAULT: 'hsl(var(--signal))',
+          foreground: 'hsl(var(--signal-foreground))',
+          soft: 'hsl(var(--signal-soft))',
+        },
         surface: 'hsl(var(--surface))',
         'border-strong': 'hsl(var(--border-strong))',
         sidebar: {
@@ -110,13 +115,16 @@ module.exports = {
       fontFamily: {
         sans: ['Inter Variable', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         display: ['Inter Variable', 'system-ui', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace'],
       },
       boxShadow: {
         card: 'var(--glow-soft)',
-        float: '0 20px 50px -22px rgb(0 0 0 / 0.75), inset 0 1px 0 0 hsl(var(--foreground) / 0.05)',
-        'card-hover': '0 16px 40px -18px hsl(var(--primary) / 0.35)',
+        float: 'var(--shadow-pop)',
+        'card-hover': 'var(--glow-primary)',
         glow: 'var(--glow-primary)',
-        'glow-sm': '0 0 22px -6px hsl(var(--primary) / 0.5)',
+        'glow-sm': 'var(--glow-primary)',
+        popover: 'var(--shadow-pop)',
+        drawer: 'var(--shadow-drawer)',
       },
       zIndex: {
         dropdown: '50',

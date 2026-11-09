@@ -3,116 +3,153 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   Hiregen design system — "editorial instrument panel"
+   Warm paper / warm graphite surfaces, near-black ink primary actions, a
+   single ember signal accent, hairline borders, tabular mono numerals.
+--------------------------------------------------------------------------- */
+
 @layer base {
   :root {
-    /* Calm, familiar career-workspace palette. */
-    --background: 210 24% 98%;
-    --surface: 0 0% 100%;
-    --foreground: 222 40% 13%;
-    --muted: 214 24% 94%;
-    --muted-foreground: 215 16% 43%;
-    --accent: 210 25% 95%;
-    --accent-foreground: 222 40% 13%;
-    --border: 214 20% 88%;
-    --border-strong: 214 18% 78%;
-    --input: 214 20% 88%;
-    --ring: 210 75% 42%;
-    --ring-soft: rgb(20 96 160 / 0.12);
+    /* Warm paper light theme */
+    --background: 44 24% 97%;          /* warm off-white paper */
+    --surface: 0 0% 100%;              /* card white */
+    --foreground: 30 9% 11%;           /* warm ink */
+    --muted: 45 14% 93%;
+    --muted-foreground: 31 7% 42%;
+    --accent: 44 16% 94%;
+    --accent-foreground: 30 9% 11%;
+    --border: 42 12% 88%;              /* hairline */
+    --border-strong: 40 10% 78%;
+    --input: 42 12% 86%;
+    --ring: 21 90% 48%;                /* ember focus */
 
-    --primary: 210 75% 39%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 210 78% 33%;
-    --primary-soft: 210 55% 94%;
+    --primary: 30 9% 11%;              /* ink button */
+    --primary-foreground: 45 24% 97%;  /* paper text */
+    --primary-hover: 30 8% 22%;
+    --primary-soft: 40 16% 93%;
 
-    --secondary: 214 24% 94%;
-    --secondary-foreground: 222 40% 13%;
+    --secondary: 44 14% 93%;
+    --secondary-foreground: 30 9% 11%;
 
-    --destructive: 350 68% 48%;
+    --destructive: 2 72% 46%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 350 65% 95%;
+    --destructive-soft: 4 62% 95%;
 
-    --success: 153 58% 34%;
+    --success: 152 52% 30%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 150 45% 93%;
+    --success-soft: 148 38% 93%;
 
-    --warning: 34 80% 38%;
+    --warning: 33 88% 40%;
     --warning-foreground: 0 0% 100%;
-    --warning-soft: 38 80% 93%;
+    --warning-soft: 38 78% 93%;
 
-    --info: 202 65% 41%;
+    --info: 204 58% 40%;
     --info-foreground: 0 0% 100%;
-    --info-soft: 200 55% 93%;
+    --info-soft: 202 48% 93%;
 
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 215 16% 43%;
-    --sidebar-muted: 210 24% 97%;
-    --sidebar-border: 214 20% 91%;
-    --sidebar-active: 210 55% 94%;
-    --sidebar-active-foreground: 210 75% 32%;
+    /* signal — the one saturated ember accent, used surgically */
+    --signal: 20 88% 46%;
+    --signal-foreground: 0 0% 100%;
+    --signal-soft: 21 92% 95%;
 
-    --hot: 350 68% 48%;
-    --hot-soft: 350 65% 95%;
-    --warm: 34 80% 38%;
-    --warm-soft: 38 80% 93%;
-    --cold: 202 65% 41%;
-    --cold-soft: 200 55% 93%;
+    --sidebar: 44 20% 98%;
+    --sidebar-foreground: 31 7% 42%;
+    --sidebar-muted: 44 16% 94%;
+    --sidebar-border: 42 12% 89%;
+    --sidebar-active: 30 9% 11%;
+    --sidebar-active-foreground: 44 24% 97%;
 
-    --grad-primary: linear-gradient(135deg, hsl(210 75% 39%), hsl(210 75% 39%));
+    --hot: 2 72% 46%;
+    --hot-soft: 4 62% 95%;
+    --warm: 33 88% 40%;
+    --warm-soft: 38 78% 93%;
+    --cold: 204 58% 40%;
+    --cold-soft: 202 48% 93%;
+
+    /* Legacy gradient hooks — kept so far pages still resolve them.
+       In the new system they resolve to flat editorial values. */
+    --grad-primary: none;
     --grad-mesh: none;
-    --glow-primary: 0 2px 6px rgb(20 55 85 / 0.08);
-    --glow-soft: 0 2px 10px rgb(25 45 65 / 0.045);
 
-    --radius: 0.85rem;
+    /* Editorial elevation: hairline first, shadow only to detach */
+    --glow-primary: 0 1px 2px rgb(28 25 23 / 0.12);
+    --glow-soft: 0 0 0 0.5px rgb(28 25 23 / 0.03), 0 1px 2px rgb(28 25 23 / 0.04);
+    --shadow-pop: 0 12px 32px -12px rgb(28 25 23 / 0.18);
+    --shadow-drawer: 16px 0 48px -24px rgb(28 25 23 / 0.2);
+
+    --radius: 0.625rem;
+    --grain-opacity: 0.028;
+    --grain-mix: multiply;
   }
 
   html.dark {
     color-scheme: dark;
-    --background: 220 25% 10%;
-    --surface: 222 23% 13%;
-    --foreground: 214 28% 93%;
-    --muted: 220 20% 18%;
-    --muted-foreground: 215 14% 67%;
-    --accent: 220 18% 20%;
-    --accent-foreground: 214 28% 93%;
-    --border: 220 16% 25%;
-    --border-strong: 218 15% 35%;
-    --input: 220 16% 25%;
-    --ring: 205 85% 62%;
-    --ring-soft: rgb(59 149 214 / 0.18);
-    --primary: 205 82% 59%;
-    --primary-foreground: 220 28% 10%;
-    --primary-hover: 205 82% 67%;
-    --primary-soft: 207 44% 22%;
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 214 28% 93%;
-    --destructive: 350 70% 62%;
-    --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 350 36% 22%;
-    --success: 153 48% 55%;
-    --success-foreground: 220 28% 10%;
-    --success-soft: 153 32% 20%;
-    --warning: 38 83% 62%;
-    --warning-foreground: 220 28% 10%;
-    --warning-soft: 38 40% 20%;
-    --info: 202 72% 62%;
-    --info-foreground: 220 28% 10%;
-    --info-soft: 202 36% 20%;
-    --sidebar: 222 23% 12%;
-    --sidebar-foreground: 215 14% 74%;
-    --sidebar-muted: 220 20% 17%;
-    --sidebar-border: 220 16% 23%;
-    --sidebar-active: 207 44% 22%;
-    --sidebar-active-foreground: 205 86% 78%;
-    --hot: 350 70% 62%;
-    --hot-soft: 350 36% 22%;
-    --warm: 38 83% 62%;
-    --warm-soft: 38 40% 20%;
-    --cold: 202 72% 62%;
-    --cold-soft: 202 36% 20%;
-    --grad-primary: linear-gradient(135deg, hsl(205 82% 59%), hsl(195 78% 57%));
+    /* Warm graphite dark theme — no blue cast */
+    --background: 28 8% 8%;            /* near-black warm */
+    --surface: 30 7% 11.5%;
+    --foreground: 44 22% 92%;
+    --muted: 30 6% 16%;
+    --muted-foreground: 38 9% 60%;
+    --accent: 30 6% 18%;
+    --accent-foreground: 44 22% 92%;
+    --border: 32 7% 17%;
+    --border-strong: 34 6% 26%;
+    --input: 32 7% 17%;
+    --ring: 20 95% 62%;
+
+    --primary: 44 22% 91%;             /* paper button on ink */
+    --primary-foreground: 30 9% 10%;
+    --primary-hover: 44 26% 100%;
+    --primary-soft: 30 6% 17%;
+
+    --secondary: 30 6% 16%;
+    --secondary-foreground: 44 22% 92%;
+
+    --destructive: 2 68% 62%;
+    --destructive-foreground: 28 8% 8%;
+    --destructive-soft: 2 32% 15%;
+
+    --success: 150 44% 56%;
+    --success-foreground: 28 8% 8%;
+    --success-soft: 152 24% 14%;
+
+    --warning: 38 82% 60%;
+    --warning-foreground: 28 8% 8%;
+    --warning-soft: 36 32% 14%;
+
+    --info: 202 62% 62%;
+    --info-foreground: 28 8% 8%;
+    --info-soft: 202 30% 14%;
+
+    --signal: 20 96% 58%;
+    --signal-foreground: 20 88% 8%;
+    --signal-soft: 20 34% 15%;
+
+    --sidebar: 28 7% 9.5%;
+    --sidebar-foreground: 38 9% 60%;
+    --sidebar-muted: 30 6% 15%;
+    --sidebar-border: 32 6% 15%;
+    --sidebar-active: 44 22% 91%;
+    --sidebar-active-foreground: 30 9% 10%;
+
+    --hot: 2 68% 62%;
+    --hot-soft: 2 32% 15%;
+    --warm: 38 82% 60%;
+    --warm-soft: 36 32% 14%;
+    --cold: 202 62% 62%;
+    --cold-soft: 202 30% 14%;
+
+    --grad-primary: none;
     --grad-mesh: none;
-    --glow-primary: 0 2px 10px rgb(0 0 0 / 0.3);
-    --glow-soft: 0 2px 10px rgb(0 0 0 / 0.2);
+
+    --glow-primary: 0 1px 2px rgb(0 0 0 / 0.4);
+    --glow-soft: 0 0 0 0.5px rgb(255 255 255 / 0.02), 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.55);
+    --shadow-drawer: 16px 0 48px -24px rgb(0 0 0 / 0.6);
+
+    --grain-opacity: 0.05;
+    --grain-mix: screen;
   }
 
   html.dark .bg-white { background-color: hsl(var(--surface)); }
@@ -137,29 +174,27 @@
     overflow-x: hidden;
   }
 
-  /* Keep the workspace calm and readable. */
+  /* Film grain — a barely-there organic texture so surfaces don't read as
+     plastic. Set far below perception threshold, disabled while printing. */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: var(--grad-mesh);
-    opacity: 0;
     pointer-events: none;
+    opacity: var(--grain-opacity);
+    mix-blend-mode: var(--grain-mix);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight text-foreground;
+    letter-spacing: -0.019em;
   }
 
   ::selection {
-    background: hsl(var(--primary) / 0.35);
-    color: hsl(var(--primary-foreground));
+    background: hsl(var(--signal) / 0.22);
+    color: hsl(var(--foreground));
   }
 
   ::-webkit-scrollbar {
@@ -210,7 +245,7 @@
     animation: shimmer 1.6s linear infinite;
   }
 
-  /* glassmorphic elevated card */
+  /* Editorial flat card: hairline border, near-invisible lift */
   .card {
     @apply rounded-xl border bg-surface;
     border-color: hsl(var(--border));
@@ -226,29 +261,46 @@
   }
 
   .table-th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+    @apply px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
   }
 
   .table-td {
     @apply px-4 py-3.5 text-sm text-foreground;
   }
 
-  /* gradient text */
+  /* Legacy hooks kept resolving — resolve flat, on-brand */
   .text-gradient {
-    color: hsl(var(--primary));
+    color: hsl(var(--foreground));
   }
-
-  /* glowing primary action */
   .btn-glow {
     box-shadow: var(--glow-primary);
   }
-
-  /* animated gradient border used on hero cards */
   .glow-ring {
     position: relative;
+    border-color: hsl(var(--border));
   }
-  .glow-ring::after {
-    display: none;
+
+  /* Mono eyebrow label — small caps instrument typography */
+  .eyebrow {
+    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.14em];
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Dotted atmosphere for dark hero surfaces */
+  .grid-dots {
+    position: relative;
+    isolation: isolate;
+  }
+  .grid-dots::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(hsl(var(--foreground) / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse 90% 130% at 75% 0%, black 40%, transparent 75%);
+    mask-image: radial-gradient(ellipse 90% 130% at 75% 0%, black 40%, transparent 75%);
   }
 }
 
@@ -317,37 +369,29 @@
 
 @layer utilities {
   .glass {
-    @apply bg-surface/60 backdrop-blur-xl;
+    @apply bg-surface/90 backdrop-blur-xl;
   }
   .glass-strong {
-    @apply bg-surface/85 backdrop-blur-2xl;
+    @apply bg-surface/95 backdrop-blur-2xl;
   }
   .animate-fade-up {
     animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .animate-scale-in {
-    animation: scaleIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: scaleIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .animate-pulse-glow {
     animation: pulseGlow 2.4s ease-in-out infinite;
   }
-  .shimmer-text {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--foreground)) 0%,
-      hsl(var(--primary)) 45%,
-      hsl(var(--info)) 55%,
-      hsl(var(--foreground)) 100%
-    );
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: shimmerText 6s linear infinite;
-  }
+  .animate-fade-in { animation: fadeIn 0.4s ease both; }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  .animate-aurora { animation: aurora 18s ease-in-out infinite; }
+  .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-overlay-in { animation: overlayIn 0.2s ease both; }
+  .animate-drawer-in { animation: drawerIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
 }
 
-/* ---- keyframes (referenced by .animate-* + .card/.skeleton above) ---- */
+/* ---- keyframes (referenced by .animate-* + .skeleton above) ---- */
 @keyframes shimmer {
   0% { background-position: 400% 0; }
   100% { background-position: -400% 0; }
@@ -361,15 +405,32 @@
   to { opacity: 1; }
 }
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
-  50% { box-shadow: 0 0 28px 4px hsl(var(--primary) / 0.5); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-@keyframes shimmerText {
-  to { background-position: 200% center; }
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes drawerIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--signal) / 0.35); }
+  50% { box-shadow: 0 0 24px 4px hsl(var(--signal) / 0.4); }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -380,31 +441,26 @@
   50% { transform: translate(4%, -4%) rotate(8deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
-.animate-fade-in { animation: fadeIn 0.4s ease both; }
-.animate-float { animation: float 6s ease-in-out infinite; }
-.animate-aurora { animation: aurora 18s ease-in-out infinite; }
 
-/* Candidate-facing workspace treatment; admin and legacy dashboards keep their own surface. */
+.animate-toast-in { animation: toastIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-toast-out { animation: toastOut 0.2s ease both; }
+
+/* ---- candidate workspace surface helpers ---- */
 .candidate-workspace { background-color: hsl(var(--background)); }
-.candidate-workspace > aside { background-color: hsl(var(--surface)); }
-.candidate-sidebar { box-shadow: 2px 0 18px rgb(23 55 88 / 0.025); }
+.candidate-workspace > aside { background-color: hsl(var(--sidebar)); }
+.candidate-workspace header { background-color: hsl(var(--background)); }
+.candidate-workspace main { background-color: hsl(var(--background)); }
 .candidate-sidebar nav { padding-inline: 0.7rem; }
 .candidate-sidebar nav > div > div > a { min-height: 40px; }
-.candidate-workspace header { background-color: hsl(var(--surface) / 0.94); }
-.candidate-workspace main { background-color: hsl(var(--background)); }
-.candidate-workspace main .card {
-  border-radius: 1rem;
-  box-shadow: 0 3px 14px rgb(23 55 88 / 0.035);
-}
 .candidate-hero {
   isolation: isolate;
-  background-color: hsl(var(--primary-soft) / 0.55);
+  background-color: hsl(var(--surface));
 }
 .candidate-hero-shape {
   position: absolute;
   z-index: -1;
   pointer-events: none;
-  border: 1px solid hsl(var(--primary) / 0.12);
+  border: 1px solid hsl(var(--border));
   border-radius: 9999px;
 }
 .candidate-hero-shape-one {
@@ -412,14 +468,14 @@
   height: 300px;
   right: 10%;
   top: -215px;
-  background-color: hsl(var(--primary) / 0.055);
+  background-color: hsl(var(--signal) / 0.05);
 }
 .candidate-hero-shape-two {
   width: 220px;
   height: 220px;
   right: 2%;
   bottom: -165px;
-  background-color: hsl(var(--info) / 0.06);
+  background-color: hsl(var(--primary) / 0.04);
 }
 .candidate-stat { transition: transform 160ms ease, border-color 160ms ease; }
-.candidate-stat:hover { transform: translateY(-2px); border-color: hsl(var(--primary) / 0.24); }
+.candidate-stat:hover { transform: translateY(-2px); border-color: hsl(var(--border-strong)); }

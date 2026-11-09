@@ -1,4 +1,3 @@
-import hiregenIcon from "@/Assets/hiregen-icon.svg";
 import { cn } from "@/components/ui/cn";
 
 export function Logo({
@@ -10,60 +9,44 @@ export function Logo({
   showText?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
 }) {
-  const iconSizes = {
-    sm: "h-8 w-10",
-    md: "h-11 w-14",
-    lg: "h-14 w-18",
-    xl: "h-18 w-24",
+  // A quiet, confident wordmark: ember square + tight-tracked name.
+  const markSizes = {
+    sm: "h-2.5 w-2.5",
+    md: "h-3 w-3",
+    lg: "h-3.5 w-3.5",
+    xl: "h-4 w-4",
   };
 
   const textSizes = {
-    sm: "text-[16px]",
-    md: "text-[20px]",
-    lg: "text-[24px]",
-    xl: "text-[28px]",
-  };
-
-  const subtextSizes = {
-    sm: "text-[9.5px]",
-    md: "text-[10.5px]",
-    lg: "text-[12px]",
-    xl: "text-[13px]",
+    sm: "text-[15px]",
+    md: "text-[18px]",
+    lg: "text-[21px]",
+    xl: "text-[25px]",
   };
 
   return (
-    <div className={cn("flex items-center gap-3 select-none", className)}>
-      <div
-        className={cn(
-          "relative flex shrink-0 items-center justify-center transition-transform hover:scale-105 duration-200",
-          iconSizes[size]
-        )}
-      >
-        <img
-          src={hiregenIcon}
-          alt="Hiregen"
-          className="h-full w-full object-contain filter drop-shadow-[0_2px_8px_rgba(37,99,235,0.25)]"
-        />
-      </div>
+    <div className={cn("flex items-center gap-2.5 select-none", className)}>
       {showText && (
-        <div className="min-w-0 leading-tight">
-          <p
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span
+            aria-hidden
+            className={cn("shrink-0 rounded-[3px] bg-signal translate-y-[-2px]", markSizes[size])}
+          />
+          <span
             className={cn(
-              "text-gradient font-black tracking-tight",
+              "font-semibold leading-none tracking-[-0.032em] text-foreground",
               textSizes[size]
             )}
           >
             Hiregen
-          </p>
-          <p
-            className={cn(
-              "font-bold uppercase tracking-[0.18em] text-muted-foreground",
-              subtextSizes[size]
-            )}
-          >
-            Career Engine
-          </p>
+          </span>
         </div>
+      )}
+      {!showText && (
+        <span
+          aria-hidden
+          className={cn("shrink-0 rounded-[4px] bg-foreground", markSizes[size])}
+        />
       )}
     </div>
   );

@@ -14,15 +14,15 @@ export function EmptyState({ icon: Icon, title, description, action, className }
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 px-6 py-14 text-center animate-fade-in",
+        "flex flex-col items-center justify-center gap-2 px-6 py-14 text-center animate-fade-in",
         className
       )}
     >
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted ring-1 ring-border">
-        <Icon className="h-6 w-6 text-muted-foreground" />
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-dashed border-border-strong">
+        <Icon className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
       </div>
-      <div className="space-y-1">
-        <h3 className="text-[15px] font-semibold">{title}</h3>
+      <div className="mt-1 space-y-1">
+        <h3 className="text-[14px] font-semibold">{title}</h3>
         {description && (
           <p className="mx-auto max-w-sm text-[13px] leading-relaxed text-muted-foreground">
             {description}

@@ -142,7 +142,12 @@ const Leads: React.FC = () => {
     ) }),
     columnHelper.accessor('lead_score', { header: 'Score', cell: (info) => {
       const band = info.row.original.score_band as 'hot' | 'warm' | 'cold'; const meta = SCORE_BAND_META[band];
-      return <div className="flex items-center gap-2"><span className="inline-flex h-8 w-8 items-center justify-center rounded-full border bg-muted text-[13px] font-bold tabular-nums text-gradient">{info.getValue()}</span>{meta && <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />}</div>;
+      return (
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[15px] font-semibold tabular-nums tracking-[-0.02em] text-foreground">{info.getValue()}</span>
+          {meta && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} />}
+        </div>
+      );
     } }),
     columnHelper.accessor('company_name', { header: 'Company', cell: (info) => (
       <div className="min-w-0"><p className="truncate font-medium text-foreground">{info.getValue() || '—'}</p>{info.row.original.company_domain && <p className="truncate text-xs text-muted-foreground">{info.row.original.company_domain}</p>}</div>
@@ -151,16 +156,24 @@ const Leads: React.FC = () => {
     columnHelper.accessor('hr_name', { header: 'HR Contact', cell: (info) => {
       const lead = info.row.original;
       return lead.hr_name ? (
-        <div className="flex items-center gap-2.5"><Avatar name={lead.hr_name} size="sm" /><div className="min-w-0"><p className="truncate text-[13px] font-medium">{lead.hr_name}</p>{lead.hr_email && <p className="truncate text-xs text-muted-foreground">{lead.hr_email}</p>}</div></div>
-      ) : <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning"><Sparkles className="h-3 w-3" />needs enrichment</span>;
+        <div className="flex items-center gap-2.5">
+          <Avatar name={lead.hr_name} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-medium text-foreground">{lead.hr_name}</p>
+            {lead.hr_email && <p className="truncate font-mono text-[11px] text-muted-foreground">{lead.hr_email}</p>}
+          </div>
+        </div>
+      ) : (
+        <Badge variant="warning"><Sparkles className="h-3 w-3" />needs enrichment</Badge>
+      );
     } }),
     columnHelper.display({ id: 'verification', header: 'Verification', cell: ({ row }) => {
       const lead = row.original; const em = emailStatusMeta(lead.email_status); const wm = whatsappStatusMeta(lead.whatsapp_status);
       return <div className="flex flex-wrap gap-1.5">{em && <Badge className={em.className}>{em.label}</Badge>}{wm && <Badge className={wm.className}>{wm.label}</Badge>}</div>;
     } }),
     columnHelper.display({ id: 'stage', header: 'Stage', cell: ({ row }) => { const meta = stageMeta(row.original.pipeline_stage); return <Badge className={meta.className}><span className="capitalize">{meta.label}</span></Badge>; } }),
-    columnHelper.accessor('source_site', { header: 'Source', cell: (info) => <span className="text-[13px] capitalize text-muted-foreground">{info.getValue() || '—'}</span> }),
-    columnHelper.accessor('created_at', { header: 'Discovered', cell: (info) => <span className="text-[13px] text-muted-foreground">{formatDate(info.getValue())}</span> }),
+    columnHelper.accessor('source_site', { header: 'Source', cell: (info) => <span className="font-mono text-[12px] capitalize text-muted-foreground">{info.getValue() || '—'}</span> }),
+    columnHelper.accessor('created_at', { header: 'Discovered', cell: (info) => <span className="font-mono text-[12px] tabular-nums text-muted-foreground">{formatDate(info.getValue())}</span> }),
     columnHelper.display({ id: 'actions', header: () => <MoreVertical className="h-4 w-4 text-muted-foreground" />, cell: ({ row }) => {
       const lead = row.original;
       return (
@@ -195,45 +208,146 @@ const Leads: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Leads" description="Your full India-fresher intelligence table — enrich, verify and draft any lead, one at a time or in bulk" actions={
-        <>
-          <div className="relative w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={globalFilter} onChange={(e) => setGlobalFilter(e.target.value)} placeholder="Search leads…" className="input pl-9" />
-          </div>
-          <Button variant="outline" onClick={() => armyMutation.mutate()} loading={armyMutation.isLoading} title="Scrape every source and auto-enrich all leads">
-            <Zap className="h-4 w-4" />{armyMutation.isLoading ? 'Deploying…' : queued > 0 ? `Army · ${queued} running` : 'Run Army'}
-          </Button>
-        </>
-      } />
+      <PageHeader
+        title="Leads"
+        description="Your full India-fresher intelligence table — enrich, verify and draft any lead, one at a time or in bulk"
+        actions={
+          <>
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder="Search leads…"
+                className="input pl-9"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => armyMutation.mutate()}
+              loading={armyMutation.isLoading}
+              title="Scrape every source and auto-enrich all leads"
+            >
+              <Zap className="h-4 w-4" />
+              {armyMutation.isLoading ? 'Deploying…' : queued > 0 ? `Army · ${queued} running` : 'Run Army'}
+            </Button>
+          </>
+        }
+      />
 
       {/* toolbar */}
       <div className="card flex flex-wrap items-center gap-2 p-3">
-        <Select value={experienceFilter} onChange={(e) => setExperienceFilter(e.target.value as never)} className="w-40" aria-label="Experience"><option value="">All experience</option><option value="fresher">Fresher</option><option value="0-1yr">0-1 years</option><option value="0-2yr">0-2 years</option><option value="no-experience">No experience</option></Select>
-        <Select value={scoreBand || ''} onChange={(e) => setColumnFilters((f) => [...f.filter((x) => x.id !== 'score_band'), ...(e.target.value ? [{ id: 'score_band', value: e.target.value }] : [])])} className="w-32" aria-label="Score"><option value="">All scores</option><option value="hot">Hot ≥70</option><option value="warm">Warm 40+</option><option value="cold">Cold</option></Select>
-        <Select value={pipelineStage || ''} onChange={(e) => setColumnFilters((f) => [...f.filter((x) => x.id !== 'pipeline_stage'), ...(e.target.value ? [{ id: 'pipeline_stage', value: e.target.value }] : [])])} className="w-40" aria-label="Stage"><option value="">All stages</option><option value="discovered">New</option><option value="enriched">Enriched</option><option value="verified">Verified</option><option value="drafted">Ready to send</option><option value="contacted">Sent</option><option value="replied">Replied</option><option value="bounced">Failed</option><option value="contact_unavailable">Needs enrichment</option><option value="verification_failed">Verify failed</option><option value="send_failed">Send failed</option><option value="suppressed">Suppressed</option></Select>
+        <Select value={experienceFilter} onChange={(e) => setExperienceFilter(e.target.value as never)} className="w-40" aria-label="Experience">
+          <option value="">All experience</option>
+          <option value="fresher">Fresher</option>
+          <option value="0-1yr">0-1 years</option>
+          <option value="0-2yr">0-2 years</option>
+          <option value="no-experience">No experience</option>
+        </Select>
+        <Select
+          value={scoreBand || ''}
+          onChange={(e) => setColumnFilters((f) => [...f.filter((x) => x.id !== 'score_band'), ...(e.target.value ? [{ id: 'score_band', value: e.target.value }] : [])])}
+          className="w-32"
+          aria-label="Score"
+        >
+          <option value="">All scores</option>
+          <option value="hot">Hot ≥70</option>
+          <option value="warm">Warm 40+</option>
+          <option value="cold">Cold</option>
+        </Select>
+        <Select
+          value={pipelineStage || ''}
+          onChange={(e) => setColumnFilters((f) => [...f.filter((x) => x.id !== 'pipeline_stage'), ...(e.target.value ? [{ id: 'pipeline_stage', value: e.target.value }] : [])])}
+          className="w-40"
+          aria-label="Stage"
+        >
+          <option value="">All stages</option>
+          <option value="discovered">New</option>
+          <option value="enriched">Enriched</option>
+          <option value="verified">Verified</option>
+          <option value="drafted">Ready to send</option>
+          <option value="contacted">Sent</option>
+          <option value="replied">Replied</option>
+          <option value="bounced">Failed</option>
+          <option value="contact_unavailable">Needs enrichment</option>
+          <option value="verification_failed">Verify failed</option>
+          <option value="send_failed">Send failed</option>
+          <option value="suppressed">Suppressed</option>
+        </Select>
         <div className="h-6 w-px bg-border" />
-        <Menu align="start" ariaLabel="Columns" trigger={<Button variant="outline" size="sm"><Columns3 className="h-4 w-4" />Columns</Button>} items={ALL_COLUMNS.map((c) => ({ label: c.label, checked: visibility[c.id] !== false, onSelect: () => setVisibility((v) => ({ ...v, [c.id]: v[c.id] === false })) }))} />
-        <Menu align="start" ariaLabel="Density" trigger={<Button variant="outline" size="sm"><LayoutGrid className="h-4 w-4" />{density}</Button>} items={[{ label: 'Comfortable', checked: density === 'comfortable', onSelect: () => setDensity('comfortable') }, { label: 'Compact', checked: density === 'compact', onSelect: () => setDensity('compact') }]} />
-        <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4" />Export</Button>
+        <Menu
+          align="start"
+          ariaLabel="Columns"
+          trigger={<Button variant="outline" size="sm"><Columns3 className="h-4 w-4" />Columns</Button>}
+          items={ALL_COLUMNS.map((c) => ({ label: c.label, checked: visibility[c.id] !== false, onSelect: () => setVisibility((v) => ({ ...v, [c.id]: v[c.id] === false })) }))}
+        />
+        <Menu
+          align="start"
+          ariaLabel="Density"
+          trigger={<Button variant="outline" size="sm"><LayoutGrid className="h-4 w-4" />{density}</Button>}
+          items={[
+            { label: 'Comfortable', checked: density === 'comfortable', onSelect: () => setDensity('comfortable') },
+            { label: 'Compact', checked: density === 'compact', onSelect: () => setDensity('compact') },
+          ]}
+        />
+        <Button variant="outline" size="sm" onClick={exportCsv}>
+          <Download className="h-4 w-4" />Export
+        </Button>
         <div className="ml-auto flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${queued > 0 ? 'border-success/40 bg-success/10 text-success' : 'border-border text-muted-foreground'}`}><Radar className={`h-3 w-3 ${queued > 0 ? 'animate-pulse' : ''}`} />{queued > 0 ? `${queued} processing` : 'idle'}</span>
-          <Button variant="outline" size="sm" onClick={() => refetch()} loading={isFetching}><RefreshCw className="h-4 w-4" /></Button>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.06em] ${
+              queued > 0 ? 'border-success/40 bg-success-soft text-success' : 'border-border text-muted-foreground'
+            }`}
+          >
+            <Radar className={`h-3 w-3 ${queued > 0 ? 'animate-pulse' : ''}`} />
+            {queued > 0 ? `${queued} processing` : 'idle'}
+          </span>
+          <Button variant="outline" size="sm" onClick={() => refetch()} loading={isFetching}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {/* bulk bar */}
       <AnimatePresence>
         {selectedIds.size > 0 && (
-          <motion.div initial={{ opacity: 0, y: -8, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -8, height: 0 }} className="overflow-hidden">
-            <div className="card flex flex-wrap items-center gap-2.5 border-primary/30 bg-primary-soft/60 px-4 py-3">
-              <Users className="h-4 w-4 text-primary" /><span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <motion.div
+            initial={{ opacity: 0, y: -6, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -6, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="card flex flex-wrap items-center gap-2.5 border-l-2 border-l-signal px-4 py-3">
+              <span className="font-mono text-[13px] font-semibold tabular-nums">{selectedIds.size} selected</span>
               <div className="h-5 w-px bg-border" />
-              <span className="text-xs text-muted-foreground">Enrich via:</span>
-              {ENRICH_PROVIDERS.map((p) => <Button key={p.key} variant="secondary" size="sm" onClick={() => { if (window.confirm(`Enrich ${selectedIds.size} leads via ${p.label}? Credits are consumed per lead (on-demand).`)) bulkEnrichMutation.mutate({ ids: Array.from(selectedIds), provider: p.key }); }}><Sparkles className="h-3.5 w-3.5" />{p.label.replace(' (auto)', '')}</Button>)}
-              <Select value={draftChannel} onChange={(e) => setDraftChannel(e.target.value as any)} className="h-8 w-32" aria-label="Channel"><option value="both">Both</option><option value="email">Email</option><option value="whatsapp">WhatsApp</option></Select>
-              <Button size="sm" onClick={() => { if (window.confirm(`Generate drafts for ${selectedIds.size} leads?`)) bulkDraftMutation.mutate({ leadIds: Array.from(selectedIds), channel: draftChannel }); }} loading={bulkDraftMutation.isLoading}><Play className="h-3.5 w-3.5" />Draft</Button>
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+              <span className="text-[12px] text-muted-foreground">Enrich via:</span>
+              {ENRICH_PROVIDERS.map((p) => (
+                <Button
+                  key={p.key}
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => { if (window.confirm(`Enrich ${selectedIds.size} leads via ${p.label}? Credits are consumed per lead (on-demand).`)) bulkEnrichMutation.mutate({ ids: Array.from(selectedIds), provider: p.key }); }}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {p.label.replace(' (auto)', '')}
+                </Button>
+              ))}
+              <Select value={draftChannel} onChange={(e) => setDraftChannel(e.target.value as any)} className="h-8 w-32" aria-label="Channel">
+                <option value="both">Both</option>
+                <option value="email">Email</option>
+                <option value="whatsapp">WhatsApp</option>
+              </Select>
+              <Button
+                size="sm"
+                onClick={() => { if (window.confirm(`Generate drafts for ${selectedIds.size} leads?`)) bulkDraftMutation.mutate({ leadIds: Array.from(selectedIds), channel: draftChannel }); }}
+                loading={bulkDraftMutation.isLoading}
+              >
+                <Play className="h-3.5 w-3.5" />
+                Draft
+              </Button>
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>
+                Clear
+              </Button>
             </div>
           </motion.div>
         )}
@@ -250,10 +364,25 @@ const Leads: React.FC = () => {
                     const canSort = header.column.getCanSort();
                     const active = header.column.getIsSorted();
                     return (
-                      <th key={header.id} onClick={canSort ? header.column.getToggleSortingHandler() : undefined} style={{ width: header.getSize() }} className={`table-th sticky top-0 bg-surface/90 backdrop-blur-xl ${canSort ? 'cursor-pointer select-none hover:text-foreground' : ''}`}>
+                      <th
+                        key={header.id}
+                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                        style={{ width: header.getSize() }}
+                        className={`table-th sticky top-0 border-b border-border bg-surface/95 backdrop-blur-sm ${canSort ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
+                      >
                         <span className="inline-flex items-center gap-1">
                           {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                          {canSort && <span className="inline-flex flex-col">{active === 'asc' ? <ChevronUp className="h-3 w-3 text-primary" /> : active === 'desc' ? <ChevronDown className="h-3 w-3 text-primary" /> : <ChevronUp className="h-3 w-3 opacity-30" />}</span>}
+                          {canSort && (
+                            <span className="inline-flex flex-col">
+                              {active === 'asc' ? (
+                                <ChevronUp className="h-3 w-3 text-foreground" />
+                              ) : active === 'desc' ? (
+                                <ChevronDown className="h-3 w-3 text-foreground" />
+                              ) : (
+                                <ChevronUp className="h-3 w-3 opacity-30" />
+                              )}
+                            </span>
+                          )}
                         </span>
                       </th>
                     );
@@ -263,30 +392,79 @@ const Leads: React.FC = () => {
             </thead>
             <tbody>
               {table.getRowModel().rows.length === 0 ? (
-                <tr><td colSpan={columns.length} className="p-4"><EmptyState icon={Users} title="No leads found." description="Deploy the army to discover India fresher jobs, or adjust your search." action={<Button variant="outline" size="sm" onClick={() => armyMutation.mutate()}><Zap className="h-3.5 w-3.5" />Run Army</Button>} /></td></tr>
+                <tr>
+                  <td colSpan={columns.length} className="p-4">
+                    <EmptyState
+                      icon={Users}
+                      title="No leads found."
+                      description="Deploy the army to discover India fresher jobs, or adjust your search."
+                      action={
+                        <Button variant="outline" size="sm" onClick={() => armyMutation.mutate()}>
+                          <Zap className="h-3.5 w-3.5" />Run Army
+                        </Button>
+                      }
+                    />
+                  </td>
+                </tr>
               ) : table.getRowModel().rows.map((row) => {
                 const open = expanded.has(row.original.id);
                 const lead: any = row.original;
                 return (
                   <React.Fragment key={row.id}>
-                    <tr onClick={() => toggleExpand(row.original.id)} className={`group cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-accent/50 ${selectedIds.has(row.original.id) ? 'bg-primary-soft/30' : ''}`}>
-                      {row.getVisibleCells().map((cell) => <td key={cell.id} className={`table-td ${pad}`}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}
+                    <tr
+                      onClick={() => toggleExpand(row.original.id)}
+                      className={`group cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-accent/60 ${selectedIds.has(row.original.id) ? 'bg-accent' : ''}`}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className={`table-td ${pad}`}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
                     </tr>
                     <AnimatePresence initial={false}>
                       {open && (
                         <tr>
                           <td colSpan={columns.length} className="border-b border-border p-0">
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-                              <div className="grid grid-cols-1 gap-4 bg-muted/30 px-6 py-4 md:grid-cols-3">
-                                <DetailBlock title="Contact"><KV k="HR" v={lead.hr_name || '—'} /><KV k="Email" v={lead.hr_email} copyable mailto /><KV k="Phone" v={lead.hr_mobile} /><KV k="LinkedIn" v={lead.hr_linkedin_url} link /></DetailBlock>
-                                <DetailBlock title="Company & Job"><KV k="Company" v={lead.company_name} /><KV k="Domain" v={lead.company_domain} link /><KV k="Job" v={lead.job_title} /><KV k="Source" v={lead.source_site} /></DetailBlock>
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="grid grid-cols-1 gap-4 bg-muted/40 px-6 py-4 md:grid-cols-3">
+                                <DetailBlock title="Contact">
+                                  <KV k="HR" v={lead.hr_name || '—'} />
+                                  <KV k="Email" v={lead.hr_email} copyable mailto />
+                                  <KV k="Phone" v={lead.hr_mobile} />
+                                  <KV k="LinkedIn" v={lead.hr_linkedin_url} link />
+                                </DetailBlock>
+                                <DetailBlock title="Company & Job">
+                                  <KV k="Company" v={lead.company_name} />
+                                  <KV k="Domain" v={lead.company_domain} link />
+                                  <KV k="Job" v={lead.job_title} />
+                                  <KV k="Source" v={lead.source_site} />
+                                </DetailBlock>
                                 <DetailBlock title="Pipeline">
                                   <div className="mb-2 text-[11px] text-muted-foreground">Manual enrichment</div>
-                                  <div className="flex flex-wrap gap-1.5">{ENRICH_PROVIDERS.map((p) => <Button key={p.key} size="sm" variant="secondary" onClick={() => enrich(lead.id, p.key)}><p.icon className="h-3.5 w-3.5" />{p.label.replace(' (auto)', '')}</Button>)}</div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ENRICH_PROVIDERS.map((p) => (
+                                      <Button key={p.key} size="sm" variant="secondary" onClick={() => enrich(lead.id, p.key)}>
+                                        <p.icon className="h-3.5 w-3.5" />
+                                        {p.label.replace(' (auto)', '')}
+                                      </Button>
+                                    ))}
+                                  </div>
                                   <div className="mt-3 flex flex-wrap gap-1.5">
-                                    <Button size="sm" variant="soft" onClick={() => runAction(leadsApi.verify(lead.id), 'Verifying')}><BadgeCheck className="h-3.5 w-3.5" />Verify</Button>
-                                    <Button size="sm" variant="soft" onClick={() => runAction(leadsApi.draft(lead.id, 'both'), 'Drafting')}><FileText className="h-3.5 w-3.5" />Draft</Button>
-                                    <Button size="sm" variant="outline" onClick={() => navigate(`/leads/${lead.id}`)}><Eye className="h-3.5 w-3.5" />Open</Button>
+                                    <Button size="sm" variant="outline" onClick={() => runAction(leadsApi.verify(lead.id), 'Verifying')}>
+                                      <BadgeCheck className="h-3.5 w-3.5" />Verify
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => runAction(leadsApi.draft(lead.id, 'both'), 'Drafting')}>
+                                      <FileText className="h-3.5 w-3.5" />Draft
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => navigate(`/leads/${lead.id}`)}>
+                                      <Eye className="h-3.5 w-3.5" />Open
+                                    </Button>
                                   </div>
                                 </DetailBlock>
                               </div>
@@ -301,25 +479,59 @@ const Leads: React.FC = () => {
             </tbody>
           </table>
         </div>
-        {leadData.pagination && <div className="border-t border-border"><Pagination pagination={leadData.pagination} onPageChange={(p: number) => setPagination({ ...pagination, pageIndex: p - 1 })} /></div>}
+        {leadData.pagination && (
+          <div className="border-t border-border">
+            <Pagination pagination={leadData.pagination} onPageChange={(p: number) => setPagination({ ...pagination, pageIndex: p - 1 })} />
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return <div><p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p><div className="space-y-1">{children}</div></div>;
+  return (
+    <div>
+      <p className="eyebrow mb-2">{title}</p>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
 }
+
 function KV({ k, v, link, mailto, copyable }: { k: string; v?: string | null; link?: boolean; mailto?: boolean; copyable?: boolean }) {
   const [copied, setCopied] = useState(false);
   const show = v && v !== '—';
   return (
-    <div className="flex items-center gap-2 text-[13px]">
-      <span className="w-16 shrink-0 text-muted-foreground">{k}</span>
-      {show && link ? <a href={v!.startsWith('http') ? v : `https://${v}`} target="_blank" rel="noreferrer" className="truncate text-info hover:underline">{v}</a>
-        : show && mailto ? <a href={`mailto:${v}`} className="truncate text-info hover:underline">{v}</a>
-        : <span className="truncate text-foreground">{v || '—'}</span>}
-      {show && copyable && <button onClick={() => { navigator.clipboard?.writeText(v!); setCopied(true); setTimeout(() => setCopied(false), 1200); }} className="shrink-0 text-muted-foreground hover:text-foreground" title="Copy">{copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}</button>}
+    <div className="flex text-[13px]">
+      <span className="w-16 shrink-0 pt-px text-muted-foreground">{k}</span>
+      {show && link ? (
+        <a
+          href={v!.startsWith('http') ? v : `https://${v}`}
+          target="_blank"
+          rel="noreferrer"
+          className="truncate text-info hover:decoration-signal hover:underline"
+        >
+          <span className="break-all font-mono text-[12px]">{v}</span>
+        </a>
+      ) : show && mailto ? (
+        <a
+          href={`mailto:${v}`}
+          className="truncate text-info hover:decoration-signal hover:underline"
+        >
+          <span className="break-all font-mono text-[12px]">{v}</span>
+        </a>
+      ) : (
+        <span className="truncate break-all text-foreground">{v || '—'}</span>
+      )}
+      {show && copyable && (
+        <button
+          onClick={() => { navigator.clipboard?.writeText(v!); setCopied(true); setTimeout(() => setCopied(false), 1200); }}
+          className="ml-auto shrink-0 pl-2 text-muted-foreground hover:text-foreground"
+          title="Copy"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+      )}
     </div>
   );
 }

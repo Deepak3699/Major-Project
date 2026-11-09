@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { motion } from 'framer-motion';
 import { leads as leadsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import { PageLoader } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { useToast } from '@/components/ui/toast';
-import { AlertTriangle, Merge, X, Copy } from 'lucide-react';
+import { AlertTriangle, Merge, Copy } from 'lucide-react';
 import { stageMeta, SCORE_BAND_META, formatDate } from '@/lib/format';
 
 interface DuplicateCandidate {
@@ -37,6 +38,8 @@ const scoreBadge = (score: number) => {
   const meta = SCORE_BAND_META[band as keyof typeof SCORE_BAND_META];
   return <Badge className={meta.className}>Score {score}</Badge>;
 };
+
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 const Duplicates: React.FC = () => {
   const queryClient = useQueryClient();
@@ -77,7 +80,7 @@ const Duplicates: React.FC = () => {
   const duplicates: DuplicateCandidate[] = (data as any)?.duplicates || [];
 
   return (
-    <div className="space-y-phi4">
+    <div className="space-y-4">
       <ConfirmDialog
         open={!!pendingMerge}
         onClose={() => (mergeMutation.isLoading ? null : setPendingMerge(null))}
@@ -102,46 +105,59 @@ const Duplicates: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {duplicates.map((dup) => (
-            <div key={dup.lead_id} className="card overflow-hidden">
-              <div className="flex items-center gap-2 border-b border-border bg-warning-soft/50 px-5 py-3">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                <span className="text-sm font-semibold text-foreground">
+          {duplicates.map((dup, index) => (
+            <motion.div
+              key={dup.lead_id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: EASE, delay: Math.min(index * 0.05, 0.25) }}
+              className="card overflow-hidden transition-colors duration-150 hover:border-border-strong"
+            >
+              {/* Similarity strip */}
+              <div className="flex items-center gap-3 border-b border-border px-5 py-3">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-warning/25 bg-warning-soft">
+                  <AlertTriangle className="h-3.5 w-3.5 text-warning" strokeWidth={1.75} />
+                </span>
+                <span className="font-mono text-[13px] font-semibold tabular-nums text-warning">
                   {Math.round(dup.similarity * 100)}% similar
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="ml-auto font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                   detected {formatDate(dup.created_at)}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-0 p-5 md:grid-cols-2 md:divide-x md:divide-border">
-                <div className="pb-5 pr-0 md:pb-0 md:pr-5">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lead</p>
-                    <div className="flex flex-wrap gap-1.5">
+              {/* Side-by-side comparison */}
+              <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-border">
+                <div className="px-5 py-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="eyebrow">Lead</p>
+                    <div className="flex flex-wrap justify-end gap-1.5">
                       {scoreBadge(dup.lead_score)}
                       {stageBadge(dup.pipeline_stage)}
                     </div>
                   </div>
-                  <p className="text-[15px] font-semibold text-foreground">{dup.company_name || '—'}</p>
-                  <p className="mt-0.5 text-[13px] text-muted-foreground">{dup.job_title || '—'}</p>
+                  <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+                    {dup.company_name || '—'}
+                  </p>
+                  <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{dup.job_title || '—'}</p>
                 </div>
 
-                <div className="pt-5 pl-0 md:pt-0 md:pl-5">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Possible Duplicate
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
+                <div className="border-t border-border px-5 py-4 md:border-t-0">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="eyebrow">Possible duplicate</p>
+                    <div className="flex flex-wrap justify-end gap-1.5">
                       {scoreBadge(dup.dup_score)}
                       {stageBadge(dup.dup_stage)}
                     </div>
                   </div>
-                  <p className="text-[15px] font-semibold text-foreground">{dup.dup_company_name || '—'}</p>
-                  <p className="mt-0.5 text-[13px] text-muted-foreground">{dup.dup_job_title || '—'}</p>
+                  <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+                    {dup.dup_company_name || '—'}
+                  </p>
+                  <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{dup.dup_job_title || '—'}</p>
                 </div>
               </div>
 
+              {/* Actions */}
               <div className="flex flex-wrap items-center gap-2 border-t border-border bg-muted/30 px-5 py-3">
                 <Button
                   onClick={() => handleMerge(dup.lead_id, dup.duplicate_of_id)}
@@ -149,7 +165,7 @@ const Duplicates: React.FC = () => {
                   size="sm"
                   variant="default"
                 >
-                  <Merge className="h-4 w-4" />
+                  <Merge className="h-3.5 w-3.5" />
                   Merge into this
                 </Button>
                 <Button
@@ -158,11 +174,10 @@ const Duplicates: React.FC = () => {
                   size="sm"
                   variant="outline"
                 >
-                  <X className="h-4 w-4" />
                   Keep this
                 </Button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}

@@ -28,7 +28,7 @@ const CANDIDATE_SECTIONS = [
   { label: "Career space", items: [
     { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { to: "/jobs", label: "Discover jobs", icon: BriefcaseBusiness },
-    { to: "/recommendations", label: "For you", icon: Target },
+    { to: "/recommendations", label: "For you", icon: Target, tour: "nav-for-you" },
     { to: "/saved", label: "Saved jobs", icon: Bookmark },
     { to: "/applications", label: "Applications", icon: ClipboardList },
     { to: "/contacts", label: "Employer contacts", icon: Contact },
@@ -36,14 +36,14 @@ const CANDIDATE_SECTIONS = [
     { to: "/profile", label: "My profile", icon: UserRound },
   ] },
   { label: "Practice space", items: [
-    { to: "/practice", label: "Interview practice", icon: Mic },
+    { to: "/practice", label: "Interview practice", icon: Mic, tour: "nav-practice" },
     { to: "/learning", label: "Learning tracks", icon: GraduationCap },
   ] },
 ];
 const ADMIN_SECTIONS = [
   { label: "Platform", items: [
     { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-    { to: "/jobs", label: "Job review", icon: BriefcaseBusiness },
+    { to: "/jobs", label: "Job review", icon: BriefcaseBusiness, tour: "nav-jobs" },
     { to: "/leads", label: "Lead pipeline", icon: Users },
     { to: "/companies", label: "Companies", icon: Building2 },
     { to: "/contacts", label: "HR contacts & verification", icon: Contact },
@@ -52,7 +52,7 @@ const ADMIN_SECTIONS = [
     { to: "/duplicates", label: "Duplicates", icon: GitMerge },
     { to: "/analytics", label: "Analytics", icon: TrendingUp },
     { to: "/admin/feedback", label: "Candidate feedback", icon: MessageCircle },
-    { to: "/admin/practice", label: "Practice subscriptions", icon: Mic },
+    { to: "/admin/practice", label: "Practice subscriptions", icon: Mic, tour: "nav-admin-practice" },
     { to: "/settings", label: "System settings", icon: SettingsIcon },
   ] },
 ];
@@ -60,13 +60,14 @@ const ADMIN_SECTIONS = [
 const LS_KEY = "hiregen:rail-collapsed";
 const EASE = "transition-[width,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
-interface NavItemProps { to: string; label: string; icon: IconType; collapsed: boolean; onNavigate?: () => void }
-function NavItem({ to, label, icon: Icon, collapsed, onNavigate }: NavItemProps) {
+interface NavItemProps { to: string; label: string; icon: IconType; collapsed: boolean; onNavigate?: () => void; tour?: string }
+function NavItem({ to, label, icon: Icon, collapsed, onNavigate, tour }: NavItemProps) {
   return (
     <NavLink
       to={to}
       onClick={onNavigate}
       title={label}
+      data-tour={tour}
       className={({ isActive }) =>
         cn(
           "group relative flex h-9 min-h-9 items-center gap-2.5 rounded-md text-[13px] font-medium transition-colors duration-150",
@@ -180,7 +181,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   return (
     <>
       {/* Desktop rail */}
-      <aside className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 64 : 232 }}>
+      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 64 : 232 }}>
         <Header compact={collapsed} />
         <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
         <Footer collapsed={collapsed} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />

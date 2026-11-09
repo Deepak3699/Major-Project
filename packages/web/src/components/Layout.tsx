@@ -5,6 +5,7 @@ import { WifiOff } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { CommandPalette } from "@/components/CommandPalette";
+import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { useAuthStore } from "@/stores/auth";
 
 const Layout: React.FC = () => {
@@ -53,6 +54,7 @@ const Layout: React.FC = () => {
         </main>
       </div>
       <CommandPalette />
+      <OnboardingTour />
     </div>
   );
 };

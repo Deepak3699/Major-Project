@@ -133,6 +133,7 @@ module.exports = {
         drawer: '60',
         palette: '90',
         modal: '80',
+        tour: '110',
         toast: '120',
       },
       keyframes: {

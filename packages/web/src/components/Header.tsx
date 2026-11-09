@@ -133,6 +133,7 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
         </button>
         <button
           type="button"
+          data-tour="palette"
           onClick={() => window.dispatchEvent(new Event('hiregen:open-palette'))}
           className="mr-1 hidden items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground sm:flex"
           aria-label="Open command palette"
@@ -205,6 +206,7 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
         <div className="relative" ref={userRef}>
           <button
             type="button"
+            data-tour="user-menu"
             onClick={() => setUserOpen((v) => !v)}
             className="flex items-center gap-2 rounded-full p-1 pr-1.5 transition-colors hover:bg-accent"
           >
@@ -220,6 +222,13 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
                 <p className="truncate text-[12.5px] font-medium text-foreground">{user?.email}</p>
                 <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{user?.role}</p>
               </div>
+              <button
+                type="button"
+                onClick={() => { setUserOpen(false); window.dispatchEvent(new Event("hiregen:replay-tour")); }}
+                className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Replay tutorial
+              </button>
               <button
                 type="button"
                 onClick={handleLogout}

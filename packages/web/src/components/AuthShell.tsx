@@ -18,14 +18,15 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
   return (
     <div className="flex min-h-screen bg-background">
       {/* Narrative panel */}
-      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[hsl(22,32%,15%)] p-10 text-[hsl(33,34%,94%)] lg:flex xl:p-14">
+      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-grad-hero p-10 text-[hsl(33,34%,94%)] lg:flex xl:p-14">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-grad-glow" />
         <div aria-hidden className="pointer-events-none absolute inset-0 border-r border-[hsl(22,22%,24%)]" />
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[hsl(14,46%,58%/0.14)]" />
         <div aria-hidden className="pointer-events-none absolute -bottom-16 right-10 h-48 w-48 rounded-full border border-[hsl(14,46%,58%/0.08)]" />
 
         <div className="relative flex items-center gap-2.5">
           <span aria-hidden className="h-3 w-3 rounded-[3px] bg-[hsl(14,46%,58%)]" />
-          <span className="text-[19px] font-semibold tracking-[-0.032em]">Hiregen</span>
+          <span className="text-[19px] font-semibold tracking-[-0.032em]">AI JobPilot</span>
         </div>
 
         <div className="relative max-w-md">
@@ -56,7 +57,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
           </ul>
         </div>
 
-        <p className="relative font-mono text-[11px] text-[hsl(28,12%,52%)]">© {new Date().getFullYear()} Hiregen</p>
+        <p className="relative font-mono text-[11px] text-[hsl(28,12%,52%)]">© {new Date().getFullYear()} AI JobPilot</p>
       </div>
 
       {/* Form panel */}

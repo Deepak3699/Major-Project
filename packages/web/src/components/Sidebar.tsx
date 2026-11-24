@@ -62,7 +62,7 @@ const ADMIN_SECTIONS = [
   ] },
 ];
 
-const LS_KEY = "hiregen:rail-collapsed";
+const LS_KEY = "aijobpilot:rail-collapsed";
 const EASE = "transition-[width,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]";
 
 interface NavItemProps { to: string; label: string; icon: IconType; collapsed: boolean; onNavigate?: () => void; tour?: string }
@@ -166,7 +166,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   const isAdmin = user?.role === "admin";
   const isCandidate = user?.role === "candidate" || user?.role === "user";
   const onLogout = async () => { await revokeCurrentToken(); await logout(); navigate("/login"); };
-  const openPalette = () => window.dispatchEvent(new Event("hiregen:open-palette"));
+  const openPalette = () => window.dispatchEvent(new Event("aijobpilot:open-palette"));
 
   const Header = ({ compact }: { compact: boolean }) => (
     <div className={cn("flex h-14 shrink-0 items-center justify-between px-4 text-sidebar-foreground", compact && "justify-center px-0")}>

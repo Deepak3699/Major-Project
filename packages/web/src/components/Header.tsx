@@ -39,7 +39,7 @@ function usePageTitle(pathname: string): { title: string; section: string } {
   for (const t of TITLES) {
     if (t.match.test(pathname)) return t;
   }
-  return { title: "Hiregen", section: "Home" };
+  return { title: "AI JobPilot", section: "Home" };
 }
 
 interface Run {
@@ -138,7 +138,7 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
         <button
           type="button"
           data-tour="palette"
-          onClick={() => window.dispatchEvent(new Event('hiregen:open-palette'))}
+          onClick={() => window.dispatchEvent(new Event('aijobpilot:open-palette'))}
           className="mr-1 hidden min-w-[18rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground sm:flex"
           aria-label="Open command palette"
         >
@@ -235,10 +235,24 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
               </button>
               <button
                 type="button"
-                onClick={() => { setUserOpen(false); window.dispatchEvent(new Event("hiregen:replay-tour")); }}
+                onClick={() => { setUserOpen(false); window.dispatchEvent(new Event("aijobpilot:replay-tour")); }}
                 className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
               >
                 Replay tutorial
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUserOpen(false); window.dispatchEvent(new Event("aijobpilot:open-subscription")); }}
+                className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Subscription plans
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUserOpen(false); window.dispatchEvent(new Event("aijobpilot:open-feedback")); }}
+                className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Send feedback
               </button>
               <button
                 type="button"

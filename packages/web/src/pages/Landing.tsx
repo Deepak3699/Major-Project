@@ -48,7 +48,7 @@ function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
       <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center gap-4 px-5 sm:px-8">
-        <Link to="/" aria-label="Hiregen home" className="shrink-0">
+        <Link to="/" aria-label="AI JobPilot home" className="shrink-0">
           <Logo size="md" />
         </Link>
         <nav aria-label="Page sections" className="ml-8 hidden items-center gap-6 lg:flex">
@@ -105,14 +105,14 @@ function ProductPreview() {
   return (
     <div className="relative">
       <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-border/60 bg-surface/40" />
-      <div className="card relative overflow-hidden shadow-pop" aria-label="Illustrative Hiregen workspace preview">
+      <div className="card relative overflow-hidden shadow-pop" aria-label="Illustrative AI JobPilot workspace preview">
         <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/20 px-4 py-3">
           <div aria-hidden className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
             <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
             <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
           </div>
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">Hiregen · candidate workspace</span>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">AI JobPilot · candidate workspace</span>
           <Badge variant="muted" className="bg-surface">Sample</Badge>
         </div>
         <div className="grid sm:grid-cols-[9rem_minmax(0,1fr)]">
@@ -300,7 +300,7 @@ const STEPS = [
   { title: 'Build your profile', body: 'Enter details yourself or upload a resume. Extracted fields stay suggestions until you review and confirm them.' },
   { title: 'Choose a role', body: 'Discover fresh listings or open a recommendation. Read the evidence and decide whether the role is worth your time.' },
   { title: 'Prepare and practise', body: 'Use your confirmed profile and the job description to generate preparation, then rehearse with the interview bot.' },
-  { title: 'Apply and track', body: 'You open the employer page and send the application. Hiregen tracks the status and lets you report an outcome voluntarily.' },
+  { title: 'Apply and track', body: 'You open the employer page and send the application. AI JobPilot tracks the status and lets you report an outcome voluntarily.' },
 ];
 
 const PLANS = [
@@ -353,7 +353,7 @@ const Landing: React.FC = () => {
                   <span className="block text-signal">crafted with clarity.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-muted-foreground">
-                  Hiregen brings roles, evidence, preparation and application tracking into one refined workspace — so every move you make is informed, deliberate and yours.
+                  AI JobPilot brings roles, evidence, preparation and application tracking into one refined workspace — so every move you make is informed, deliberate and yours.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Button asChild size="lg" className="h-11 px-6">
@@ -544,7 +544,7 @@ const Landing: React.FC = () => {
                 A tool, not a decision maker.
               </h2>
               <p className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-                Hiregen does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
+                AI JobPilot does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
               </p>
               <div className="mt-6 rounded-xl border border-border bg-muted/20 p-4">
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">Design principle</p>
@@ -567,7 +567,8 @@ const Landing: React.FC = () => {
 
         {/* Closing CTA */}
         <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-8 lg:pb-20" aria-labelledby="cta-heading">
-          <div className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-[hsl(22,32%,15%)] px-6 py-14 text-[hsl(33,34%,94%)] sm:px-10">
+          <div className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-grad-hero px-6 py-14 text-[hsl(33,34%,94%)] sm:px-10">
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-grad-glow" />
             <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border border-[hsl(14,46%,58%/0.14)]" />
             <div aria-hidden className="pointer-events-none absolute bottom-0 left-10 h-32 w-32 rounded-full border border-[hsl(14,46%,58%/0.08)]" />
             <div className="relative mx-auto max-w-3xl text-center">
@@ -605,7 +606,7 @@ const Landing: React.FC = () => {
             ))}
           </nav>
           <div className="text-[12px] leading-relaxed text-muted-foreground">
-            <p>© {new Date().getFullYear()} Hiregen</p>
+            <p>© {new Date().getFullYear()} AI JobPilot</p>
             <p className="mt-1">Not an employer. No applications sent automatically.</p>
           </div>
         </div>

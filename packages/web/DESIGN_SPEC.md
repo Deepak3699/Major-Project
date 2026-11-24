@@ -1,4 +1,4 @@
-# Hiregen UI Design Spec — "Terracotta Atelier"
+# AI JobPilot UI Design Spec — "Terracotta Atelier"
 
 This is the binding design language for the full UI. The foundation
 (`src/index.css`, `tailwind.config.js`) and all `components/ui/*` primitives +
@@ -27,11 +27,7 @@ works in both light and dark themes.
    `signal` + their `-soft` forms). Everything must look intentional in BOTH
    light and dark themes — verify your classes do not hardcode light values;
    `dark:` overrides are unnecessary because index.css tokens flip for you.
-4. **Banned (AI-slop tells):** `rounded-2xl`/`rounded-3xl` on cards (use `rounded-lg`
-   / `rounded-xl` max), gradients (`bg-gradient-*`, `bg-[image:var(--grad-*)]`,
-   `.glass` classes), glow shadows (`shadow-glow*`, `shadow-card-hover`,
-   `shadow-float` except on real popovers), emoji, `text-gradient`, decorative
-   blobs/rings, exclamation-mark marketing copy, "Powered by AI" style phrases.
+4. **Visual guardrails:** Use gradients only as controlled premium accents (`bg-grad-hero`, `bg-grad-primary`, `bg-grad-glow`) — no loud neon gradients. Avoid glassmorphism, emoji, decorative blobs, exclamation-mark marketing copy, and "Powered by AI" style phrases. Keep corners rounded-lg/xl, borders hairline, and shadows restrained.
 5. **The one saturated accent is `signal` (dusty terracotta).** Use it surgically: primary
    buttons, links on hover, the active navigation pill, focus cues, a single
    primary metric, match badges. Keep large fills to deep walnut ink surfaces; do not

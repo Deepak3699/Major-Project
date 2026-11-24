@@ -33,7 +33,7 @@ Documented in `packages/web/DESIGN_SPEC.md` and implemented with semantic Tailwi
 - Terracotta Atelier layout: mono eyebrows, confident display type, restrained rules.
 - Dusty terracotta primary buttons with warm light labels, almond-beige cards, walnut-brown ink, crisp borders, low elevation.
 - Single `signal` dusty terracotta accent; success/warning/danger/destructive soft variants.
-- Light and dark themes through CSS variables (almond beige / deep walnut, terracotta signal); no gradients, glassmorphism, neon or emoji.
+- Light and dark themes through CSS variables (almond beige / deep walnut, terracotta signal); controlled premium gradients allowed; no glassmorphism, neon or emoji.
 - Shared primitives under `components/ui`: button, input, textarea, select, badge, card, modal, toast, spinner, empty-state, stat-card, page-header, table, tabs, avatar, skeleton.
 
 ## 5. State and data
@@ -75,4 +75,4 @@ Gaps:
 
 `AuthShell.tsx` was restyled to the same flat ink/paper language, with a "Back to preview" link added to both sign-in and registration. All test-visible form copy and handlers are unchanged.
 
-The layout and component patterns were cross-checked against the owner-supplied reference image in `Doccumentation/` (welcome banner, profile completion ring and checklist, compact stat row, recommended-job cards with match badges, application progress stepper, preparation-centre tiles, credits/plan cards, sidebar career tagline). The owner asked for major user-panel UI changes with a new unique color scheme. The design system is now **Terracotta Atelier**: almond-beige paper, walnut-brown ink, and a dusty terracotta primary/signal. The user panel shell, dashboard, logo, auth shell and public preview were restyled for a warmer, more premium editorial feel with confident spacing, flat surfaces and restrained elevation. The logo was clarified with a stronger mark and wordmark contrast. Gradients, glassmorphism, emoji and fabricated data remain banned.
+The layout and component patterns were cross-checked against the owner-supplied reference image in `Doccumentation/` (welcome banner, profile completion ring and checklist, compact stat row, recommended-job cards with match badges, application progress stepper, preparation-centre tiles, credits/plan cards, sidebar career tagline). The owner asked for major user-panel UI changes with a new unique color scheme. The design system is now **Terracotta Atelier**: almond-beige paper, walnut-brown ink, and a dusty terracotta primary/signal. The user panel shell, dashboard, logo, auth shell and public preview were restyled for a warmer, more premium editorial feel with confident spacing, flat surfaces and restrained elevation. The logo was clarified and rebranded to **AI JobPilot** with a clearer mark. Controlled premium gradients are used sparingly; glassmorphism, emoji and fabricated data remain banned.

@@ -6,10 +6,14 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { CommandPalette } from "@/components/CommandPalette";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { SubscriptionDialog } from "@/components/SubscriptionDialog";
 import { useAuthStore } from "@/stores/auth";
 
 const Layout: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [online, setOnline] = useState(
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
@@ -19,11 +23,17 @@ const Layout: React.FC = () => {
   useEffect(() => {
     const goOffline = () => setOnline(false);
     const goOnline = () => setOnline(true);
+    const openFeedback = () => setFeedbackOpen(true);
+    const openSubscription = () => setSubscriptionOpen(true);
     window.addEventListener("offline", goOffline);
     window.addEventListener("online", goOnline);
+    window.addEventListener("aijobpilot:open-feedback", openFeedback);
+    window.addEventListener("aijobpilot:open-subscription", openSubscription);
     return () => {
       window.removeEventListener("offline", goOffline);
       window.removeEventListener("online", goOnline);
+      window.removeEventListener("aijobpilot:open-feedback", openFeedback);
+      window.removeEventListener("aijobpilot:open-subscription", openSubscription);
     };
   }, []);
 
@@ -76,6 +86,8 @@ const Layout: React.FC = () => {
       )}
       <CommandPalette />
       <OnboardingTour />
+      <FeedbackDialog open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <SubscriptionDialog open={subscriptionOpen} onClose={() => setSubscriptionOpen(false)} />
     </div>
   );
 };

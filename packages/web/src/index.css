@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Hiregen design system — "Terracotta Atelier"
+   AI JobPilot design system — "Terracotta Atelier"
    Almond-beige paper, walnut-brown ink, dusty terracotta signal. Warm,
    premium, editorial, flat — no gradients, no glassmorphism, no emoji.
 --------------------------------------------------------------------------- */
@@ -36,9 +36,9 @@
     --destructive-foreground: 0 0% 100%;
     --destructive-soft: 4 70% 96%;
 
-    --success: 142 34% 34%;
-    --success-foreground: 0 0% 100%;
-    --success-soft: 140 30% 93%;
+    --success: 88 28% 36%;
+    --success-foreground: 40 33% 98%;
+    --success-soft: 78 28% 92%;
 
     --warning: 34 85% 42%;
     --warning-foreground: 0 0% 100%;
@@ -67,9 +67,11 @@
     --cold: 200 35% 40%;
     --cold-soft: 200 35% 93%;
 
-    /* Legacy gradient hooks — kept resolving; flat by design. */
-    --grad-primary: none;
-    --grad-mesh: none;
+    /* Premium gradients — controlled, warm, and subtle. */
+    --grad-primary: linear-gradient(135deg, hsl(12 43% 46%) 0%, hsl(20 38% 38%) 100%);
+    --grad-surface: linear-gradient(180deg, hsl(33 36% 98%) 0%, hsl(30 28% 94%) 100%);
+    --grad-hero: linear-gradient(135deg, hsl(22 32% 15%) 0%, hsl(18 28% 20%) 55%, hsl(14 34% 24%) 100%);
+    --grad-glow: radial-gradient(ellipse at top right, hsl(14 46% 58% / 0.18), transparent 55%);
 
     /* Flat elevation: hairline borders with a warm near-invisible lift */
     --glow-primary: 0 1px 2px rgb(58 36 24 / 0.14);
@@ -109,9 +111,9 @@
     --destructive-foreground: 22 24% 8%;
     --destructive-soft: 2 26% 15%;
 
-    --success: 142 34% 52%;
+    --success: 88 30% 56%;
     --success-foreground: 22 24% 8%;
-    --success-soft: 142 20% 14%;
+    --success-soft: 88 18% 15%;
 
     --warning: 38 78% 58%;
     --warning-foreground: 22 24% 8%;
@@ -139,8 +141,10 @@
     --cold: 200 40% 60%;
     --cold-soft: 200 22% 14%;
 
-    --grad-primary: none;
-    --grad-mesh: none;
+    --grad-primary: linear-gradient(135deg, hsl(14 52% 62%) 0%, hsl(20 45% 52%) 100%);
+    --grad-surface: linear-gradient(180deg, hsl(22 20% 12%) 0%, hsl(22 20% 9%) 100%);
+    --grad-hero: linear-gradient(135deg, hsl(22 30% 13%) 0%, hsl(20 26% 17%) 55%, hsl(14 28% 20%) 100%);
+    --grad-glow: radial-gradient(ellipse at top right, hsl(14 52% 62% / 0.16), transparent 55%);
 
     --glow-primary: 0 1px 2px rgb(0 0 0 / 0.45);
     --glow-soft: 0 0 0 0.5px rgb(245 235 225 / 0.04), 0 1px 2px rgb(0 0 0 / 0.35);
@@ -388,6 +392,15 @@
   .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-overlay-in { animation: overlayIn 0.2s ease both; }
   .animate-drawer-in { animation: drawerIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .bg-grad-primary { background-image: var(--grad-primary); }
+  .bg-grad-surface { background-image: var(--grad-surface); }
+  .bg-grad-hero { background-image: var(--grad-hero); }
+  .bg-grad-glow { background-image: var(--grad-glow); }
+  .premium-card {
+    background-image: linear-gradient(180deg, hsl(var(--surface)) 0%, hsl(var(--background)) 100%);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--glow-soft);
+  }
 }
 
 /* ---- keyframes (referenced by .animate-* + .skeleton above) ---- */

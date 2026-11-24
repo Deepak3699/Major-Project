@@ -27,16 +27,25 @@ export function Logo({
     <div className={cn("inline-flex items-center gap-2.5 select-none", className)}>
       <span
         aria-hidden
-        className={cn("shrink-0 bg-signal shadow-[inset_0_1px_0_rgba(255,255,255,0.22)]", markSizes[size])}
-      />
+        className={cn(
+          "grid shrink-0 place-items-center bg-signal text-signal-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]",
+          markSizes[size]
+        )}
+      >
+        <svg viewBox="0 0 16 16" className="h-[70%] w-[70%]" fill="none" aria-hidden>
+          <path d="M8 2.5L12.8 12.5H11L10 10.4H6L5 12.5H3.2L8 2.5Z" fill="currentColor" />
+          <path d="M7 9H9L8 6.8L7 9Z" fill="currentColor" opacity="0.28" />
+          <path d="M12 2.2L12.45 3.3L13.55 3.75L12.45 4.2L12 5.3L11.55 4.2L10.45 3.75L11.55 3.3L12 2.2Z" fill="currentColor" />
+        </svg>
+      </span>
       {showText && (
         <span
           className={cn(
-            "font-bold leading-none tracking-[-0.035em] text-current",
+            "font-bold leading-none tracking-[-0.04em] text-current",
             textSizes[size]
           )}
         >
-          Hire<span className="text-signal">gen</span>
+          <span className="text-signal">AI</span> JobPilot
         </span>
       )}
     </div>

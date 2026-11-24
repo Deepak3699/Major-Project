@@ -131,10 +131,10 @@ const CandidateDashboard: React.FC = () => {
     <div className="space-y-4">
       {/* Welcome banner + profile completion */}
       <motion.section {...rise(0)} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-[hsl(22,32%,15%)] p-6 text-[hsl(33,34%,94%)] sm:p-8">
+        <div className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-grad-hero p-6 text-[hsl(33,34%,94%)] sm:p-8">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-grad-glow" />
           <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border border-[hsl(14,46%,58%/0.16)]" />
           <div aria-hidden className="pointer-events-none absolute -bottom-20 right-20 h-48 w-48 rounded-full border border-[hsl(14,46%,58%/0.1)]" />
-          <div aria-hidden className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-[hsl(14,46%,58%/0.04)]" />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0 max-w-2xl">
               <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[hsl(14,46%,64%)]">Your career space</p>

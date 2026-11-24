@@ -75,11 +75,10 @@ function NavItem({ to, label, icon: Icon, collapsed, onNavigate, tour }: NavItem
       data-tour={tour}
       className={({ isActive }) =>
         cn(
-          "group relative flex h-9 min-h-9 items-center gap-2.5 rounded-md text-[13px] font-medium transition-colors duration-150",
-          collapsed ? "justify-center px-0" : "px-2.5",
-          "text-sidebar-foreground hover:bg-sidebar-muted hover:text-sidebar-foreground",
-          // Active state: solid ink pill with paper label — unmistakable, quiet.
-          isActive && "!bg-sidebar-active !text-sidebar-active-foreground",
+          "group relative flex h-10 min-h-10 items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-150",
+          collapsed ? "justify-center px-0" : "px-3",
+          "text-sidebar-foreground/82 hover:bg-sidebar-muted/80 hover:text-sidebar-foreground",
+          isActive && "!bg-sidebar-active !text-sidebar-active-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]",
         )
       }
     >
@@ -87,12 +86,12 @@ function NavItem({ to, label, icon: Icon, collapsed, onNavigate, tour }: NavItem
         <>
           <Icon
             className={cn(
-              "h-4 w-4 shrink-0 transition-colors",
-              isActive ? "opacity-90" : "opacity-75 group-hover:opacity-100",
+              "h-[18px] w-[18px] shrink-0 transition-colors",
+              isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100",
             )}
-            strokeWidth={isActive ? 2 : 1.75}
+            strokeWidth={isActive ? 2 : 1.8}
           />
-          <span className={cn("truncate", collapsed && "hidden")}>{label}</span>
+          <span className={cn("truncate tracking-[-0.01em]", collapsed && "hidden")}>{label}</span>
         </>
       )}
     </NavLink>
@@ -102,12 +101,12 @@ function NavItem({ to, label, icon: Icon, collapsed, onNavigate, tour }: NavItem
 function Nav({ collapsed, isAdmin, isCandidate, onNavigate }: { collapsed: boolean; isAdmin: boolean; isCandidate: boolean; onNavigate?: () => void }) {
   const sections = isCandidate ? CANDIDATE_SECTIONS : isAdmin ? ADMIN_SECTIONS : LEGACY_SECTIONS;
   return (
-    <nav className="flex flex-1 flex-col gap-px overflow-x-hidden overflow-y-auto px-2.5 py-2">
-      {sections.map((sec) => (
-        <div key={sec.label}>
-          {!collapsed && <p className={cn("eyebrow px-2.5 pb-1.5 pt-4", EASE)} style={{ color: 'hsl(var(--sidebar-foreground) / 0.55)' }}>{sec.label}</p>}
-          {collapsed && <div className="mx-1.5 my-2 h-px bg-sidebar-border" />}
-          <div className="flex flex-col gap-px">
+    <nav className="flex flex-1 flex-col gap-1 overflow-x-hidden overflow-y-auto px-3 py-3">
+      {sections.map((sec, secIndex) => (
+        <div key={sec.label} className={cn(secIndex > 0 && !collapsed && "mt-3")}>
+          {!collapsed && <p className={cn("px-3 pb-2 pt-2 font-mono text-[10px] font-medium uppercase tracking-[0.14em]", EASE)} style={{ color: 'hsl(var(--sidebar-foreground) / 0.45)' }}>{sec.label}</p>}
+          {collapsed && <div className="mx-2 my-2.5 h-px bg-sidebar-border/80" />}
+          <div className="flex flex-col gap-1">
             {sec.items.map((it) => <NavItem key={it.to} {...it} collapsed={collapsed} onNavigate={onNavigate} />)}
           </div>
         </div>
@@ -119,12 +118,13 @@ function Nav({ collapsed, isAdmin, isCandidate, onNavigate }: { collapsed: boole
 function SidebarPromo({ collapsed, isCandidate }: { collapsed: boolean; isCandidate: boolean }) {
   if (!isCandidate || collapsed) return null;
   return (
-    <div className="mx-2.5 mb-2 rounded-xl border border-[hsl(14,46%,58%/0.22)] bg-[hsl(14,46%,58%/0.08)] p-3.5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[hsl(14,46%,68%)]">Premium workspace</p>
-      <p className="mt-1.5 text-[12.5px] font-semibold leading-snug text-sidebar-foreground">Your career, our priority.</p>
+    <div className="mx-3 mb-3 rounded-2xl border border-[hsl(14,46%,58%/0.2)] bg-[linear-gradient(180deg,hsl(14,46%,58%,0.12),hsl(14,46%,58%,0.05))] p-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[hsl(14,52%,68%)]">Premium workspace</p>
+      <p className="mt-2 text-[13px] font-semibold leading-snug text-sidebar-foreground">Your career, our priority.</p>
+      <p className="mt-1 text-[11.5px] leading-relaxed text-sidebar-foreground/65">Track progress, prepare smarter, and stay focused.</p>
       <Link
         to="/credits"
-        className="mt-2.5 inline-flex items-center gap-1 text-[11.5px] text-[hsl(33,30%,82%)] transition-colors hover:text-sidebar-foreground"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[hsl(14,46%,58%/0.25)] bg-[hsl(14,46%,58%/0.1)] px-2.5 py-1.5 text-[11.5px] font-medium text-[hsl(33,34%,92%)] transition-colors hover:bg-[hsl(14,46%,58%/0.16)]"
       >
         Preparation credits <ArrowUpRight className="h-3 w-3" aria-hidden />
       </Link>
@@ -134,26 +134,26 @@ function SidebarPromo({ collapsed, isCandidate }: { collapsed: boolean; isCandid
 
 function Footer({ collapsed, email, role, onLogout, onCommand }: { collapsed: boolean; email?: string | null; role?: string | null; onLogout: () => void; onCommand: () => void }) {
   return (
-    <div className="border-t border-sidebar-border p-2.5">
+    <div className="border-t border-sidebar-border/80 p-3">
       <button
         type="button"
         onClick={onCommand}
         title="Command palette (⌘K)"
-        className={cn("mb-2 flex h-8 w-full items-center gap-2.5 rounded-md border border-sidebar-border bg-transparent text-sidebar-foreground transition-colors hover:border-border-strong hover:text-sidebar-foreground", collapsed ? "justify-center px-0" : "px-2.5")}
+        className={cn("mb-3 flex h-10 w-full items-center gap-2.5 rounded-xl border border-sidebar-border/80 bg-sidebar-muted/25 text-sidebar-foreground/80 transition-colors hover:border-sidebar-border hover:bg-sidebar-muted/45 hover:text-sidebar-foreground", collapsed ? "justify-center px-0" : "px-3")}
       >
-        <Search className="h-3.5 w-3.5" />
+        <Search className="h-4 w-4" />
         <span className={cn("text-[12.5px]", collapsed && "hidden")}>Search</span>
-        <kbd className={cn("ml-auto font-mono text-[10px] text-sidebar-foreground/70", collapsed && "hidden")}>⌘K</kbd>
+        <kbd className={cn("ml-auto rounded-md border border-sidebar-border/70 px-1.5 py-0.5 font-mono text-[10px] text-sidebar-foreground/55", collapsed && "hidden")}>⌘K</kbd>
       </button>
-      <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
+      <div className={cn("flex items-center gap-2.5 rounded-xl px-1 py-1", collapsed && "justify-center px-0")}>
         <Avatar name={email} size="sm" />
-        <div className={cn("min-w-0 flex-1 leading-tight", collapsed && "hidden")}>
+        <div className={cn("min-w-0 flex-1", collapsed && "hidden")}>
           <p className="truncate text-[12.5px] font-medium text-sidebar-foreground">{email || "User"}</p>
-          <p className="truncate font-mono text-[10px] uppercase tracking-[0.08em] text-sidebar-foreground">{role || "user"}</p>
+          <p className="truncate font-mono text-[10px] uppercase tracking-[0.08em] text-sidebar-foreground/55">{role || "user"}</p>
         </div>
-        <button type="button" onClick={onLogout} title="Sign out" className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-md text-sidebar-foreground transition-colors hover:bg-destructive-soft hover:text-destructive", collapsed && "hidden")}><LogOut className="h-3.5 w-3.5" /></button>
+        <button type="button" onClick={onLogout} title="Sign out" className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sidebar-foreground/65 transition-colors hover:bg-destructive-soft hover:text-destructive", collapsed && "hidden")}><LogOut className="h-4 w-4" /></button>
       </div>
-      {collapsed && <button type="button" onClick={onLogout} title="Sign out" className="mx-auto mt-2 grid h-7 w-7 place-items-center rounded-md text-sidebar-foreground transition-colors hover:bg-destructive-soft hover:text-destructive"><LogOut className="h-3.5 w-3.5" /></button>}
+      {collapsed && <button type="button" onClick={onLogout} title="Sign out" className="mx-auto mt-2 grid h-8 w-8 place-items-center rounded-lg text-sidebar-foreground/65 transition-colors hover:bg-destructive-soft hover:text-destructive"><LogOut className="h-4 w-4" /></button>}
     </div>
   );
 }
@@ -169,7 +169,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   const openPalette = () => window.dispatchEvent(new Event("aijobpilot:open-palette"));
 
   const Header = ({ compact }: { compact: boolean }) => (
-    <div className={cn("flex h-14 shrink-0 items-center justify-between px-4 text-sidebar-foreground", compact && "justify-center px-0")}>
+    <div className={cn("flex h-16 shrink-0 items-center justify-between px-4 text-sidebar-foreground", compact && "justify-center px-0")}>
       {compact ? (
         <button
           type="button"
@@ -202,7 +202,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   return (
     <>
       {/* Desktop rail */}
-      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 64 : 232 }}>
+      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 72 : 252 }}>
         <Header compact={collapsed} />
         <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
         <SidebarPromo collapsed={collapsed} isCandidate={isCandidate} />
@@ -213,8 +213,8 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
       {drawerOpen && (
         <div className="fixed inset-0 z-overlay md:hidden">
           <div className="absolute inset-0 bg-zinc-950/60 animate-overlay-in" onClick={onDrawerClose} aria-hidden />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-sidebar-border bg-sidebar shadow-drawer animate-drawer-in">
-            <div className="flex h-14 shrink-0 items-center justify-between px-4 text-sidebar-foreground">
+          <aside className="absolute inset-y-0 left-0 flex w-[17rem] flex-col border-r border-sidebar-border bg-sidebar shadow-drawer animate-drawer-in">
+            <div className="flex h-16 shrink-0 items-center justify-between px-4 text-sidebar-foreground">
               <Logo size="md" />
               <button type="button" onClick={onDrawerClose} aria-label="Close menu" className="grid h-8 w-8 place-items-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-muted hover:text-sidebar-foreground"><X className="h-4 w-4" /></button>
             </div>

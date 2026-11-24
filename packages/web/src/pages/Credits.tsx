@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import { AlertCircle, ArrowRight, Check, Coins, History, Lock, Sparkles } from 'lucide-react';
 import { credits } from '@/lib/api';
 import { CreditKind, CreditLedgerEntry } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+/* header replaced by premium hero */
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,96 +91,91 @@ const Credits: React.FC = () => {
   const pageEnd = Math.min(offset + limit, total);
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Credits & plan"
-        description="Every preparation credit is tracked in a server-side ledger. Balances come from the API, never from the browser."
-      />
-
-      <div className="card overflow-hidden">
-        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-background text-foreground">
-              <Coins className="h-5 w-5" strokeWidth={1.75} />
-            </span>
-            <div>
-              <p className="eyebrow">Current balance</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="font-mono text-[38px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-foreground">{wallet.balance}</span>
-                <span className="text-[13px] text-muted-foreground">preparation credits</span>
-              </div>
-              <p className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
-                <Badge variant={plan.code === 'FREE' ? 'muted' : 'signal'}>{plan.name}</Badge>
-                <span>{plan.code === 'FREE' ? 'Free plan' : `Active until ${plan.expires_at ? formatDateTime(plan.expires_at) : 'further notice'}`}</span>
-              </p>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-grad-hero p-6 text-[hsl(33,34%,94%)] sm:p-8">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-grad-glow" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[hsl(14,52%,64%)]">Credits & plan</p>
+            <h1 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.032em] text-[#EFDECD] sm:text-[40px]">Your preparation, well managed.</h1>
+            <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-[hsl(30,16%,74%)]">
+              Every preparation credit is tracked in a secure server-side ledger. Clear balances, transparent history, and plans designed for your pace.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild className="h-11 bg-[hsl(14,46%,58%)] px-5 text-[hsl(22,32%,12%)] hover:bg-[hsl(14,50%,64%)]">
+                <Link to="/preparation"><Sparkles className="h-4 w-4" />Use for preparation</Link>
+              </Button>
+              <Button variant="outline" asChild className="h-11 border-[hsl(33,34%,94%/0.18)] bg-transparent px-5 text-[#EFDECD] hover:bg-[hsl(33,34%,94%/0.08)] hover:text-[#EFDECD]">
+                <a href="#ledger"><History className="h-4 w-4" />View ledger</a>
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {wallet.signup_granted && (
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2.5 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted-foreground">
-                <Check className="h-3 w-3 text-success" /> {free_initial_credits}-credit welcome grant applied
-              </span>
-            )}
-            <Button asChild>
-              <Link to="/preparation"><Sparkles className="h-4 w-4" />Use for preparation</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <a href="#ledger"><History className="h-4 w-4" />View ledger</a>
-            </Button>
+          <div className="rounded-2xl border border-[hsl(33,34%,94%/0.12)] bg-[hsl(33,34%,94%/0.05)] p-5 backdrop-blur-[1px] sm:min-w-[220px]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[hsl(30,16%,68%)]">Current balance</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="font-mono text-[42px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-[#EFDECD]">{wallet.balance}</span>
+              <span className="text-[13px] text-[hsl(30,16%,72%)]">credits</span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Badge variant={plan.code === 'FREE' ? 'muted' : 'signal'} className="bg-[hsl(33,34%,94%/0.1)] text-[#EFDECD] border-[hsl(33,34%,94%/0.12)]">{plan.name}</Badge>
+              {wallet.signup_granted && <span className="text-[11px] text-[hsl(30,16%,72%)]">{free_initial_credits} welcome credits applied</span>}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <StatCardGrid>
         <StatCard icon={Coins} label="Balance" value={wallet.balance} tone="success" hint="Available to spend" />
         <StatCard icon={Sparkles} label="Granted" value={wallet.lifetime_granted} tone="muted" hint="Lifetime credits added" />
         <StatCard icon={History} label="Used" value={wallet.lifetime_used} tone="warning" hint="Lifetime credits spent" />
-        <StatCard icon={Lock} label="Plan" value={plan.name} tone="primary" hint={plan.code === 'FREE' ? 'Upgrade requires an administrator' : 'Paid plan'} />
+        <StatCard icon={Lock} label="Plan" value={plan.name} tone="primary" hint={plan.code === 'FREE' ? 'Upgrade when available' : 'Paid plan'} />
       </StatCardGrid>
 
       <section className="card overflow-hidden" aria-labelledby="plans-heading">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-5 py-5 sm:px-6">
           <div>
             <p id="plans-heading" className="eyebrow">Choose your plan</p>
-            <p className="mt-1 text-[12.5px] text-muted-foreground">Known prices, no invented entitlements. Paid-plan credits and billing stay configurable.</p>
+            <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] text-foreground">Plans built for momentum</h2>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">Known prices, no invented entitlements. Paid-plan credits and billing stay configurable by the owner.</p>
           </div>
           <Badge variant="outline">Billing not configured</Badge>
         </div>
-        <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
+        <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-4">
           {plans.map((item) => {
             const current = item.code === plan.code;
             return (
-              <div key={item.code} className={cn('flex flex-col gap-3 p-5', current && 'bg-signal-soft/40')}>
+              <div key={item.code} className={cn('flex flex-col rounded-2xl border p-5 transition-all duration-200', current ? 'border-signal/35 bg-signal-soft/25 shadow-pop' : 'border-border bg-surface hover:border-border-strong hover:shadow-pop')}>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[14px] font-semibold text-foreground">{item.name}</p>
-                  {current && <Badge variant="signal">Current</Badge>}
+                  <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">{item.code}</p>
+                  {current ? <Badge variant="signal">Current</Badge> : item.code === 'FREE' ? <Badge variant="muted">Free</Badge> : <Badge variant="outline">Premium</Badge>}
                 </div>
-                <div>
-                  <p className="font-mono text-[24px] font-semibold leading-none tabular-nums text-foreground">{money(item.price_paise, item.currency)}</p>
-                  <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.05em] text-muted-foreground">one-time reference price</p>
+                <p className="mt-4 text-[15px] font-semibold text-foreground">{item.name}</p>
+                <div className="mt-2">
+                  <p className="font-mono text-[30px] font-semibold leading-none tabular-nums tracking-tight text-foreground">{money(item.price_paise, item.currency)}</p>
+                  <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.05em] text-muted-foreground">one-time reference price</p>
                 </div>
-                <p className="min-h-[2.5rem] text-[12.5px] leading-relaxed text-muted-foreground">
+                <p className="mt-4 min-h-[2.75rem] text-[12.5px] leading-relaxed text-muted-foreground">
                   {item.credits_included != null
                     ? `${item.credits_included} preparation credits included`
                     : 'Credit allocation is set by the administrator.'}
                 </p>
                 {Array.isArray(item.features) && item.features.length > 0 && (
-                  <ul className="space-y-1.5">
+                  <ul className="mt-4 space-y-2 border-t border-border pt-4">
                     {item.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-1.5 text-[12px] leading-relaxed text-foreground/85">
-                        <Check className="mt-0.5 h-3 w-3 shrink-0 text-success" />{feature}
+                      <li key={feature} className="flex items-start gap-2 text-[12px] leading-relaxed text-foreground/85">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-signal" />{feature}
                       </li>
                     ))}
                   </ul>
                 )}
-                <Button variant={current ? 'outline' : 'default'} size="sm" className="mt-auto" disabled title={payments.reason}>
+                <Button variant={current ? 'outline' : 'default'} size="sm" className="mt-5" disabled title={payments.reason}>
                   {current ? 'Current plan' : 'Get started'} <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             );
           })}
         </div>
-        <div className="border-t border-border bg-muted/35 px-5 py-3">
+        <div className="border-t border-border bg-muted/30 px-5 py-4 sm:px-6">
           <p className="flex items-start gap-2 text-[12.5px] leading-relaxed text-muted-foreground">
             <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             {payments.reason}

@@ -121,7 +121,7 @@ describe('Credits page', () => {
     expect(await screen.findByText('Welcome grant')).toBeTruthy();
     expect(screen.getByText('Billing not configured')).toBeTruthy();
     expect(screen.getByText('₹799')).toBeTruthy();
-    expect(screen.getByText('2-credit welcome grant applied')).toBeTruthy();
+    expect(screen.getByText('2 welcome credits applied')).toBeTruthy();
     expect(screen.getByText('No payment provider is configured.')).toBeTruthy();
   });
 

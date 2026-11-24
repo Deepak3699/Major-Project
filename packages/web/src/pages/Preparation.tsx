@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { candidate, preparation } from '@/lib/api';
 import type { PreparationArtifact, PreparationModule, PreparationSource } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
@@ -278,16 +277,40 @@ const Preparation: React.FC = () => {
   );
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Preparation workspace"
-        description="Job- and company-specific material built from your confirmed profile, the posting and cited sources. Generated content is a preparation aid, not employer endorsement."
-      />
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-grad-hero p-6 text-[hsl(33,34%,94%)] sm:p-8">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-grad-glow" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[hsl(14,52%,64%)]">Preparation workspace</p>
+            <h1 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.032em] text-[#EFDECD] sm:text-[40px]">Prepare with confidence.</h1>
+            <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-[hsl(30,16%,74%)]">
+              Job- and company-specific material built from your confirmed profile, the posting, and cited sources. Everything here is a preparation aid — clear, grounded, and ready when you are.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:w-auto">
+            <div className="rounded-xl border border-[hsl(33,34%,94%/0.12)] bg-[hsl(33,34%,94%/0.04)] px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[hsl(30,16%,68%)]">Saved</p>
+              <p className="mt-1 font-mono text-[24px] tabular-nums text-[#EFDECD]">{artifacts.data?.pagination.total ?? 0}</p>
+            </div>
+            <div className="rounded-xl border border-[hsl(33,34%,94%/0.12)] bg-[hsl(33,34%,94%/0.04)] px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[hsl(30,16%,68%)]">Module</p>
+              <p className="mt-1 text-[13px] font-medium text-[#EFDECD]">{MODULE_LABEL[module]}</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <section className="card p-5" aria-labelledby="preparation-setup-heading">
-        <p id="preparation-setup-heading" className="eyebrow">Choose a job and module</p>
-        <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_auto] lg:items-end">
-          <div className="space-y-1.5">
+      <section className="card p-5 sm:p-6" aria-labelledby="preparation-setup-heading">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p id="preparation-setup-heading" className="eyebrow">Choose a job and module</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Select a role, pick a preparation module, and generate a saved artifact.</p>
+          </div>
+          <Badge variant="muted">No credits charged</Badge>
+        </div>
+        <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_auto] xl:items-end">
+          <div className="space-y-2">
             <label htmlFor="preparation-job" className="text-[12.5px] font-medium text-foreground">Job</label>
             <Select id="preparation-job" value={jobId} onChange={(event) => { setJobId(event.target.value); setSelectedId(''); }}>
               <option value="">Select a job</option>
@@ -301,9 +324,9 @@ const Preparation: React.FC = () => {
               <p className="text-[12px] text-muted-foreground">No jobs are available yet. Discover jobs first.</p>
             )}
           </div>
-          <fieldset className="space-y-1.5">
+          <fieldset className="space-y-2">
             <legend className="text-[12.5px] font-medium text-foreground">Module</legend>
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {MODULES.map(({ value, label, hint, icon: Icon }) => (
                 <button
                   key={value}
@@ -311,29 +334,29 @@ const Preparation: React.FC = () => {
                   aria-pressed={module === value}
                   title={hint}
                   onClick={() => { setModule(value); setSelectedId(''); }}
-                  className={`flex flex-col items-start gap-1 rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                  className={`group flex min-h-[76px] flex-col items-start gap-2 rounded-xl border px-3 py-3 text-left transition-all ${
                     module === value
-                      ? 'border-signal bg-signal-soft text-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:border-border-strong hover:text-foreground'
+                      ? 'border-signal/35 bg-signal-soft text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]'
+                      : 'border-border bg-background/60 text-muted-foreground hover:border-border-strong hover:bg-background hover:text-foreground'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                  <Icon className={`h-4 w-4 ${module === value ? 'text-signal' : ''}`} aria-hidden />
                   <span className="text-[11.5px] font-medium leading-tight">{label}</span>
                 </button>
               ))}
             </div>
           </fieldset>
-          <Button type="button" onClick={() => generate.mutate()} disabled={!jobId} loading={generate.isLoading}>
+          <Button type="button" className="h-11 px-5" onClick={() => generate.mutate()} disabled={!jobId} loading={generate.isLoading}>
             {generate.isLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             Generate
           </Button>
         </div>
-        <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+        <p className="mt-4 rounded-lg bg-muted/40 px-3 py-2.5 text-[12px] leading-relaxed text-muted-foreground">
           Generated artifacts are saved to your workspace so you can resume later. No credits are charged until a credit policy is configured by the owner.
         </p>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(15rem,0.28fr)_minmax(0,0.72fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(16rem,0.3fr)_minmax(0,0.7fr)]">
         <section className="card overflow-hidden" aria-labelledby="preparation-history-heading">
           <div className="border-b border-border px-4 py-3">
             <p id="preparation-history-heading" className="eyebrow">Saved artifacts</p>

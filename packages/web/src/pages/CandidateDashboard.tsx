@@ -138,7 +138,7 @@ const CandidateDashboard: React.FC = () => {
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0 max-w-2xl">
               <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[hsl(14,46%,64%)]">Your career space</p>
-              <h1 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.032em] sm:text-[40px]">
+              <h1 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.032em] text-[#EFDECD] sm:text-[40px]">
                 Welcome back, {firstName}.
               </h1>
               <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-[hsl(30,18%,74%)]">

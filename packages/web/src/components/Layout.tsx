@@ -56,7 +56,7 @@ const Layout: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, transition: { duration: 0.08 } }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto w-full max-w-content space-y-phi2 p-4 pb-20 sm:p-6 md:pb-6"
+              className="mx-auto w-full max-w-content space-y-5 p-4 pb-20 sm:p-6 sm:space-y-6 md:pb-8 lg:p-8"
             >
               <Outlet />
             </motion.div>

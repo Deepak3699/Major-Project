@@ -180,7 +180,7 @@ const CandidateDashboard: React.FC = () => {
               Welcome back, <span className="text-[hsl(20,40%,14%)]">{firstName}</span>.
             </motion.h1>
             <motion.p {...rise(0.16)} className="mt-4 max-w-2xl text-[15px] leading-relaxed text-foreground/75">
-              Your next opportunity is closer than it looks. Discover roles that fit your strengths, prepare with intent, and move forward with confidence.
+              Your next opportunity is closer than it looks. Discover jobs that fit your strengths and prepare for what's next.
             </motion.p>
             <motion.div {...rise(0.2)} className="mt-7 flex flex-wrap items-center gap-3">
               <Link to="/recommendations" className="group inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-all duration-200 hover:bg-primary-hover hover:shadow-[0_10px_24px_-10px_hsl(var(--primary)/0.45)]">
@@ -209,10 +209,10 @@ const CandidateDashboard: React.FC = () => {
       </motion.section>
 
       <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatTile icon={BriefcaseBusiness} label="Active jobs" value={summary?.fresh_jobs_7d ?? 0} hint="Fresh in the last 7 days" delay={0.05} />
+        <StatTile icon={BriefcaseBusiness} label="Fresh jobs" value={summary?.fresh_jobs_7d ?? 0} hint="New in the last 7 days" delay={0.05} />
         <StatTile icon={Target} label="Applied" value={summary?.application_total ?? 0} hint={`${activeCount} currently active`} delay={0.09} />
         <StatTile icon={Coins} label="Credits" value={creditsData?.wallet.balance ?? '—'} hint={creditsData ? `${creditsData.plan.name} plan` : 'Loading plan'} delay={0.13} />
-        <StatTile icon={TrendingUp} label="Offers & joined" value={offerCount} hint="Your latest milestones" delay={0.17} />
+        <StatTile icon={TrendingUp} label="Profile strength" value={`${completion}%`} hint={completion >= 80 ? 'Great, you are on track' : 'Complete your profile'} delay={0.17} />
       </section>
 
       {!summary?.has_profile && (
@@ -310,6 +310,24 @@ const CandidateDashboard: React.FC = () => {
             </div>
             <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 font-mono text-[10.5px] uppercase tracking-[0.05em] text-foreground/60">
               <Clock className="h-3.5 w-3.5" /> {pLastScore != null ? `Last scored session: ${pLastScore}/100` : 'No scored session yet'}
+            </div>
+          </motion.section>
+
+          <motion.section {...rise(0.32)} className="glass-gloss-soft rounded-2xl p-5">
+            <p className="eyebrow text-signal/85">Recent activity</p>
+            <h2 className="mt-1 text-[15px] font-semibold text-foreground">What’s happening</h2>
+            <div className="mt-4 space-y-3">
+              {(recentApps.slice(0, 3)).length ? recentApps.slice(0, 3).map((app, i) => (
+                <div key={app.id} className="flex items-start gap-3 text-[12.5px]">
+                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-signal-soft/70 text-signal"><BriefcaseBusiness className="h-3.5 w-3.5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-foreground/85"><span className="font-medium text-foreground">{app.job_title}</span> · {app.status.replace(/_/g, ' ').toLowerCase()}</p>
+                    <p className="text-[11px] text-foreground/55">{new Date(app.updated_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-[12.5px] leading-relaxed text-foreground/65">Your recent job activity will appear here as you save and apply.</p>
+              )}
             </div>
           </motion.section>
         </div>

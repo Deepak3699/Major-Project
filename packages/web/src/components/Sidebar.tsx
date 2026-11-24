@@ -187,7 +187,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   return (
     <>
       {/* Desktop rail */}
-      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-[image:var(--grad-sidebar)] bg-sidebar md:flex shadow-[1px_0_0_hsl(var(--sidebar-border))]", EASE)} style={{ width: collapsed ? 64 : 240 }}>
+      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-[hsl(var(--sidebar-border)/0.7)] bg-[hsl(var(--sidebar)/0.72)] backdrop-blur-xl md:flex shadow-[1px_0_0_hsl(var(--sidebar-border)/0.5)]", EASE)} style={{ width: collapsed ? 64 : 240 }}>
         <Header compact={collapsed} />
         <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
         <Footer collapsed={collapsed} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
@@ -197,7 +197,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
       {drawerOpen && (
         <div className="fixed inset-0 z-overlay md:hidden">
           <div className="absolute inset-0 bg-zinc-950/60 animate-overlay-in" onClick={onDrawerClose} aria-hidden />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-sidebar-border bg-[image:var(--grad-sidebar)] bg-sidebar shadow-drawer animate-drawer-in">
+          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-[hsl(var(--sidebar-border)/0.7)] bg-[hsl(var(--sidebar)/0.82)] backdrop-blur-xl shadow-drawer animate-drawer-in">
             <div className="flex h-16 shrink-0 items-center justify-between px-4 text-sidebar-foreground">
               <Logo size="md" />
               <button type="button" onClick={onDrawerClose} aria-label="Close menu" className="grid h-8 w-8 place-items-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-muted hover:text-sidebar-foreground"><X className="h-4 w-4" /></button>

@@ -4,7 +4,7 @@
 
 `packages/web/src/App.tsx` selects one of three route tables after `useAuthStore().init()`:
 
-- Unauthenticated → `/login`, `/register`, everything else → login.
+- Unauthenticated → public `Landing` preview at `/` and `/welcome`; `/login` and `/register` remain direct links; unknown paths show the preview.
 - Authenticated `candidate` or `admin` → shared `Layout` shell with candidate/admin routes.
 - Other legacy roles (`sales_rep`, `viewer`) → legacy CRM routes.
 
@@ -14,9 +14,9 @@ Admin-only pages are route-guarded on the client **and** protected again on the 
 
 | Area | Pages |
 |---|---|
-| Auth | `Login`, `Register` (AuthShell, email/password, inline errors) |
-| Candidate | `CandidateDashboard`, `Jobs`, `JobDetails`, `Recommendations`, `SavedJobs`, `Applications`, `Profile`, `ResumeStudio`, `CandidateContacts`, `Practice`, `PracticeSession`, `Learning` |
-| Admin | `AdminDashboard`, `AdminJobs`, `AdminFeedback`, `AdminPractice`, legacy `Dashboard`, `Leads`, `LeadDetail`, `Companies`, `Contacts`, `Duplicates`, `Analytics`, `Settings` |
+| Auth | `Landing` (public, illustrative preview), `Login`, `Register` (restyled `AuthShell`, email/password, inline errors) |
+| Candidate | `CandidateDashboard`, `Jobs`, `JobDetails`, `Recommendations`, `SavedJobs`, `Applications`, `Profile`, `ResumeStudio`, `CandidateContacts`, `Practice`, `PracticeSession`, `Learning`, `Credits`, `Placements`, `Preparation` |
+| Admin | `AdminDashboard`, `AdminJobs`, `AdminFeedback`, `AdminPractice`, `AdminCredits`, `AdminPlacements`, legacy `Dashboard`, `Leads`, `LeadDetail`, `Companies`, `Contacts`, `Duplicates`, `Analytics`, `Settings` |
 
 ## 3. Shell and navigation
 
@@ -41,7 +41,7 @@ Documented in `packages/web/DESIGN_SPEC.md` and implemented with semantic Tailwi
 - react-query for server state; query invalidation after mutations.
 - Zustand auth store persists tokens and user; axios interceptor refreshes on 401 and logs out on refresh failure.
 - Voice interview uses browser SpeechSynthesis/SpeechRecognition through `components/interview/speech.ts`; animated SVG interviewer in `InterviewerAvatar.tsx`; text fallback everywhere.
-- Onboarding completion is localStorage-only.
+- Onboarding completion is stored server-side in `onboarding_progress`; localStorage remains the offline fallback.
 
 ## 6. States and accessibility
 
@@ -49,25 +49,28 @@ Implemented: loading spinners/page loaders, empty states, error panels with retr
 
 Gaps:
 
-- No offline/connectivity banner or request retry UI beyond react-query defaults.
-- No server-persisted onboarding progress (localStorage only).
-- Theme preference handling exists in the header; verify contrast on every new surface.
+- No offline/connectivity banner or request retry UI beyond react-query defaults and per-page retry buttons.
+- Theme preference handling exists in the header and on the public landing page; contrast verified on new surfaces in both themes.
 - Voice recognition realistically works only in Chromium browsers; fallback copy is present but unsupported-browser UX could be more explicit.
-- No candidate credits/plan page, ledger history, or purchase status surface.
-- No placement-outcome form.
 
 ## 7. Tests
 
-- `Login.test.tsx` and `Duplicates.test.tsx` pin copy/behavior and must keep passing.
-- `PracticeSmoke.test.tsx` covers Practice, PracticeSession and Learning across loading/empty/profile-null/all-answered states.
-- Jest/jsdom lacks speech APIs; new voice code must be guarded and default off in tests.
-- No dedicated tests yet for credits, plan catalog, ledger rendering, feedback, or placement.
+- Tests in place: `Login.test.tsx`, `Duplicates.test.tsx`, `PracticeSmoke.test.tsx`, `Credits.test.tsx`, `Placements.test.tsx`, `Preparation.test.tsx`, `Landing.test.tsx`, plus API client auth-recovery and SSE hook tests.
+- Login/Duplicates pinned copy still passes; new pages follow the same provider/router setup.
+- Jest/jsdom lacks IntersectionObserver and speech APIs; landing motion uses entrance-only animation and voice code is guarded and default off in tests.
 
 ## 8. Frontend work required by the master brief
 
-1. Candidate **Credits & plan** screen: current plan, balance, transaction history, catalog with ₹0/₹199/₹499/₹799, purchase disabled/reason when payment is not configured.
-2. Dashboard credit balance + understandable next action.
-3. Admin **Credits** screen: search wallets, view ledger, adjust/refund with confirmation, audit trail visibility.
-4. Voluntary placement-outcome form (probably under Applications) and history.
-5. Server-persisted onboarding progress (optional follow-up).
-6. Reusable plan/credits types in `lib/types.ts` and wrappers in `lib/api.ts`.
+1. Candidate **Credits & plan** screen — done (`/credits`), including catalog, honest disabled checkout and ledger history.
+2. Dashboard credit balance + next action — done.
+3. Admin **Credits** screen — done (`/admin/credits`) with wallet search, ledger and audited adjustments.
+4. Voluntary placement-outcome form and history — done (`/placements`, `/admin/placements`).
+5. Server-persisted onboarding progress — done.
+6. Reusable plan/credits types and API wrappers — done.
+7. Public pre-login preview — done (`Landing.tsx`), with an explicitly labelled illustrative product preview, feature/workflow/plans/trust sections and theme toggle.
+
+## 9. Public preview design notes
+
+`packages/web/src/pages/Landing.tsx` is a premium editorial landing surface built only from semantic tokens. It contains a hero with an explicitly labelled sample workspace mockup, four feature cards, a four-step workflow, a preparation artifact example, the four known plan prices (paid entitlements described as administrator-configured), a trust section and a closing call to action. No gradient, glassmorphism, emoji, fabricated company names, fake payment success or invented statistics are used. The mockup carries a visible "Sample" badge and a "not live listings or results" footnote.
+
+`AuthShell.tsx` was restyled to the same flat ink/paper language, with a "Back to preview" link added to both sign-in and registration. All test-visible form copy and handlers are unchanged.

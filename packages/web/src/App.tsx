@@ -6,6 +6,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
+import Landing from '@/pages/Landing';
 
 const LegacyDashboard = lazy(() => import('@/pages/Dashboard'));
 const Leads = lazy(() => import('@/pages/Leads'));
@@ -46,7 +47,13 @@ function App() {
   const { isAuthenticated, user, init } = useAuthStore();
   React.useEffect(() => { init(); }, []);
 
-  if (!isAuthenticated) return <Routes><Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="*" element={<Login />} /></Routes>;
+  if (!isAuthenticated) return <Routes>
+    <Route path="/" element={<Landing />} />
+    <Route path="/welcome" element={<Landing />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
+    <Route path="*" element={<Landing />} />
+  </Routes>;
 
   const isAdmin = user?.role === 'admin';
   const isCandidate = user?.role === 'candidate' || user?.role === 'user';

@@ -20,6 +20,8 @@ const TITLES: Array<{ match: RegExp; title: string; section: string }> = [
   { match: /^\/practice/, title: "Interview practice", section: "Practice" },
   { match: /^\/learning/, title: "Learning tracks", section: "Practice" },
   { match: /^\/credits/, title: "Credits & plan", section: "Account" },
+  { match: /^\/placements/, title: "Placement outcomes", section: "Account" },
+  { match: /^\/preparation/, title: "Preparation workspace", section: "Practice" },
   { match: /^\/profile/, title: "Candidate profile", section: "Account" },
   { match: /^\/admin\/feedback/, title: "Candidate feedback", section: "Insights" },
   { match: /^\/admin\/practice/, title: "Practice subscriptions", section: "Insights" },

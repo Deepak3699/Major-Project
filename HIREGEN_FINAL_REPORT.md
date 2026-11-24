@@ -17,7 +17,7 @@
 | `packages/api/src/utils/preparation.ts`, `routes/preparation.ts` | Grounded interview/GD/presentation/company-research generation with template fallback, idempotency, configurable cost hook | Brief preparation pipeline |
 | `packages/api/src/routes/engagement.ts`, `engagement-admin.ts` | Placement reporting/history and onboarding save/load | Brief engagement items |
 | `packages/api/src/routes/practice.ts`, `utils/practice-ai.ts` (earlier commits) | Adaptive follow-ups, intro chaining, cap 3 | Interview bot requirement |
-| `packages/web/src/pages/{Credits,AdminCredits,Placements,AdminPlacements,Preparation}.tsx` | New candidate/admin screens | User visibility and admin control |
+| Web | `Landing.tsx` public preview; `AuthShell.tsx` flat ink/paper restyle; new credits, placement and preparation screens; routes, navigation and dashboard links | Engagement before login and a consistent premium UI |
 | Web shell (`App.tsx`, `Sidebar`, `Header`, `CommandPalette`, `Layout`, `CandidateDashboard`, `JobDetails`) | Routes, navigation, dashboard credit card, links into preparation | Complete the journey |
 | `packages/web/src/components/onboarding/OnboardingTour.tsx` | Server-side progress persistence with offline fallback | Onboarding continuity |
 | `docs/*.md`, `README.md`, `.env.example`, `.gitignore` | Audits, phased plan, honest setup instructions, placeholders only | Required documentation |
@@ -30,7 +30,7 @@ Additive changes only: new tables, new routes, new pages and a configurable phas
 
 ## 3. Feature status
 
-- **Implemented:** registration as `user`/USER with FREE plan and exactly 2 idempotent credits in one transaction; durable wallet + ledger with nonnegative balance, row locks and idempotency keys; BRO never grants ADMIN; protected bootstrap admin; candidate/admin credit screens and audited adjustments; placement outcome reporting (voluntary) and admin read-only view; server-side onboarding persistence; interview practice with voice avatars, answer capture, grading and adaptive follow-ups; job-specific interview prep, GD, presentation and cited company research; feedback collection/moderation; design-spec UI with light/dark, responsive states.
+- **Implemented:** public editorial landing preview with an explicitly labelled sample workspace, feature/workflow/plans/trust sections and a shared theme toggle; restyled auth shell with a link back to the preview; registration as `user`/USER with FREE plan and exactly 2 idempotent credits in one transaction; durable wallet + ledger with nonnegative balance, row locks and idempotency keys; BRO never grants ADMIN; protected bootstrap admin; candidate/admin credit screens and audited adjustments; placement outcome reporting (voluntary) and admin read-only view; server-side onboarding persistence; interview practice with voice avatars, answer capture, grading and adaptive follow-ups; job-specific interview prep, GD, presentation and cited company research; feedback collection/moderation; design-spec UI with light/dark, responsive states.
 - **Partial:** global offline/retry banner (per-page retry exists); legacy JSONB string-encoded rows remain as-is and are parsed on read.
 - **Blocked (owner decision/config):** paid-plan credit quantities, expiry, renewal, feature caps, billing terms and refund policy; real payment provider and sandbox credentials. Checkout returns `503 PAYMENTS_NOT_CONFIGURED` and never fakes success.
 - **Disabled by default:** credit consumption for preparation (`PREPARATION_CREDIT_COST=0`). The configurable hook charges idempotently and refunds on failure only when an owner sets a cost. Practice quota remains independent and unchanged.
@@ -75,10 +75,10 @@ Exact commands and results:
 | `cd packages/api && npm run lint` (`tsc --noEmit`) | Clean |
 | `cd packages/api && npm test -- --runInBand` | **19 suites, 142 tests passed** |
 | `cd packages/web && npx tsc --noEmit` | Clean |
-| `cd packages/web && npm test -- --runInBand` | **9 suites, 42 tests passed** |
+| `cd packages/web && npm test -- --runInBand` | **10 suites, 47 tests passed** |
 | `cd packages/web && npm run build` | Production build succeeded |
 
-New suites: `test/credits.test.ts` (11), `test/engagement.test.ts` (8), `test/preparation.test.ts` (8), `src/pages/Credits.test.tsx` (4), `src/pages/Placements.test.tsx` (6), `src/pages/Preparation.test.tsx` (4). Existing Login/Duplicates copy and practice smoke tests still pass. No known pre-existing failures remain.
+New suites: `test/credits.test.ts` (11), `test/engagement.test.ts` (8), `test/preparation.test.ts` (8), `src/pages/Credits.test.tsx` (4), `src/pages/Placements.test.tsx` (6), `src/pages/Preparation.test.tsx` (4), `src/pages/Landing.test.tsx` (5). Existing Login/Duplicates copy and practice smoke tests still pass. No known pre-existing failures remain.
 
 Live HTTP smoke checks passed: registration → `role=user`, `plan=FREE`, `initial_credits=2`, one `signup_grant` ledger row; credits/plans/ledger endpoints; purchase → 503; admin adjustment + audit; candidate/admin 403 guards; placement report and onboarding save/reload; preparation generation, idempotent replay, cited sources and JSONB object/array types; test users removed afterwards.
 

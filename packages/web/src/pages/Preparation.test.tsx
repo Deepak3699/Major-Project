@@ -36,6 +36,8 @@ const JOB: CandidateJob = {
   source_site: 'example',
   skills: ['React', 'Accessibility'],
   company_name: 'Acme',
+  trust_score: 92,
+  trust_band: 'very_high',
 };
 
 const ARTIFACT: PreparationArtifact = {

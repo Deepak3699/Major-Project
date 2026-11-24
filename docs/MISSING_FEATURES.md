@@ -67,9 +67,10 @@ Status legend: **Done**, **Partial**, **Missing**, **Blocked (decision/config)**
 
 | Requirement | Status |
 |---|---|
-| Distinctive professional light/dark design | Done |
-| Responsive + accessible | Done for existing pages; new pages must follow |
-| Loading/empty/error/success states | Done for existing pages |
+| Distinctive professional light/dark design | Done | Landing + app + auth shell follow the editorial token system |
+| Responsive + accessible | Done | Semantic sections, skip link, labelled controls, visible focus, light/dark tokens |
+| Loading/empty/error/success states | Done for existing and new pages |
+| Public pre-login preview | Done | `/` shows a premium editorial preview with an explicitly labelled sample workspace and clear sign-in/register paths |
 | Credits/plan screen | Done | `/credits` and `/admin/credits` |
 | Placement outcome form | Done | `/placements` candidate form/history + `/admin/placements` read-only table |
 | Offline/retry banner | Missing (nice-to-have) | Per-page retry buttons exist; global banner not implemented |

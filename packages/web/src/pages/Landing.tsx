@@ -102,12 +102,12 @@ function PreviewRing() {
 }
 
 function ProductPreview() {
-  const glassPanel = 'rounded-xl border border-[hsl(var(--border)/0.8)] bg-[hsl(36,42%,99%,0.96)] shadow-[0_1px_0_hsl(36,40%,100%,0.95)_inset,0_8px_24px_-18px_hsl(22,32%,16%,0.14)]';
+  const glassPanel = 'rounded-xl border border-[hsl(var(--border)/0.65)] bg-[hsl(var(--surface)/0.62)] backdrop-blur-md shadow-[0_1px_0_hsl(var(--surface)/0.8)_inset]';
   return (
     <div className="relative">
       <div aria-hidden className="absolute -inset-4 rounded-[2rem] bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.14),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(var(--primary)/0.08),transparent_50%)] blur-sm" />
       <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.35)] backdrop-blur-sm" />
-      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(36,42%,99%,0.92)] shadow-[0_24px_60px_-20px_hsl(22,32%,16%,0.2)] backdrop-blur-xl" aria-label="Illustrative AI JobPilot workspace preview">
+      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--surface)/0.58)] shadow-[0_24px_60px_-20px_hsl(var(--foreground)/0.18)] backdrop-blur-xl" aria-label="Illustrative AI JobPilot workspace preview">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--surface)/0.45),hsl(var(--surface)/0.15))]" />
         <div className="relative flex items-center justify-between gap-3 border-b border-[hsl(var(--border)/0.6)] bg-[hsl(var(--surface)/0.45)] px-4 py-3 backdrop-blur-md">
           <div aria-hidden className="flex items-center gap-1.5">
@@ -141,7 +141,7 @@ function ProductPreview() {
             </div>
           </div>
 
-          <div className="min-w-0 bg-[hsl(34,36%,95%,0.55)] p-4 sm:p-5">
+          <div className="min-w-0 bg-[hsl(var(--background)/0.25)] p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 { icon: BriefcaseBusiness, label: 'Active jobs', value: '12' },
@@ -246,21 +246,20 @@ function FeatureCard({
   index: number;
 }) {
   return (
-    <div className="glass-gloss-soft group relative h-full overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-signal/25 hover:shadow-[0_24px_48px_-24px_hsl(var(--signal)/0.22)]">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signal/55 via-signal/20 to-transparent opacity-80" />
+    <div className="glass-gloss-soft group relative h-full rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20 hover:shadow-[0_20px_40px_-20px_hsl(var(--signal)/0.18)]">
       <div className="flex items-start justify-between gap-4">
-        <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl border border-signal/15 bg-signal-soft/70 text-signal transition-all duration-300 group-hover:scale-105 group-hover:bg-signal group-hover:text-signal-foreground">
+        <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-muted/40 text-foreground transition-colors group-hover:border-signal/30 group-hover:bg-signal-soft group-hover:text-signal">
           <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </span>
-        <span className="font-mono text-[11px] tabular-nums text-foreground/45">0{index + 1}</span>
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground/70">0{index + 1}</span>
       </div>
-      <p className="eyebrow mt-5 text-signal/80">{eyebrow}</p>
-      <h3 className="mt-2 text-[18px] font-semibold tracking-[-0.02em] text-foreground">{title}</h3>
-      <p className="mt-2.5 text-[13.5px] leading-relaxed text-foreground/75">{body}</p>
-      <ul className="mt-5 space-y-2.5 border-t border-border/80 pt-4">
+      <p className="eyebrow mt-5">{eyebrow}</p>
+      <h3 className="mt-2 text-[17px] font-semibold tracking-[-0.02em] text-foreground">{title}</h3>
+      <p className="mt-2.5 text-[13.5px] leading-relaxed text-muted-foreground">{body}</p>
+      <ul className="mt-5 space-y-2 border-t border-border pt-4">
         {points.map((point) => (
           <li key={point} className="flex gap-2.5 text-[12.5px] leading-relaxed text-foreground/85">
-            <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-signal-soft text-signal"><Check className="h-3 w-3" aria-hidden /></span>
+            <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-signal" aria-hidden />
             <span>{point}</span>
           </li>
         ))}
@@ -357,7 +356,7 @@ const Landing: React.FC = () => {
                   <span className="text-[hsl(20,48%,8%)] dark:text-[#EFDECD]">A job search,</span>
                   <span className="block text-signal">crafted with clarity.</span>
                 </h1>
-                <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-foreground/75">
+                <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-muted-foreground">
                   AI JobPilot brings roles, evidence, preparation and application tracking into one refined workspace — so every move you make is informed, deliberate and yours.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -402,7 +401,7 @@ const Landing: React.FC = () => {
                 One workspace, every meaningful step.
               </h2>
             </div>
-            <p className="max-w-2xl text-[15px] leading-relaxed text-foreground/75 lg:pb-1">
+            <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground lg:pb-1">
               Each module uses the same confirmed profile and the same selected job, so your preparation never drifts into generic advice. Evidence stays visible, and control stays with you.
             </p>
           </div>
@@ -430,17 +429,16 @@ const Landing: React.FC = () => {
                 <p className="eyebrow">How it works</p>
                 <h2 id="workflow-heading" className="mt-3 text-[32px] font-semibold tracking-[-0.032em] text-foreground sm:text-[40px]">Four steps, fully in your control.</h2>
               </div>
-              <p className="max-w-sm text-[14px] leading-relaxed text-foreground/75">
+              <p className="max-w-sm text-[14px] leading-relaxed text-muted-foreground">
                 You decide what is confirmed, which roles deserve time and which application is yours to send.
               </p>
             </div>
             <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, index) => (
-                <motion.li key={step.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.06, ease: EASE }} className="glass-gloss-soft group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-signal/25 hover:shadow-[0_20px_40px_-24px_hsl(var(--signal)/0.2)]">
-                  <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signal/50 to-transparent opacity-70" />
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-signal/20 bg-signal-soft font-mono text-[11px] font-semibold tabular-nums text-signal">0{index + 1}</span>
-                  <h3 className="mt-4 text-[16px] font-semibold tracking-[-0.014em] text-foreground">{step.title}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-foreground/72">{step.body}</p>
+                <motion.li key={step.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.06, ease: EASE }} className="glass-gloss-soft relative rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-signal/25 bg-signal-soft font-mono text-[11px] tabular-nums text-signal">0{index + 1}</span>
+                  <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.014em] text-foreground">{step.title}</h3>
+                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{step.body}</p>
                 </motion.li>
               ))}
             </ol>
@@ -455,7 +453,7 @@ const Landing: React.FC = () => {
               <h2 id="preparation-heading" className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.032em] text-foreground sm:text-[40px]">
                 Built for the role in front of you.
               </h2>
-              <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-foreground/75">
+              <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
                 Preparation uses the posting, your confirmed profile and cited company context. Where evidence is missing, the artifact says so instead of guessing.
               </p>
               <ul className="mt-7 space-y-3">
@@ -512,27 +510,26 @@ const Landing: React.FC = () => {
             <div className="max-w-2xl">
               <p className="eyebrow">Plans</p>
               <h2 id="plans-heading" className="mt-3 text-[32px] font-semibold tracking-[-0.032em] text-foreground sm:text-[40px]">Clear pricing. Honest limits.</h2>
-              <p className="mt-4 text-[15px] leading-relaxed text-foreground/75">
+              <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
                 The free plan is ready to use. Paid-plan credits, expiry and feature limits stay under administrator configuration until the product owner defines them.
               </p>
             </div>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {PLANS.map((plan, index) => (
-                <motion.div key={plan.code} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className={cn('glass-gloss-soft group relative flex flex-col overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-signal/25 hover:shadow-[0_20px_40px_-24px_hsl(var(--signal)/0.2)]', plan.code === 'FREE' && 'border-signal/30 shadow-[0_16px_40px_-24px_hsl(var(--signal)/0.22)]')}>
-                  <div aria-hidden className={cn('absolute inset-x-0 top-0 h-1 bg-gradient-to-r', plan.code === 'FREE' ? 'from-signal/70 via-signal/30 to-transparent' : 'from-foreground/15 to-transparent')} />
+                <motion.div key={plan.code} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className={cn('glass-gloss-soft flex flex-col rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1', plan.code === 'FREE' && 'border-signal/30 shadow-[0_16px_40px_-24px_hsl(var(--signal)/0.25)]')}>
                   <div className="flex items-start justify-between gap-3">
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground">{plan.code}</p>
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">{plan.code}</p>
                     {plan.code === 'FREE' && <Badge variant="success">Available</Badge>}
                   </div>
-                  <p className="mt-5 font-mono text-[32px] font-semibold tabular-nums leading-none tracking-tight text-foreground">{plan.price}</p>
-                  <p className="mt-3 min-h-[4rem] text-[13px] leading-relaxed text-foreground/72">{plan.note}</p>
-                  <div className="mt-5 border-t border-border/80 pt-4">
+                  <p className="mt-5 font-mono text-[30px] tabular-nums leading-none tracking-tight text-foreground">{plan.price}</p>
+                  <p className="mt-3 min-h-[4rem] text-[12.5px] leading-relaxed text-muted-foreground">{plan.note}</p>
+                  <div className="mt-5 border-t border-border pt-4">
                     {plan.action ? (
                       <Button asChild size="sm" className="w-full">
                         <Link to="/register">{plan.action} <ArrowRight className="h-3.5 w-3.5" /></Link>
                       </Button>
                     ) : (
-                      <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-foreground/55">Configured by administrator</p>
+                      <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground">Configured by administrator</p>
                     )}
                   </div>
                 </motion.div>
@@ -553,7 +550,7 @@ const Landing: React.FC = () => {
               <h2 id="trust-heading" className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.032em] text-foreground sm:text-[40px]">
                 A tool, not a decision maker.
               </h2>
-              <p className="mt-4 max-w-md text-[15px] leading-relaxed text-foreground/75">
+              <p className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground">
                 AI JobPilot does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
               </p>
               <div className="glass-gloss-soft mt-6 rounded-2xl p-4">
@@ -567,8 +564,8 @@ const Landing: React.FC = () => {
                   <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl border border-signal/15 bg-signal-soft/70 text-signal">
                     <item.icon className="h-4 w-4" strokeWidth={1.75} />
                   </span>
-                  <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.01em] text-foreground">{item.title}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-foreground/72">{item.body}</p>
+                  <h3 className="mt-4 text-[14px] font-semibold tracking-[-0.01em] text-foreground">{item.title}</h3>
+                  <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">{item.body}</p>
                 </motion.div>
               ))}
             </div>

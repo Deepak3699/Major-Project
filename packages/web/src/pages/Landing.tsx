@@ -94,7 +94,7 @@ function PreviewRing() {
   const circumference = 2 * Math.PI * radius;
   return (
     <svg width="60" height="60" viewBox="0 0 60 60" role="img" aria-label="Sample profile 75 percent complete">
-      <circle cx="30" cy="30" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
+      <circle cx="30" cy="30" r={radius} fill="none" stroke="hsl(var(--border) / 0.7)" strokeWidth="5" />
       <circle cx="30" cy="30" r={radius} fill="none" stroke="hsl(var(--signal))" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * 0.25} transform="rotate(-90 30 30)" />
       <text x="30" y="34" textAnchor="middle" className="font-mono text-[12px] tabular-nums" style={{ fill: 'hsl(var(--foreground))' }}>75%</text>
     </svg>
@@ -102,22 +102,25 @@ function PreviewRing() {
 }
 
 function ProductPreview() {
+  const glassPanel = 'rounded-xl border border-[hsl(var(--border)/0.65)] bg-[hsl(var(--surface)/0.62)] backdrop-blur-md shadow-[0_1px_0_hsl(var(--surface)/0.8)_inset]';
   return (
     <div className="relative">
-      <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-border/60 bg-surface/40" />
-      <div className="card relative overflow-hidden shadow-pop" aria-label="Illustrative AI JobPilot workspace preview">
-        <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/20 px-4 py-3">
+      <div aria-hidden className="absolute -inset-4 rounded-[2rem] bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.14),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(var(--primary)/0.08),transparent_50%)] blur-sm" />
+      <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.35)] backdrop-blur-sm" />
+      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--surface)/0.58)] shadow-[0_24px_60px_-20px_hsl(var(--foreground)/0.18)] backdrop-blur-xl" aria-label="Illustrative AI JobPilot workspace preview">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--surface)/0.45),hsl(var(--surface)/0.15))]" />
+        <div className="relative flex items-center justify-between gap-3 border-b border-[hsl(var(--border)/0.6)] bg-[hsl(var(--surface)/0.45)] px-4 py-3 backdrop-blur-md">
           <div aria-hidden className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
-            <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-signal/40" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--foreground)/0.15)]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--foreground)/0.15)]" />
           </div>
           <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">AI JobPilot · candidate workspace</span>
-          <Badge variant="muted" className="bg-surface">Sample</Badge>
+          <Badge variant="signal" className="bg-signal-soft/80 backdrop-blur-sm">Sample</Badge>
         </div>
-        <div className="grid sm:grid-cols-[9rem_minmax(0,1fr)]">
-          <div className="hidden border-r border-border bg-muted/20 p-3.5 sm:block" aria-hidden>
-            <p className="eyebrow px-1">Workspace</p>
+        <div className="relative grid sm:grid-cols-[9rem_minmax(0,1fr)]">
+          <div className="hidden border-r border-[hsl(var(--border)/0.55)] bg-[hsl(var(--muted)/0.25)] p-3.5 backdrop-blur-sm sm:block" aria-hidden>
+            <p className="eyebrow px-1 text-foreground/65">Workspace</p>
             <ul className="mt-3 space-y-0.5">
               {[
                 { icon: Compass, label: 'Discover', active: false },
@@ -126,19 +129,19 @@ function ProductPreview() {
                 { icon: Mic, label: 'Practice', active: false },
                 { icon: FileText, label: 'Credits', active: false },
               ].map(({ icon: Icon, label, active }) => (
-                <li key={label} className={cn('flex items-center gap-2 rounded-md px-2 py-2 text-[11px]', active ? 'bg-primary-soft text-primary font-medium' : 'text-muted-foreground')}>
+                <li key={label} className={cn('flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] transition-colors', active ? 'bg-signal-soft/80 text-signal font-semibold shadow-[inset_0_0_0_1px_hsl(var(--signal)/0.12)]' : 'text-foreground/70')}>
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{label}</span>
                 </li>
               ))}
             </ul>
-            <div className="mt-5 rounded-lg border border-border bg-surface p-2.5">
+            <div className="mt-5 rounded-xl border border-[hsl(var(--border)/0.6)] bg-[hsl(var(--surface)/0.55)] p-2.5 backdrop-blur-sm">
               <p className="text-[11px] font-semibold leading-tight text-foreground">Your career, our priority.</p>
               <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">Credits → preparation</p>
             </div>
           </div>
 
-          <div className="min-w-0 bg-background/40 p-4 sm:p-5">
+          <div className="min-w-0 bg-[hsl(var(--background)/0.25)] p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 { icon: BriefcaseBusiness, label: 'Active jobs', value: '12' },
@@ -146,10 +149,10 @@ function ProductPreview() {
                 { icon: Coins, label: 'Credits', value: '02' },
                 { icon: Target, label: 'Matches', value: '03' },
               ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="rounded-lg border border-border bg-surface px-2.5 py-2.5">
+                <div key={label} className={cn(glassPanel, 'px-2.5 py-2.5')}>
                   <div className="flex items-center justify-between gap-2">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                    <span className="h-1.5 w-1.5 rounded-full bg-signal/50" aria-hidden />
+                    <Icon className="h-3.5 w-3.5 text-signal/80" aria-hidden />
+                    <span className="h-1.5 w-1.5 rounded-full bg-signal/60" aria-hidden />
                   </div>
                   <p className="mt-2 font-mono text-[18px] tabular-nums leading-none tracking-tight text-foreground">{value}</p>
                   <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-[0.05em] text-muted-foreground">{label}</p>
@@ -160,44 +163,44 @@ function ProductPreview() {
             <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_11.5rem]">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="eyebrow">Recommended for you</p>
+                  <p className="eyebrow text-foreground/70">Recommended for you</p>
                   <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">3 roles</span>
                 </div>
                 <ul className="mt-2 space-y-2">
                   {PREVIEW_ROWS.map((row) => (
-                    <li key={row.role} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
+                    <li key={row.role} className={cn(glassPanel, 'flex flex-wrap items-center justify-between gap-2 px-3 py-2.5')}>
                       <div className="min-w-0">
                         <p className="text-[12.5px] font-medium text-foreground">{row.role}</p>
                         <p className="truncate text-[10.5px] text-muted-foreground">{row.employer} · {row.meta}</p>
                       </div>
-                      <span className="rounded-md border border-signal/20 bg-signal-soft px-2 py-1 font-mono text-[9.5px] tabular-nums text-signal">{row.match} match</span>
+                      <span className="rounded-md border border-signal/25 bg-signal-soft/80 px-2 py-1 font-mono text-[9.5px] tabular-nums text-signal">{row.match} match</span>
                     </li>
                   ))}
                 </ul>
-                <p className="eyebrow mt-4">Preparation center</p>
+                <p className="eyebrow mt-4 text-foreground/70">Preparation center</p>
                 <div className="mt-2 grid grid-cols-4 gap-1.5">
                   {PREP_TILES.map(({ icon: Icon, label }) => (
-                    <div key={label} className="rounded-lg border border-border bg-surface px-1.5 py-2.5 text-center">
-                      <Icon className="mx-auto h-3.5 w-3.5 text-foreground" aria-hidden />
-                      <p className="mt-1.5 truncate text-[8.5px] text-muted-foreground">{label}</p>
+                    <div key={label} className={cn(glassPanel, 'px-1.5 py-2.5 text-center')}>
+                      <Icon className="mx-auto h-3.5 w-3.5 text-signal/85" aria-hidden />
+                      <p className="mt-1.5 truncate text-[8.5px] font-medium text-foreground/75">{label}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="rounded-lg border border-border bg-surface px-3 py-3">
+                <div className={cn(glassPanel, 'px-3 py-3')}>
                   <div className="flex items-center gap-2.5">
                     <PreviewRing />
                     <div>
-                      <p className="eyebrow">Profile</p>
+                      <p className="eyebrow text-foreground/70">Profile</p>
                       <p className="mt-1 text-[11px] font-medium text-foreground">Nearly ready</p>
                     </div>
                   </div>
-                  <ul className="mt-3 space-y-1.5 border-t border-border pt-2.5">
+                  <ul className="mt-3 space-y-1.5 border-t border-[hsl(var(--border)/0.55)] pt-2.5">
                     {['Basic details', 'Education', 'Skills', 'Experience'].map((item, index) => (
-                      <li key={item} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <span className={cn('grid h-3.5 w-3.5 place-items-center rounded-full border', index < 3 ? 'border-success/30 bg-success-soft text-success' : 'border-border')}>
+                      <li key={item} className="flex items-center gap-1.5 text-[10px] text-foreground/75">
+                        <span className={cn('grid h-3.5 w-3.5 place-items-center rounded-full border', index < 3 ? 'border-success/30 bg-success-soft text-success' : 'border-border/70 bg-surface/40')}>
                           {index < 3 ? <Check className="h-2 w-2" aria-hidden /> : null}
                         </span>
                         {item}
@@ -205,15 +208,15 @@ function ProductPreview() {
                     ))}
                   </ul>
                 </div>
-                <div className="rounded-lg border border-border bg-surface px-3 py-3">
-                  <p className="eyebrow">Application progress</p>
+                <div className={cn(glassPanel, 'px-3 py-3')}>
+                  <p className="eyebrow text-foreground/70">Application progress</p>
                   <ol className="mt-3 flex items-center" aria-label="Sample application progress">
                     {['Applied', 'Interview', 'Offer', 'Joined'].map((stage, index) => (
                       <li key={stage} className="flex flex-1 flex-col items-center gap-1 text-center">
-                        <span className={cn('grid h-4.5 w-4.5 place-items-center rounded-full border font-mono text-[8px]', index < 2 ? 'border-signal bg-signal text-signal-foreground' : 'border-border text-muted-foreground')}>
+                        <span className={cn('grid h-4.5 w-4.5 place-items-center rounded-full border font-mono text-[8px]', index < 2 ? 'border-signal/50 bg-signal text-signal-foreground' : 'border-border/70 bg-surface/40 text-muted-foreground')}>
                           {index < 2 ? <Check className="h-2 w-2" aria-hidden /> : index + 1}
                         </span>
-                        <span className="text-[8.5px] text-muted-foreground">{stage}</span>
+                        <span className="text-[8.5px] text-foreground/70">{stage}</span>
                       </li>
                     ))}
                   </ol>
@@ -222,7 +225,7 @@ function ProductPreview() {
             </div>
           </div>
         </div>
-        <div className="border-t border-border bg-muted/10 px-4 py-2.5">
+        <div className="relative border-t border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.35)] px-4 py-2.5 backdrop-blur-sm">
           <p className="font-mono text-[10px] uppercase tracking-[0.07em] text-muted-foreground">
             Illustrative interface · sample data, not live listings or results
           </p>

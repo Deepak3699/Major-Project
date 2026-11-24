@@ -34,7 +34,7 @@ export function Logo({
           />
           <span
             className={cn(
-              "font-semibold leading-none tracking-[-0.032em] text-foreground",
+              "font-semibold leading-none tracking-[-0.032em] text-current",
               textSizes[size]
             )}
           >
@@ -45,7 +45,7 @@ export function Logo({
       {!showText && (
         <span
           aria-hidden
-          className={cn("shrink-0 rounded-[4px] bg-foreground", markSizes[size])}
+          className={cn("shrink-0 rounded-[4px] bg-current", markSizes[size])}
         />
       )}
     </div>

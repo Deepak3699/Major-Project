@@ -53,11 +53,11 @@
     --signal-foreground: 0 0% 100%;
     --signal-soft: 214 100% 96%;
 
-    --sidebar: 210 40% 99%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-muted: 214 32% 96%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-active: 222 47% 13%;
+    --sidebar: 222 47% 13%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-muted: 217 33% 18%;
+    --sidebar-border: 217 33% 21%;
+    --sidebar-active: 221 83% 53%;
     --sidebar-active-foreground: 0 0% 100%;
 
     --hot: 0 72% 46%;

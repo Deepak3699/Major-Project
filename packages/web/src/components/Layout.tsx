@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { WifiOff } from "lucide-react";
+import { WifiOff, LayoutDashboard, BriefcaseBusiness, Sparkles, UserRound } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -46,13 +46,34 @@ const Layout: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, transition: { duration: 0.08 } }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto w-full max-w-content space-y-phi2 p-4 sm:p-6"
+              className="mx-auto w-full max-w-content space-y-phi2 p-4 pb-20 sm:p-6 md:pb-6"
             >
               <Outlet />
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
+      {isCandidate && (
+        <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-30 flex h-14 items-stretch border-t border-border bg-surface md:hidden">
+          {[
+            { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
+            { to: '/jobs', label: 'Jobs', icon: BriefcaseBusiness },
+            { to: '/preparation', label: 'Prep', icon: Sparkles },
+            { to: '/profile', label: 'Profile', icon: UserRound },
+          ].map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `flex flex-1 flex-col items-center justify-center gap-1 text-[10.5px] transition-colors ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" strokeWidth={1.75} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      )}
       <CommandPalette />
       <OnboardingTour />
     </div>

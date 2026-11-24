@@ -28,6 +28,7 @@ const PREP_MODULES = [
   { title: 'Group discussion', body: 'Topics, arguments and participation tips.', to: '/preparation', icon: Users },
   { title: 'Presentation', body: 'Slide outline, speaking notes and questions.', to: '/preparation', icon: Presentation },
   { title: 'Company research', body: 'Cited sources, with gaps labelled honestly.', to: '/preparation', icon: BriefcaseBusiness },
+  { title: 'Skill gap analysis', body: 'See which posting requirements you can evidence.', to: '/recommendations', icon: Target },
 ];
 
 function CompletionRing({ value }: { value: number }) {
@@ -147,10 +148,16 @@ const CandidateDashboard: React.FC = () => {
                 </Link>
               </div>
             </div>
-            <span aria-hidden className="hidden h-24 w-px bg-border xl:block" />
-            <p className="hidden max-w-[11rem] font-mono text-[10.5px] uppercase leading-relaxed tracking-[0.06em] text-muted-foreground xl:block">
-              Evidence first · you decide · you apply
-            </p>
+            <svg aria-hidden viewBox="0 0 220 110" className="hidden h-24 w-56 shrink-0 xl:block" preserveAspectRatio="xMidYMid slice">
+              <rect x="0" y="62" width="34" height="48" fill="hsl(var(--primary))" opacity="0.35" />
+              <rect x="38" y="40" width="28" height="70" fill="hsl(var(--primary))" opacity="0.55" />
+              <rect x="70" y="18" width="38" height="92" fill="hsl(var(--primary))" opacity="0.75" />
+              <rect x="112" y="50" width="26" height="60" fill="hsl(var(--primary))" opacity="0.4" />
+              <rect x="142" y="30" width="34" height="80" fill="hsl(var(--primary))" opacity="0.65" />
+              <rect x="180" y="56" width="40" height="54" fill="hsl(var(--primary))" opacity="0.45" />
+              {[74, 82, 90, 98].map((y) => <rect key={y} x="78" y={y} width="22" height="3" fill="hsl(var(--background))" opacity="0.35" />)}
+              {[146, 154, 162].map((y) => <rect key={y} x="148" y={y} width="22" height="3" fill="hsl(var(--background))" opacity="0.35" />)}
+            </svg>
           </div>
         </div>
 
@@ -284,7 +291,7 @@ const CandidateDashboard: React.FC = () => {
           </div>
           <Link to="/preparation" className="group inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {PREP_MODULES.map(({ title, body, to, icon: Icon }, index) => (
             <motion.div key={title} {...rise(Math.min(0.24 + index * 0.04, 0.36))}>
               <Link to={to} className="card group flex h-full flex-col p-4 transition-colors hover:border-border-strong">

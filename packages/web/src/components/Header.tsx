@@ -139,11 +139,11 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
           type="button"
           data-tour="palette"
           onClick={() => window.dispatchEvent(new Event('hiregen:open-palette'))}
-          className="mr-1 hidden items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12.5px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground sm:flex"
+          className="mr-1 hidden min-w-[18rem] items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground sm:flex"
           aria-label="Open command palette"
         >
           <Search className="h-3.5 w-3.5" />
-          <span>Search</span>
+          <span>Search jobs, roles, or companies…</span>
           <kbd className="font-mono text-[10px] text-muted-foreground/70">⌘K</kbd>
         </button>
         {isAdmin && (

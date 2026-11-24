@@ -30,10 +30,10 @@ Admin-only pages are route-guarded on the client **and** protected again on the 
 
 Documented in `packages/web/DESIGN_SPEC.md` and implemented with semantic Tailwind tokens:
 
-- Blue Atlas layout: mono eyebrows, tight display type, restrained rules.
-- Blue primary buttons with white labels, white cards, navy ink, crisp borders, low elevation.
-- Single `signal` blue accent; success/warning/danger/destructive soft variants.
-- Light and dark themes through CSS variables (cool paper / navy); no gradients, glassmorphism, neon or emoji.
+- Verdant Atelier layout: mono eyebrows, confident display type, restrained rules.
+- Deep emerald primary buttons with light labels, warm ivory cards, deep charcoal ink, crisp borders, low elevation.
+- Single `signal` emerald accent; success/warning/danger/destructive soft variants.
+- Light and dark themes through CSS variables (warm ivory / deep charcoal, emerald signal); no gradients, glassmorphism, neon or emoji.
 - Shared primitives under `components/ui`: button, input, textarea, select, badge, card, modal, toast, spinner, empty-state, stat-card, page-header, table, tabs, avatar, skeleton.
 
 ## 5. State and data
@@ -75,4 +75,4 @@ Gaps:
 
 `AuthShell.tsx` was restyled to the same flat ink/paper language, with a "Back to preview" link added to both sign-in and registration. All test-visible form copy and handlers are unchanged.
 
-The layout and component patterns were cross-checked against the owner-supplied reference image in `Doccumentation/` (welcome banner, profile completion ring and checklist, compact stat row, recommended-job cards with match badges, application progress stepper, preparation-centre tiles, credits/plan cards, sidebar career tagline). The owner first asked for layout-only adoption, then explicitly approved switching the token palette. The design system is now the owner-approved **Blue Atlas** system: cool paper, navy ink, blue primary/signal, with the reference image's information architecture. The sidebar is deep navy in both themes, the header search is a wide input-like control, and a mobile bottom tab bar mirrors the reference phone layout. The welcome banner uses a flat inline SVG skyline motif; the image-generation service was unavailable, so no photograph was used. Gradients, glassmorphism, emoji and fabricated data remain banned.
+The layout and component patterns were cross-checked against the owner-supplied reference image in `Doccumentation/` (welcome banner, profile completion ring and checklist, compact stat row, recommended-job cards with match badges, application progress stepper, preparation-centre tiles, credits/plan cards, sidebar career tagline). The owner asked for a premium, first-class preview with a new unique color scheme. The design system is now **Verdant Atelier**: warm ivory paper, deep charcoal-green ink, and a refined emerald primary/signal. The public preview, auth shell and dashboard chrome were restyled for a premium editorial feel with confident spacing, flat surfaces and restrained elevation. Gradients, glassmorphism, emoji and fabricated data remain banned.

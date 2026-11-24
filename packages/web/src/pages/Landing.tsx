@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowRight, BriefcaseBusiness, Building2, Check, ClipboardList, Coins,
-  Compass, Lock, Mic, Moon, Presentation, Search, ShieldCheck, Sun, Target,
+  Compass, FileText, Lock, Mic, Moon, Presentation, Search, ShieldCheck, Sun, Target,
   UserRound, Users,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
@@ -46,28 +46,28 @@ function ThemeToggle() {
 
 function PublicHeader() {
   return (
-    <header className="border-b border-border bg-background">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-5 sm:px-8">
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center gap-4 px-5 sm:px-8">
         <Link to="/" aria-label="Hiregen home" className="shrink-0">
           <Logo size="md" />
         </Link>
-        <nav aria-label="Page sections" className="ml-6 hidden items-center gap-5 lg:flex">
+        <nav aria-label="Page sections" className="ml-8 hidden items-center gap-6 lg:flex">
           {NAV.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="text-[13px] text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4"
+              className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {item.label}
             </a>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2.5">
           <ThemeToggle />
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
             <Link to="/login">Sign in</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="px-4">
             <Link to="/register">Create free account</Link>
           </Button>
         </div>
@@ -77,16 +77,16 @@ function PublicHeader() {
 }
 
 const PREVIEW_ROWS = [
-  { role: 'Role 01', employer: 'Sample employer', meta: 'Hybrid · 2–4 yrs', match: '92%' },
-  { role: 'Role 02', employer: 'Sample employer', meta: 'Remote · 3–5 yrs', match: '86%' },
-  { role: 'Role 03', employer: 'Sample employer', meta: 'On-site · 1–3 yrs', match: '81%' },
+  { role: 'Product Designer', employer: 'Sample employer', meta: 'Hybrid · 2–4 yrs', match: '92%' },
+  { role: 'Frontend Engineer', employer: 'Sample employer', meta: 'Remote · 3–5 yrs', match: '86%' },
+  { role: 'Data Analyst', employer: 'Sample employer', meta: 'On-site · 1–3 yrs', match: '81%' },
 ];
 
 const PREP_TILES = [
   { icon: Mic, label: 'Mock interview' },
   { icon: Users, label: 'Group discussion' },
   { icon: Presentation, label: 'Presentation' },
-  { icon: BriefcaseBusiness, label: 'Company research' },
+  { icon: Building2, label: 'Company research' },
 ];
 
 function PreviewRing() {
@@ -103,150 +103,160 @@ function PreviewRing() {
 
 function ProductPreview() {
   return (
-    <div className="card overflow-hidden" aria-label="Illustrative Hiregen workspace preview">
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-        <div aria-hidden className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-border-strong" />
-          <span className="h-2 w-2 rounded-full bg-border-strong" />
-          <span className="h-2 w-2 rounded-full bg-border-strong" />
-        </div>
-        <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">Hiregen · workspace</span>
-        <Badge variant="muted">Sample</Badge>
-      </div>
-      <div className="grid sm:grid-cols-[8.5rem_minmax(0,1fr)]">
-        <div className="hidden border-r border-border bg-muted/30 p-3 sm:block" aria-hidden>
-          <p className="eyebrow px-1">Workspace</p>
-          <ul className="mt-3 space-y-px">
-            {[
-              { icon: Compass, label: 'Discover' },
-              { icon: Target, label: 'For you' },
-              { icon: ClipboardList, label: 'Applications' },
-              { icon: Mic, label: 'Practice' },
-              { icon: BriefcaseBusiness, label: 'Credits' },
-            ].map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2 rounded-md px-1.5 py-2 text-[11px] text-muted-foreground">
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{label}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 rounded-lg border border-sidebar-border bg-sidebar-muted/40 p-2.5">
-            <p className="text-[11px] font-semibold leading-tight text-foreground">Your career, our priority.</p>
-            <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">Credits → preparation</p>
+    <div className="relative">
+      <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-border/60 bg-surface/40" />
+      <div className="card relative overflow-hidden shadow-pop" aria-label="Illustrative Hiregen workspace preview">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/20 px-4 py-3">
+          <div aria-hidden className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-border-strong/70" />
           </div>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">Hiregen · candidate workspace</span>
+          <Badge variant="muted" className="bg-surface">Sample</Badge>
         </div>
-
-        <div className="min-w-0 p-4">
-          <div className="grid grid-cols-4 gap-1.5">
-            {[
-              { icon: BriefcaseBusiness, label: 'Active jobs', value: '12' },
-              { icon: ClipboardList, label: 'Applied', value: '08' },
-              { icon: Coins, label: 'Credits', value: '02' },
-              { icon: Target, label: 'Matches', value: '03' },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="rounded-lg border border-border bg-background/60 px-2 py-2">
-                <Icon className="h-3 w-3 text-muted-foreground" aria-hidden />
-                <p className="mt-1 font-mono text-[15px] tabular-nums leading-none text-foreground">{value}</p>
-                <p className="mt-1 truncate font-mono text-[8.5px] uppercase tracking-[0.04em] text-muted-foreground">{label}</p>
-              </div>
-            ))}
+        <div className="grid sm:grid-cols-[9rem_minmax(0,1fr)]">
+          <div className="hidden border-r border-border bg-muted/20 p-3.5 sm:block" aria-hidden>
+            <p className="eyebrow px-1">Workspace</p>
+            <ul className="mt-3 space-y-0.5">
+              {[
+                { icon: Compass, label: 'Discover', active: false },
+                { icon: Target, label: 'For you', active: true },
+                { icon: ClipboardList, label: 'Applications', active: false },
+                { icon: Mic, label: 'Practice', active: false },
+                { icon: FileText, label: 'Credits', active: false },
+              ].map(({ icon: Icon, label, active }) => (
+                <li key={label} className={cn('flex items-center gap-2 rounded-md px-2 py-2 text-[11px]', active ? 'bg-primary-soft text-primary font-medium' : 'text-muted-foreground')}>
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{label}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 rounded-lg border border-border bg-surface p-2.5">
+              <p className="text-[11px] font-semibold leading-tight text-foreground">Your career, our priority.</p>
+              <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">Credits → preparation</p>
+            </div>
           </div>
 
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="eyebrow">Recommended for you</p>
-                <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">3 roles</span>
-              </div>
-              <ul className="mt-2 space-y-1.5">
-                {PREVIEW_ROWS.map((row) => (
-                  <li key={row.role} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-2.5 py-2">
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-medium text-foreground">{row.role}</p>
-                      <p className="truncate text-[10.5px] text-muted-foreground">{row.employer} · {row.meta}</p>
-                    </div>
-                    <span className="rounded-md border border-signal/25 bg-signal-soft px-1.5 py-0.5 font-mono text-[9.5px] tabular-nums text-signal">{row.match} match</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="eyebrow mt-3">Preparation center</p>
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {PREP_TILES.map(({ icon: Icon, label }) => (
-                  <div key={label} className="rounded-lg border border-border bg-background/60 px-1.5 py-2 text-center">
-                    <Icon className="mx-auto h-3.5 w-3.5 text-foreground" aria-hidden />
-                    <p className="mt-1 truncate text-[8.5px] text-muted-foreground">{label}</p>
+          <div className="min-w-0 bg-background/40 p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { icon: BriefcaseBusiness, label: 'Active jobs', value: '12' },
+                { icon: ClipboardList, label: 'Applied', value: '08' },
+                { icon: Coins, label: 'Credits', value: '02' },
+                { icon: Target, label: 'Matches', value: '03' },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="rounded-lg border border-border bg-surface px-2.5 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                    <span className="h-1.5 w-1.5 rounded-full bg-signal/50" aria-hidden />
                   </div>
-                ))}
-              </div>
+                  <p className="mt-2 font-mono text-[18px] tabular-nums leading-none tracking-tight text-foreground">{value}</p>
+                  <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-[0.05em] text-muted-foreground">{label}</p>
+                </div>
+              ))}
             </div>
 
-            <div className="space-y-2">
-              <div className="rounded-lg border border-border bg-background/60 px-2.5 py-2.5">
-                <div className="flex items-center gap-2.5">
-                  <PreviewRing />
-                  <div>
-                    <p className="eyebrow">Profile completion</p>
-                    <p className="mt-1 text-[11px] font-medium text-foreground">A few details left</p>
-                  </div>
+            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_11.5rem]">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="eyebrow">Recommended for you</p>
+                  <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">3 roles</span>
                 </div>
-                <ul className="mt-2 space-y-1 border-t border-border pt-2">
-                  {['Basic details', 'Education', 'Skills', 'Experience'].map((item, index) => (
-                    <li key={item} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className={cn('grid h-3 w-3 place-items-center rounded-full border', index < 3 ? 'border-success bg-success-soft text-success' : 'border-border')}>
-                        {index < 3 ? <Check className="h-2 w-2" aria-hidden /> : null}
-                      </span>
-                      {item}
+                <ul className="mt-2 space-y-2">
+                  {PREVIEW_ROWS.map((row) => (
+                    <li key={row.role} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[12.5px] font-medium text-foreground">{row.role}</p>
+                        <p className="truncate text-[10.5px] text-muted-foreground">{row.employer} · {row.meta}</p>
+                      </div>
+                      <span className="rounded-md border border-signal/20 bg-signal-soft px-2 py-1 font-mono text-[9.5px] tabular-nums text-signal">{row.match} match</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-              <div className="rounded-lg border border-border bg-background/60 px-2.5 py-2.5">
-                <p className="eyebrow">Application progress</p>
-                <ol className="mt-2 flex items-center" aria-label="Sample application progress">
-                  {['Applied', 'Interview', 'Offer', 'Joined'].map((stage, index) => (
-                    <li key={stage} className="flex flex-1 flex-col items-center gap-1 text-center">
-                      <span className={cn('grid h-4 w-4 place-items-center rounded-full border font-mono text-[8px]', index < 2 ? 'border-signal bg-signal text-signal-foreground' : 'border-border text-muted-foreground')}>
-                        {index < 2 ? <Check className="h-2 w-2" aria-hidden /> : index + 1}
-                      </span>
-                      <span className="text-[8.5px] text-muted-foreground">{stage}</span>
-                    </li>
+                <p className="eyebrow mt-4">Preparation center</p>
+                <div className="mt-2 grid grid-cols-4 gap-1.5">
+                  {PREP_TILES.map(({ icon: Icon, label }) => (
+                    <div key={label} className="rounded-lg border border-border bg-surface px-1.5 py-2.5 text-center">
+                      <Icon className="mx-auto h-3.5 w-3.5 text-foreground" aria-hidden />
+                      <p className="mt-1.5 truncate text-[8.5px] text-muted-foreground">{label}</p>
+                    </div>
                   ))}
-                </ol>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="rounded-lg border border-border bg-surface px-3 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <PreviewRing />
+                    <div>
+                      <p className="eyebrow">Profile</p>
+                      <p className="mt-1 text-[11px] font-medium text-foreground">Nearly ready</p>
+                    </div>
+                  </div>
+                  <ul className="mt-3 space-y-1.5 border-t border-border pt-2.5">
+                    {['Basic details', 'Education', 'Skills', 'Experience'].map((item, index) => (
+                      <li key={item} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className={cn('grid h-3.5 w-3.5 place-items-center rounded-full border', index < 3 ? 'border-success/30 bg-success-soft text-success' : 'border-border')}>
+                          {index < 3 ? <Check className="h-2 w-2" aria-hidden /> : null}
+                        </span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-lg border border-border bg-surface px-3 py-3">
+                  <p className="eyebrow">Application progress</p>
+                  <ol className="mt-3 flex items-center" aria-label="Sample application progress">
+                    {['Applied', 'Interview', 'Offer', 'Joined'].map((stage, index) => (
+                      <li key={stage} className="flex flex-1 flex-col items-center gap-1 text-center">
+                        <span className={cn('grid h-4.5 w-4.5 place-items-center rounded-full border font-mono text-[8px]', index < 2 ? 'border-signal bg-signal text-signal-foreground' : 'border-border text-muted-foreground')}>
+                          {index < 2 ? <Check className="h-2 w-2" aria-hidden /> : index + 1}
+                        </span>
+                        <span className="text-[8.5px] text-muted-foreground">{stage}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div className="border-t border-border px-4 py-2.5">
-        <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
-          Illustrative interface · sample data, not live listings or results
-        </p>
+        <div className="border-t border-border bg-muted/10 px-4 py-2.5">
+          <p className="font-mono text-[10px] uppercase tracking-[0.07em] text-muted-foreground">
+            Illustrative interface · sample data, not live listings or results
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
 function FeatureCard({
-  icon: Icon, eyebrow, title, body, points,
+  icon: Icon, eyebrow, title, body, points, index,
 }: {
   icon: React.ElementType;
   eyebrow: string;
   title: string;
   body: string;
   points: string[];
+  index: number;
 }) {
   return (
-    <div className="card p-5">
-      <span aria-hidden className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-background text-foreground">
-        <Icon className="h-4 w-4" strokeWidth={1.75} />
-      </span>
-      <p className="eyebrow mt-4">{eyebrow}</p>
-      <h3 className="mt-1.5 text-[16px] font-semibold tracking-[-0.018em] text-foreground">{title}</h3>
-      <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{body}</p>
-      <ul className="mt-4 space-y-1.5 border-t border-border pt-3">
+    <div className="card group relative h-full p-6 transition-colors duration-200 hover:border-border-strong">
+      <div className="flex items-start justify-between gap-4">
+        <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-muted/40 text-foreground transition-colors group-hover:border-signal/30 group-hover:bg-signal-soft group-hover:text-signal">
+          <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        </span>
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground/70">0{index + 1}</span>
+      </div>
+      <p className="eyebrow mt-5">{eyebrow}</p>
+      <h3 className="mt-2 text-[17px] font-semibold tracking-[-0.02em] text-foreground">{title}</h3>
+      <p className="mt-2.5 text-[13.5px] leading-relaxed text-muted-foreground">{body}</p>
+      <ul className="mt-5 space-y-2 border-t border-border pt-4">
         {points.map((point) => (
-          <li key={point} className="flex gap-2 text-[12.5px] leading-relaxed text-foreground/85">
-            <Check className="mt-[3px] h-3 w-3 shrink-0 text-signal" aria-hidden />
+          <li key={point} className="flex gap-2.5 text-[12.5px] leading-relaxed text-foreground/85">
+            <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-signal" aria-hidden />
             <span>{point}</span>
           </li>
         ))}
@@ -307,9 +317,15 @@ const TRUST = [
   { icon: Lock, title: 'Facts before generation', body: 'Only confirmed profile details and the selected job reach the provider. Provider keys stay server-side.' },
 ];
 
+const PRINCIPLES = [
+  { value: '02', label: 'Starter credits' },
+  { value: '04', label: 'Preparation modules' },
+  { value: '100%', label: 'User-controlled applying' },
+];
+
 const Landing: React.FC = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-[13px] focus:text-foreground"
@@ -320,77 +336,103 @@ const Landing: React.FC = () => {
 
       <main id="main">
         {/* Hero */}
-        <section className="border-b border-border" aria-labelledby="hero-heading">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center lg:py-20">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }}>
-              <p className="eyebrow">Candidate workspace · public preview</p>
-              <h1 id="hero-heading" className="mt-4 text-[38px] font-semibold leading-[1.08] tracking-[-0.035em] text-foreground sm:text-[52px] lg:text-[58px]">
-                A job search with its receipts.
-              </h1>
-              <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-                Hiregen keeps the useful parts of a search in one place: roles with visible evidence, a profile you control,
-                interview practice, job-specific preparation and an honest record of what you sent.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-2.5">
-                <Button asChild size="lg">
-                  <Link to="/register">Create free account <ArrowRight className="h-4 w-4" /></Link>
-                </Button>
-                <Button asChild size="lg" variant="outline">
-                  <Link to="/login">Sign in</Link>
-                </Button>
-              </div>
-              <p className="mt-5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground">
-                2 starter credits · no card required · no automatic applications
-              </p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.06, ease: EASE }}>
-              <ProductPreview />
-            </motion.div>
+        <section className="relative overflow-hidden border-b border-border" aria-labelledby="hero-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute -right-24 top-0 h-[28rem] w-[28rem] rounded-full border border-signal/10" />
+            <div className="absolute -right-8 top-16 h-[20rem] w-[20rem] rounded-full border border-signal/8" />
+          </div>
+          <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
+            <div className="grid gap-12 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-center">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE }}>
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-signal" aria-hidden />
+                  <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">Candidate workspace · public preview</span>
+                </div>
+                <h1 id="hero-heading" className="mt-6 max-w-xl text-[42px] font-semibold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-[56px] lg:text-[64px]">
+                  A job search,
+                  <span className="block text-signal">crafted with clarity.</span>
+                </h1>
+                <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-muted-foreground">
+                  Hiregen brings roles, evidence, preparation and application tracking into one refined workspace — so every move you make is informed, deliberate and yours.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Button asChild size="lg" className="h-11 px-6">
+                    <Link to="/register">Create free account <ArrowRight className="h-4 w-4" /></Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="h-11 px-6">
+                    <Link to="/login">Sign in</Link>
+                  </Button>
+                </div>
+                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-5">
+                  {['2 starter credits', 'No card required', 'No automatic applications'].map((item) => (
+                    <p key={item} className="flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground">
+                      <span className="h-1 w-1 rounded-full bg-signal/70" aria-hidden />
+                      {item}
+                    </p>
+                  ))}
+                </div>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.08, ease: EASE }}>
+                <ProductPreview />
+              </motion.div>
+            </div>
+
+            <div className="mt-14 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-3">
+              {PRINCIPLES.map((item) => (
+                <div key={item.label} className="bg-surface px-5 py-5 sm:px-6">
+                  <p className="font-mono text-[28px] tabular-nums leading-none tracking-tight text-foreground">{item.value}</p>
+                  <p className="mt-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* Feature grid */}
-        <section id="product" className="mx-auto max-w-6xl px-5 py-14 sm:px-8" aria-labelledby="product-heading">
-          <div className="max-w-2xl">
-            <p className="eyebrow">Product</p>
-            <h2 id="product-heading" className="mt-2 text-[28px] font-semibold tracking-[-0.028em] text-foreground">
-              One workspace, from first shortlist to final answer.
-            </h2>
-            <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
-              Each module uses the same confirmed profile and the same selected job, so your preparation never drifts into generic advice.
+        <section id="product" className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20" aria-labelledby="product-heading">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.34fr)_minmax(0,0.66fr)] lg:items-end">
+            <div>
+              <p className="eyebrow">Product</p>
+              <h2 id="product-heading" className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.032em] text-foreground sm:text-[40px]">
+                One workspace, every meaningful step.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground lg:pb-1">
+              Each module uses the same confirmed profile and the same selected job, so your preparation never drifts into generic advice. Evidence stays visible, and control stays with you.
             </p>
           </div>
-          <div className="mt-7 grid gap-3 md:grid-cols-2">
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
             {FEATURES.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05, ease: EASE }}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.35, delay: index * 0.04, ease: EASE }}
               >
-                <FeatureCard {...feature} />
+                <FeatureCard {...feature} index={index} />
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* How it works */}
-        <section id="workflow" className="border-y border-border bg-muted/30" aria-labelledby="workflow-heading">
-          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
+        <section id="workflow" className="border-y border-border bg-muted/20" aria-labelledby="workflow-heading">
+          <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
+            <div className="flex flex-wrap items-end justify-between gap-5">
+              <div className="max-w-2xl">
                 <p className="eyebrow">How it works</p>
-                <h2 id="workflow-heading" className="mt-2 text-[28px] font-semibold tracking-[-0.028em] text-foreground">Four steps, in your control.</h2>
+                <h2 id="workflow-heading" className="mt-3 text-[32px] font-semibold tracking-[-0.032em] text-foreground sm:text-[40px]">Four steps, fully in your control.</h2>
               </div>
-              <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+              <p className="max-w-sm text-[14px] leading-relaxed text-muted-foreground">
                 You decide what is confirmed, which roles deserve time and which application is yours to send.
               </p>
             </div>
-            <ol className="mt-8 grid gap-px border-t border-border sm:grid-cols-2 lg:grid-cols-4">
+            <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, index) => (
-                <li key={step.title} className="border-b border-border px-4 py-5 first:pl-0 lg:border-b-0 lg:border-r lg:last:border-r-0 lg:first:pl-0">
-                  <span className="font-mono text-[11px] tabular-nums text-signal">0{index + 1}</span>
-                  <h3 className="mt-3 text-[15px] font-semibold tracking-[-0.014em] text-foreground">{step.title}</h3>
+                <li key={step.title} className="card relative p-5">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-signal/25 bg-signal-soft font-mono text-[11px] tabular-nums text-signal">0{index + 1}</span>
+                  <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.014em] text-foreground">{step.title}</h3>
                   <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{step.body}</p>
                 </li>
               ))}
@@ -399,78 +441,83 @@ const Landing: React.FC = () => {
         </section>
 
         {/* Preparation deep-dive */}
-        <section id="preparation" className="mx-auto max-w-6xl px-5 py-14 sm:px-8" aria-labelledby="preparation-heading">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+        <section id="preparation" className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20" aria-labelledby="preparation-heading">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-center">
             <div>
               <p className="eyebrow">Preparation</p>
-              <h2 id="preparation-heading" className="mt-2 text-[28px] font-semibold tracking-[-0.028em] text-foreground">
+              <h2 id="preparation-heading" className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.032em] text-foreground sm:text-[40px]">
                 Built for the role in front of you.
               </h2>
-              <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+              <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
                 Preparation uses the posting, your confirmed profile and cited company context. Where evidence is missing, the artifact says so instead of guessing.
               </p>
-              <ul className="mt-6 space-y-2.5">
+              <ul className="mt-7 space-y-3">
                 {[
                   'Interview preparation with question bank, frameworks and revision plan',
                   'Group discussion topics, balanced arguments and participation tips',
                   'Presentation outline with speaking notes and likely questions',
                   'Company research with source URLs and retrieval timestamps',
                 ].map((line) => (
-                  <li key={line} className="flex gap-2.5 text-[13px] leading-relaxed text-foreground/90">
-                    <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-signal" aria-hidden />
+                  <li key={line} className="flex gap-3 text-[13.5px] leading-relaxed text-foreground/90">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-signal/25 bg-signal-soft text-signal">
+                      <Check className="h-3 w-3" aria-hidden />
+                    </span>
                     <span>{line}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="card overflow-hidden">
-              <div className="flex items-center justify-between border-b border-border px-5 py-3">
-                <p className="eyebrow">Artifact · sample structure</p>
-                <Badge variant="muted">Sample</Badge>
+            <div className="card overflow-hidden shadow-pop">
+              <div className="flex items-center justify-between border-b border-border bg-muted/20 px-5 py-4">
+                <div>
+                  <p className="eyebrow">Artifact · sample structure</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">What a preparation package contains</p>
+                </div>
+                <Badge variant="muted" className="bg-surface">Sample</Badge>
               </div>
               <div className="divide-y divide-border">
                 {[
-                  { index: '01', title: 'Role and company context', detail: 'Requirements and confirmed profile facts' },
-                  { index: '02', title: 'Questions and frameworks', detail: 'A short answer shape for each question' },
-                  { index: '03', title: 'Sources and evidence notes', detail: 'URLs, retrieval time, gaps called out' },
-                  { index: '04', title: 'Revision plan', detail: 'What to review before the conversation' },
+                  { index: '01', title: 'Role and company context', detail: 'Requirements, responsibilities and confirmed profile facts' },
+                  { index: '02', title: 'Questions and frameworks', detail: 'A clear answer shape for each likely question' },
+                  { index: '03', title: 'Sources and evidence notes', detail: 'URLs, retrieval time, and gaps called out plainly' },
+                  { index: '04', title: 'Revision plan', detail: 'Focused actions to review before the conversation' },
                 ].map((row) => (
-                  <div key={row.index} className="flex gap-4 px-5 py-3.5">
-                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{row.index}</span>
+                  <div key={row.index} className="flex gap-4 px-5 py-4">
+                    <span className="font-mono text-[11px] tabular-nums text-signal">{row.index}</span>
                     <div>
-                      <p className="text-[13.5px] font-medium text-foreground">{row.title}</p>
-                      <p className="mt-1 text-[12.5px] text-muted-foreground">{row.detail}</p>
+                      <p className="text-[14px] font-medium text-foreground">{row.title}</p>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{row.detail}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-border px-5 py-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">Preparation aid only · not employer endorsed</p>
+              <div className="border-t border-border bg-muted/10 px-5 py-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.07em] text-muted-foreground">Preparation aid only · not employer endorsed</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* Plans */}
-        <section id="plans" className="border-y border-border bg-muted/30" aria-labelledby="plans-heading">
-          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+        <section id="plans" className="border-y border-border bg-muted/20" aria-labelledby="plans-heading">
+          <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
             <div className="max-w-2xl">
               <p className="eyebrow">Plans</p>
-              <h2 id="plans-heading" className="mt-2 text-[28px] font-semibold tracking-[-0.028em] text-foreground">Known prices. No invented entitlements.</h2>
-              <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+              <h2 id="plans-heading" className="mt-3 text-[32px] font-semibold tracking-[-0.032em] text-foreground sm:text-[40px]">Clear pricing. Honest limits.</h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
                 The free plan is ready to use. Paid-plan credits, expiry and feature limits stay under administrator configuration until the product owner defines them.
               </p>
             </div>
-            <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {PLANS.map((plan) => (
-                <div key={plan.code} className="card flex flex-col p-5">
+                <div key={plan.code} className={cn('card flex flex-col p-5', plan.code === 'FREE' && 'border-signal/30')}>
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">{plan.code}</p>
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">{plan.code}</p>
                     {plan.code === 'FREE' && <Badge variant="success">Available</Badge>}
                   </div>
-                  <p className="mt-4 font-mono text-[26px] tabular-nums leading-none text-foreground">{plan.price}</p>
-                  <p className="mt-3 min-h-[3.5rem] text-[12.5px] leading-relaxed text-muted-foreground">{plan.note}</p>
-                  <div className="mt-4 border-t border-border pt-3">
+                  <p className="mt-5 font-mono text-[30px] tabular-nums leading-none tracking-tight text-foreground">{plan.price}</p>
+                  <p className="mt-3 min-h-[4rem] text-[12.5px] leading-relaxed text-muted-foreground">{plan.note}</p>
+                  <div className="mt-5 border-t border-border pt-4">
                     {plan.action ? (
                       <Button asChild size="sm" className="w-full">
                         <Link to="/register">{plan.action} <ArrowRight className="h-3.5 w-3.5" /></Link>
@@ -482,32 +529,36 @@ const Landing: React.FC = () => {
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
+            <p className="mt-5 text-[12.5px] leading-relaxed text-muted-foreground">
               Checkout stays disabled until a payment provider and billing terms are configured. No purchase state is simulated.
             </p>
           </div>
         </section>
 
         {/* Trust */}
-        <section id="trust" className="mx-auto max-w-6xl px-5 py-14 sm:px-8" aria-labelledby="trust-heading">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <section id="trust" className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20" aria-labelledby="trust-heading">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
             <div>
               <p className="eyebrow">Trust</p>
-              <h2 id="trust-heading" className="mt-2 text-[28px] font-semibold tracking-[-0.028em] text-foreground">
+              <h2 id="trust-heading" className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.032em] text-foreground sm:text-[40px]">
                 A tool, not a decision maker.
               </h2>
-              <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
+              <p className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground">
                 Hiregen does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
               </p>
+              <div className="mt-6 rounded-xl border border-border bg-muted/20 p-4">
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">Design principle</p>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-foreground/90">Every generated claim should be inspectable, and every important action should remain yours.</p>
+              </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               {TRUST.map((item) => (
-                <div key={item.title} className="border-t border-border pt-4">
-                  <span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg border border-border text-foreground">
+                <div key={item.title} className="card p-5">
+                  <span aria-hidden className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-muted/30 text-foreground">
                     <item.icon className="h-4 w-4" strokeWidth={1.75} />
                   </span>
-                  <h3 className="mt-3 text-[14px] font-semibold text-foreground">{item.title}</h3>
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted-foreground">{item.body}</p>
+                  <h3 className="mt-4 text-[14px] font-semibold tracking-[-0.01em] text-foreground">{item.title}</h3>
+                  <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">{item.body}</p>
                 </div>
               ))}
             </div>
@@ -515,19 +566,21 @@ const Landing: React.FC = () => {
         </section>
 
         {/* Closing CTA */}
-        <section className="mx-auto max-w-6xl px-5 pb-14 sm:px-8" aria-labelledby="cta-heading">
-          <div className="rounded-xl bg-foreground px-6 py-12 text-background sm:px-10">
-            <div className="mx-auto max-w-2xl text-center">
-              <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-background/60">Ready when you are</p>
-              <h2 id="cta-heading" className="mt-3 text-[30px] font-semibold tracking-[-0.028em] sm:text-[36px]">Start with a profile. Everything else follows.</h2>
-              <p className="mt-3 text-[14px] leading-relaxed text-background/70">
+        <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-8 lg:pb-20" aria-labelledby="cta-heading">
+          <div className="relative overflow-hidden rounded-2xl border border-[hsl(165,16%,20%)] bg-[hsl(168,28%,11%)] px-6 py-14 text-[hsl(42,22%,95%)] sm:px-10">
+            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border border-[hsl(156,58%,45%/0.14)]" />
+            <div aria-hidden className="pointer-events-none absolute bottom-0 left-10 h-32 w-32 rounded-full border border-[hsl(156,58%,45%/0.08)]" />
+            <div className="relative mx-auto max-w-3xl text-center">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[hsl(156,55%,52%)]">Ready when you are</p>
+              <h2 id="cta-heading" className="mt-4 text-[34px] font-semibold leading-[1.1] tracking-[-0.032em] sm:text-[44px]">Start with a profile. Everything else follows.</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-[hsl(150,7%,72%)]">
                 Create an account, confirm your details and receive two preparation credits. The tour shows you where everything lives.
               </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-                <Button asChild size="lg" variant="secondary">
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
+                <Button asChild size="lg" className="h-11 bg-[hsl(156,55%,52%)] px-6 text-[hsl(168,28%,9%)] hover:bg-[hsl(156,55%,58%)]">
                   <Link to="/register">Create free account <ArrowRight className="h-4 w-4" /></Link>
                 </Button>
-                <Button asChild size="lg" variant="ghost" className={cn('text-background hover:bg-background/10')}>
+                <Button asChild size="lg" variant="ghost" className="h-11 px-6 text-[hsl(42,22%,95%)] hover:bg-[hsl(42,22%,95%/0.08)] hover:text-[hsl(42,22%,95%)]">
                   <Link to="/login">Sign in</Link>
                 </Button>
               </div>
@@ -537,7 +590,7 @@ const Landing: React.FC = () => {
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-8 px-5 py-10 sm:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-start justify-between gap-8 px-5 py-10 sm:px-8">
           <div className="max-w-xs">
             <Logo size="md" />
             <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">

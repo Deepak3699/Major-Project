@@ -12,26 +12,33 @@ const ONE_LINERS = [
   'Applications tracked from saved to joined.',
 ];
 
-// Shared sign-in and registration layout. Both panels follow the theme tokens:
-// ink on light, warm paper on dark. The narrative stays editorial and flat.
+// Shared sign-in and registration layout. Premium editorial split:
+// deep ink narrative panel, warm ivory form panel, refined emerald signal.
 export function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Narrative panel */}
-      <div className="hidden w-[46%] flex-col justify-between bg-foreground p-10 text-background lg:flex xl:p-14">
-        <div className="flex items-center gap-2.5">
-          <span aria-hidden className="h-3 w-3 rounded-[3px] bg-signal" />
+      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[hsl(168,28%,11%)] p-10 text-[hsl(42,22%,95%)] lg:flex xl:p-14">
+        <div aria-hidden className="pointer-events-none absolute inset-0 border-r border-[hsl(165,16%,20%)]" />
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[hsl(156,58%,45%/0.12)]" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-16 right-10 h-48 w-48 rounded-full border border-[hsl(156,58%,45%/0.08)]" />
+
+        <div className="relative flex items-center gap-2.5">
+          <span aria-hidden className="h-3 w-3 rounded-[3px] bg-[hsl(156,58%,45%)]" />
           <span className="text-[19px] font-semibold tracking-[-0.032em]">Hiregen</span>
         </div>
 
-        <div className="max-w-md">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-background/60">
+        <div className="relative max-w-md">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[hsl(150,7%,62%)]">
             Job intelligence, without the noise
           </p>
-          <h1 className="mt-4 text-[34px] font-semibold leading-[1.12] tracking-[-0.028em]">
-            See every role worth your time.
-            <span className="text-background/55"> Nothing that isn't.</span>
+          <h1 className="mt-4 text-[36px] font-semibold leading-[1.1] tracking-[-0.03em] xl:text-[40px]">
+            Your next role,
+            <span className="block text-[hsl(156,55%,52%)]">prepared with care.</span>
           </h1>
+          <p className="mt-5 max-w-sm text-[14px] leading-relaxed text-[hsl(150,7%,72%)]">
+            A premium workspace for discovery, preparation and honest application tracking.
+          </p>
           <ul className="mt-9 space-y-px">
             {ONE_LINERS.map((line, i) => (
               <motion.li
@@ -39,17 +46,17 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + i * 0.06, duration: 0.35, ease: EASE }}
-                className="group flex h-11 items-center gap-3 border-t border-background/15 last:border-b"
+                className="group flex h-11 items-center gap-3 border-t border-[hsl(165,16%,20%)] last:border-b"
               >
-                <span className="font-mono text-[10px] text-background/50">0{i + 1}</span>
-                <span className="text-[13.5px] leading-snug text-background/75 transition-colors group-hover:text-background">{line}</span>
-                <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-background/40 transition-colors group-hover:text-background" />
+                <span className="font-mono text-[10px] text-[hsl(156,55%,52%)]">0{i + 1}</span>
+                <span className="text-[13.5px] leading-snug text-[hsl(42,18%,78%)] transition-colors group-hover:text-[hsl(42,22%,95%)]">{line}</span>
+                <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-[hsl(150,7%,45%)] transition-colors group-hover:text-[hsl(156,55%,52%)]" />
               </motion.li>
             ))}
           </ul>
         </div>
 
-        <p className="font-mono text-[11px] text-background/50">© {new Date().getFullYear()} Hiregen</p>
+        <p className="relative font-mono text-[11px] text-[hsl(150,7%,52%)]">© {new Date().getFullYear()} Hiregen</p>
       </div>
 
       {/* Form panel */}
@@ -58,9 +65,9 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
-          className="w-full max-w-[368px]"
+          className="w-full max-w-[392px]"
         >
-          <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="mb-7 flex items-center justify-between gap-3">
             <Logo size="lg" />
             <Link
               to="/"
@@ -71,9 +78,9 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
           </div>
           <div className="mb-7">
             <p className="eyebrow">{subtitle}</p>
-            <h2 className="mt-1.5 text-[24px] font-semibold tracking-[-0.022em] text-foreground">{title}</h2>
+            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.026em] text-foreground">{title}</h2>
           </div>
-          <div className="card p-6">{children}</div>
+          <div className="card p-6 sm:p-7">{children}</div>
         </motion.div>
       </div>
     </div>

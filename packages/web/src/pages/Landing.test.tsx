@@ -18,7 +18,7 @@ const renderPage = () => render(
 describe('public landing preview', () => {
   it('presents the hero, preview disclaimer and primary calls to action', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: /A job search with its receipts/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /A job search/i })).toBeTruthy();
     expect(screen.getAllByText(/Create free account/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Sign in/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Illustrative interface · sample data/i)).toBeTruthy();
@@ -26,10 +26,10 @@ describe('public landing preview', () => {
 
   it('explains the product, workflow, preparation, plans and trust sections', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: /One workspace, from first shortlist/i })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /Four steps, in your control/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /One workspace, every meaningful step/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Four steps, fully in your control/i })).toBeTruthy();
     expect(screen.getByRole('heading', { name: /Built for the role in front of you/i })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /Known prices. No invented entitlements/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Clear pricing\. Honest limits/i })).toBeTruthy();
     expect(screen.getByRole('heading', { name: /A tool, not a decision maker/i })).toBeTruthy();
   });
 

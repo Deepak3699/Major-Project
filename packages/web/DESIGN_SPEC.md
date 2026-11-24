@@ -1,13 +1,14 @@
-# Hiregen UI Design Spec — "Blue Atlas"
+# Hiregen UI Design Spec — "Verdant Atelier"
 
 This is the binding design language for the full UI. The foundation
 (`src/index.css`, `tailwind.config.js`) and all `components/ui/*` primitives +
 chrome (`Sidebar`, `Header`, `Layout`, `AuthShell`, `Logo`, `CommandPalette`,
 `JobCard`) implement it. Pages must use the same tokens.
 
-The palette is the owner-approved blue system from the reference image: cool
-near-white paper, deep navy ink, a single saturated blue for actions and
-highlights, and flat white cards. It works in both light and dark themes.
+The palette is a premium editorial system: warm ivory paper, deep charcoal-green
+ink, and a single refined emerald for actions and highlights. Surfaces stay flat
+and confident, with hairline borders and restrained elevation. It works in both
+light and dark themes.
 
 ## Golden rules (non-negotiable)
 
@@ -31,10 +32,10 @@ highlights, and flat white cards. It works in both light and dark themes.
    `.glass` classes), glow shadows (`shadow-glow*`, `shadow-card-hover`,
    `shadow-float` except on real popovers), emoji, `text-gradient`, decorative
    blobs/rings, exclamation-mark marketing copy, "Powered by AI" style phrases.
-5. **The one saturated accent is `signal` (blue).** Use it surgically: primary
+5. **The one saturated accent is `signal` (emerald).** Use it surgically: primary
    buttons, links on hover, the active navigation pill, focus cues, a single
-   primary metric, match badges. Keep large fills to the ink/navy surfaces;
-   do not paint whole panels in signal blue.
+   primary metric, match badges. Keep large fills to deep ink surfaces; do not
+   paint whole panels in signal green.
 
 ## Vocabulary
 

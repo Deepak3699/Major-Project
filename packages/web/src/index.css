@@ -4,150 +4,151 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Hiregen design system — "editorial instrument panel"
-   Warm paper / warm graphite surfaces, near-black ink primary actions, a
-   single ember signal accent, hairline borders, tabular mono numerals.
+   Hiregen design system — "Verdant Atelier"
+   Warm ivory paper / deep charcoal surfaces, deep emerald ink for actions,
+   a single refined emerald signal, hairline borders, tabular mono numerals.
+   Premium, editorial, flat — no gradients, no glassmorphism, no emoji.
 --------------------------------------------------------------------------- */
 
 @layer base {
   :root {
-    /* Hiregen Blue — light theme: cool paper, deep navy ink, one blue accent */
-    --background: 210 40% 98%;
+    /* Verdant Atelier — light theme: warm ivory, deep ink, refined emerald */
+    --background: 42 30% 97%;
     --surface: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --muted: 214 32% 95%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 214 32% 96%;
-    --accent-foreground: 222 47% 11%;
-    --border: 214 32% 91%;
-    --border-strong: 213 20% 82%;
-    --input: 214 32% 89%;
-    --ring: 221 83% 48%;
+    --foreground: 168 24% 12%;
+    --muted: 42 18% 93%;
+    --muted-foreground: 160 8% 40%;
+    --accent: 45 20% 94%;
+    --accent-foreground: 168 24% 12%;
+    --border: 42 14% 88%;
+    --border-strong: 150 8% 76%;
+    --input: 42 14% 86%;
+    --ring: 160 84% 25%;
 
-    --primary: 221 83% 48%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 221 83% 40%;
-    --primary-soft: 214 100% 96%;
+    --primary: 160 84% 25%;
+    --primary-foreground: 42 30% 98%;
+    --primary-hover: 160 84% 20%;
+    --primary-soft: 152 42% 94%;
 
-    --secondary: 214 32% 95%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 42 18% 93%;
+    --secondary-foreground: 168 24% 12%;
 
-    --destructive: 0 72% 46%;
+    --destructive: 2 68% 46%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 0 86% 97%;
+    --destructive-soft: 4 70% 96%;
 
-    --success: 152 52% 30%;
+    --success: 152 58% 30%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 150 40% 94%;
+    --success-soft: 150 42% 94%;
 
-    --warning: 33 88% 40%;
+    --warning: 35 90% 42%;
     --warning-foreground: 0 0% 100%;
-    --warning-soft: 38 92% 94%;
+    --warning-soft: 40 90% 94%;
 
-    --info: 214 90% 46%;
+    --info: 190 55% 38%;
     --info-foreground: 0 0% 100%;
-    --info-soft: 214 100% 96%;
+    --info-soft: 190 45% 94%;
 
-    /* signal — the one saturated blue accent, used surgically */
-    --signal: 221 83% 48%;
-    --signal-foreground: 0 0% 100%;
-    --signal-soft: 214 100% 96%;
+    /* signal — refined emerald accent, used surgically */
+    --signal: 160 84% 25%;
+    --signal-foreground: 42 30% 98%;
+    --signal-soft: 152 42% 94%;
 
-    --sidebar: 222 47% 13%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-muted: 217 33% 18%;
-    --sidebar-border: 217 33% 21%;
-    --sidebar-active: 221 83% 53%;
-    --sidebar-active-foreground: 0 0% 100%;
+    --sidebar: 168 28% 11%;
+    --sidebar-foreground: 42 22% 95%;
+    --sidebar-muted: 165 20% 16%;
+    --sidebar-border: 165 16% 20%;
+    --sidebar-active: 156 58% 45%;
+    --sidebar-active-foreground: 168 28% 9%;
 
-    --hot: 0 72% 46%;
-    --hot-soft: 0 86% 97%;
-    --warm: 33 88% 40%;
-    --warm-soft: 38 92% 94%;
-    --cold: 214 90% 46%;
-    --cold-soft: 214 100% 96%;
+    --hot: 2 68% 46%;
+    --hot-soft: 4 70% 96%;
+    --warm: 35 90% 42%;
+    --warm-soft: 40 90% 94%;
+    --cold: 190 55% 38%;
+    --cold-soft: 190 45% 94%;
 
-    /* Legacy gradient hooks — kept so far pages still resolve them. */
+    /* Legacy gradient hooks — kept resolving; flat by design. */
     --grad-primary: none;
     --grad-mesh: none;
 
     /* Flat elevation: hairline borders with a near-invisible lift */
-    --glow-primary: 0 1px 2px rgb(15 23 42 / 0.12);
-    --glow-soft: 0 0 0 0.5px rgb(15 23 42 / 0.03), 0 1px 2px rgb(15 23 42 / 0.04);
-    --shadow-pop: 0 12px 32px -12px rgb(15 23 42 / 0.22);
-    --shadow-drawer: 16px 0 48px -24px rgb(15 23 42 / 0.24);
+    --glow-primary: 0 1px 2px rgb(20 35 30 / 0.14);
+    --glow-soft: 0 0 0 0.5px rgb(20 35 30 / 0.04), 0 1px 2px rgb(20 35 30 / 0.05);
+    --shadow-pop: 0 16px 40px -16px rgb(20 35 30 / 0.22);
+    --shadow-drawer: 16px 0 48px -24px rgb(20 35 30 / 0.28);
 
     --radius: 0.625rem;
-    --grain-opacity: 0.022;
+    --grain-opacity: 0.024;
     --grain-mix: multiply;
   }
 
   html.dark {
     color-scheme: dark;
-    /* Hiregen Blue — dark theme: deep navy surfaces, cool paper text */
-    --background: 222 47% 8%;
-    --surface: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --muted: 217 33% 16%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 18%;
-    --accent-foreground: 210 40% 98%;
-    --border: 217 33% 20%;
-    --border-strong: 216 20% 30%;
-    --input: 217 33% 20%;
-    --ring: 213 94% 68%;
+    /* Verdant Atelier — dark theme: deep charcoal, warm ivory, luminous emerald */
+    --background: 168 18% 7%;
+    --surface: 168 14% 10%;
+    --foreground: 42 22% 94%;
+    --muted: 165 12% 15%;
+    --muted-foreground: 150 7% 62%;
+    --accent: 165 12% 16%;
+    --accent-foreground: 42 22% 94%;
+    --border: 165 10% 19%;
+    --border-strong: 160 8% 30%;
+    --input: 165 10% 19%;
+    --ring: 156 55% 52%;
 
-    --primary: 213 94% 68%;
-    --primary-foreground: 222 47% 11%;
-    --primary-hover: 213 94% 76%;
-    --primary-soft: 217 33% 18%;
+    --primary: 156 55% 52%;
+    --primary-foreground: 168 28% 9%;
+    --primary-hover: 156 55% 60%;
+    --primary-soft: 160 20% 16%;
 
-    --secondary: 217 33% 18%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 165 12% 16%;
+    --secondary-foreground: 42 22% 94%;
 
-    --destructive: 0 72% 62%;
-    --destructive-foreground: 222 47% 8%;
-    --destructive-soft: 0 32% 16%;
+    --destructive: 2 68% 62%;
+    --destructive-foreground: 168 18% 7%;
+    --destructive-soft: 2 28% 15%;
 
-    --success: 150 44% 56%;
-    --success-foreground: 222 47% 8%;
-    --success-soft: 152 24% 14%;
+    --success: 152 48% 54%;
+    --success-foreground: 168 18% 7%;
+    --success-soft: 152 22% 14%;
 
     --warning: 38 82% 60%;
-    --warning-foreground: 222 47% 8%;
-    --warning-soft: 36 32% 14%;
+    --warning-foreground: 168 18% 7%;
+    --warning-soft: 36 28% 14%;
 
-    --info: 213 94% 68%;
-    --info-foreground: 222 47% 8%;
-    --info-soft: 217 33% 18%;
+    --info: 186 52% 58%;
+    --info-foreground: 168 18% 7%;
+    --info-soft: 186 24% 14%;
 
-    --signal: 213 94% 68%;
-    --signal-foreground: 222 47% 8%;
-    --signal-soft: 217 33% 18%;
+    --signal: 156 55% 52%;
+    --signal-foreground: 168 28% 9%;
+    --signal-soft: 160 20% 16%;
 
-    --sidebar: 222 47% 9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-muted: 217 33% 16%;
-    --sidebar-border: 217 33% 18%;
-    --sidebar-active: 213 94% 68%;
-    --sidebar-active-foreground: 222 47% 11%;
+    --sidebar: 168 22% 8%;
+    --sidebar-foreground: 42 22% 94%;
+    --sidebar-muted: 165 14% 14%;
+    --sidebar-border: 165 10% 17%;
+    --sidebar-active: 156 55% 52%;
+    --sidebar-active-foreground: 168 28% 9%;
 
-    --hot: 0 72% 62%;
-    --hot-soft: 0 32% 16%;
+    --hot: 2 68% 62%;
+    --hot-soft: 2 28% 15%;
     --warm: 38 82% 60%;
-    --warm-soft: 36 32% 14%;
-    --cold: 213 94% 68%;
-    --cold-soft: 217 33% 18%;
+    --warm-soft: 36 28% 14%;
+    --cold: 186 52% 58%;
+    --cold-soft: 186 24% 14%;
 
     --grad-primary: none;
     --grad-mesh: none;
 
-    --glow-primary: 0 1px 2px rgb(0 0 0 / 0.4);
-    --glow-soft: 0 0 0 0.5px rgb(148 163 184 / 0.06), 0 1px 2px rgb(0 0 0 / 0.3);
+    --glow-primary: 0 1px 2px rgb(0 0 0 / 0.45);
+    --glow-soft: 0 0 0 0.5px rgb(220 235 225 / 0.05), 0 1px 2px rgb(0 0 0 / 0.35);
     --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.55);
-    --shadow-drawer: 16px 0 48px -24px rgb(0 0 0 / 0.6);
+    --shadow-drawer: 16px 0 48px -24px rgb(0 0 0 / 0.65);
 
-    --grain-opacity: 0.04;
+    --grain-opacity: 0.035;
     --grain-mix: screen;
   }
 

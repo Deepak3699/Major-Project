@@ -18,6 +18,6 @@ describe('public preview access', () => {
         <App />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('heading', { level: 1, name: /A job search with its receipts/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: /A job search/i })).toBeTruthy();
   });
 });

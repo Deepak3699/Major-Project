@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import { ChevronRight, GraduationCap, Mic, Plus, ScrollText, ShieldCheck, Users } from 'lucide-react';
 import { candidate, practice } from '@/lib/api';
 import { PracticeSessionSummary, PracticeSubscription } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+/* hero replaces PageHeader */
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -252,18 +252,22 @@ const Practice: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Interview practice"
-        description="Mock interviews graded question by question, and a learning plan that tracks the gap between your profile and the role."
-        actions={
-          <>
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow text-signal">Practice space</p>
+            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Interview practice.</h1>
+            <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">Mock interviews graded question by question, with a learning plan that tracks the gap between your profile and the role.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
             <Button variant="outline" asChild><Link to="/learning"><GraduationCap className="h-4 w-4" />Learning tracks</Link></Button>
             <Button onClick={() => (subscription && !subscription.unlimited && subscription.monthly_limit != null && subscription.used_this_month >= subscription.monthly_limit ? setUpgradeOpen(true) : setStartOpen(true))}>
               <Plus className="h-4 w-4" />New session
             </Button>
-          </>
-        }
-      />
+          </div>
+        </div>
+      </motion.section>
 
       <StatCardGrid loading={subLoading}>
         <StatCard icon={ShieldCheck} label="Plan" value={subscription ? (subscription.plan === 'pro' ? 'Pro' : 'Free') : null} hint={subscription?.unlimited ? 'Unlimited interviews' : 'Monthly interview quota'} />

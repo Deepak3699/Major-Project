@@ -40,7 +40,17 @@ const AdminCredits = lazy(() => import('@/pages/AdminCredits'));
 const AdminPlacements = lazy(() => import('@/pages/AdminPlacements'));
 
 function RouteFallback() {
-  return <div className="flex h-[60vh] items-center justify-center" role="status" aria-live="polite"><div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground/70" /><span className="sr-only">Loading…</span></div>;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background" role="status" aria-live="polite">
+      <div className="flex flex-col items-center gap-4 animate-fade-in">
+        <div className="relative h-12 w-12">
+          <div className="absolute inset-0 rounded-full border-2 border-border" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-signal animate-spin" />
+        </div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Loading workspace</p>
+      </div>
+    </div>
+  );
 }
 
 function App() {

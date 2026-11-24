@@ -256,13 +256,14 @@
 
   /* Editorial flat card: hairline border, near-invisible lift */
   .card {
-    @apply rounded-xl border bg-surface;
+    @apply rounded-2xl border bg-surface;
     border-color: hsl(var(--border));
     box-shadow: var(--glow-soft);
+    transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
   }
 
   .input {
-    @apply h-10 w-full rounded-lg border border-input bg-surface px-3 py-2 text-sm text-foreground shadow-sm transition-all duration-150 placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-4 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    @apply h-11 w-full rounded-xl border border-input bg-surface px-3.5 py-2 text-sm text-foreground shadow-sm transition-all duration-200 placeholder:text-muted-foreground/55 focus:border-primary/50 focus:outline-none focus:ring-4 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .label {

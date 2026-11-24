@@ -16,10 +16,10 @@ export function PageHeader({ title, description, actions, className }: PageHeade
         className,
       )}
     >
-      <div className="min-w-0 space-y-1">
-        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.022em] text-foreground text-balance">{title}</h1>
+      <div className="min-w-0 space-y-1.5">
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] text-foreground text-balance sm:text-[32px]">{title}</h1>
         {description && (
-          <p className="max-w-phi-body text-sm leading-relaxed text-muted-foreground text-pretty">{description}</p>
+          <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground text-pretty sm:text-sm">{description}</p>
         )}
       </div>
       {actions && (

@@ -26,21 +26,21 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const base =
-      "group relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.985]"
+      "group relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium tracking-[-0.01em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]"
     const variants: Record<string, string> = {
       // Ink / paper primary — flat, weighty, no gradient glow.
       default:
-        "bg-primary text-primary-foreground hover:bg-primary-hover active:saturate-[1.1]",
+        "bg-primary text-primary-foreground shadow-[0_1px_2px_hsl(var(--primary)/0.25)] hover:bg-primary-hover hover:shadow-[0_8px_20px_-8px_hsl(var(--primary)/0.45)] hover:-translate-y-px active:translate-y-0",
       destructive:
-        "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-[0_8px_20px_-8px_hsl(var(--destructive)/0.4)]",
       outline:
-        "border border-border bg-surface text-foreground hover:border-border-strong hover:bg-accent",
+        "border border-border bg-surface text-foreground hover:border-border-strong hover:bg-accent hover:shadow-sm",
       secondary:
-        "bg-secondary text-secondary-foreground hover:bg-secondary/70 border border-transparent",
+        "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-transparent",
       ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
       link: "underline-offset-4 hover:underline text-foreground p-0 h-auto",
-      soft: "bg-primary-soft text-foreground hover:bg-primary/15",
-      signal: "bg-signal text-signal-foreground hover:hsl(var(--signal)) hover:brightness-110 font-semibold",
+      soft: "bg-primary-soft text-primary hover:bg-primary/15 hover:shadow-sm",
+      signal: "bg-signal text-signal-foreground hover:brightness-110 font-semibold shadow-[0_1px_2px_hsl(var(--signal)/0.25)] hover:shadow-[0_8px_20px_-8px_hsl(var(--signal)/0.45)] hover:-translate-y-px",
       success: "bg-success text-success-foreground hover:bg-success/90",
       warning: "bg-warning text-warning-foreground hover:bg-warning/90",
     }

@@ -6,7 +6,7 @@ import { Bookmark, BriefcaseBusiness } from 'lucide-react';
 import { candidate } from '@/lib/api';
 import { CandidateApplication } from '@/lib/types';
 import { JobCard } from '@/components/candidate/JobCard';
-import { PageHeader } from '@/components/ui/page-header';
+/* hero replaces PageHeader */
 import { PageLoader } from '@/components/ui/spinner';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -15,8 +15,15 @@ const SavedJobs: React.FC = () => {
   const { data, isLoading, error } = useQuery('candidate-applications', candidate.applications);
   const saved = (data?.data || []).filter((application: CandidateApplication) => application.status === 'SAVED');
   return (
-    <div className="space-y-4">
-      <PageHeader title="Saved jobs" description="Roles you bookmarked to review or apply to later." />
+    <div className="space-y-6">
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+        <div className="relative">
+          <p className="eyebrow text-signal">Your shortlist</p>
+          <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Saved jobs.</h1>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">Roles you bookmarked to review, compare, and apply to when the time is right.</p>
+        </div>
+      </motion.section>
       {isLoading ? (
         <PageLoader label="Loading saved jobs…" />
       ) : error ? (

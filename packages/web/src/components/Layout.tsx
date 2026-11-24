@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { Outlet, useLocation, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, LayoutDashboard, BriefcaseBusiness, Sparkles, UserRound } from "lucide-react";
@@ -9,6 +9,31 @@ import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { SubscriptionDialog } from "@/components/SubscriptionDialog";
 import { useAuthStore } from "@/stores/auth";
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in" aria-hidden>
+      <div className="space-y-3">
+        <div className="skeleton h-3 w-28 rounded-full" />
+        <div className="skeleton h-9 w-72 max-w-full rounded-xl" />
+        <div className="skeleton h-4 w-[28rem] max-w-full rounded-lg" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="card p-5 space-y-3" style={{ animationDelay: `${i * 60}ms` }}>
+            <div className="flex items-center justify-between"><div className="skeleton h-3 w-20 rounded-full" /><div className="skeleton h-10 w-10 rounded-xl" /></div>
+            <div className="skeleton h-8 w-24 rounded-lg" />
+            <div className="skeleton h-3 w-32 rounded-full" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="card p-5 space-y-4"><div className="skeleton h-5 w-40 rounded-lg" /><div className="skeleton h-40 w-full rounded-xl" /><div className="skeleton h-24 w-full rounded-xl" /></div>
+        <div className="card p-5 space-y-4"><div className="skeleton h-5 w-36 rounded-lg" /><div className="skeleton h-20 w-full rounded-xl" /><div className="skeleton h-20 w-full rounded-xl" /></div>
+      </div>
+    </div>
+  );
+}
 
 const Layout: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -48,17 +73,19 @@ const Layout: React.FC = () => {
             You are offline — showing cached data. Actions will retry when you reconnect.
           </div>
         )}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto scroll-smooth bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.04),transparent_45%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background)))]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, transition: { duration: 0.08 } }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
               className="mx-auto w-full max-w-content space-y-5 p-4 pb-20 sm:p-6 sm:space-y-6 md:pb-8 lg:p-8"
             >
-              <Outlet />
+              <Suspense fallback={<PageSkeleton />}>
+                <Outlet />
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </main>

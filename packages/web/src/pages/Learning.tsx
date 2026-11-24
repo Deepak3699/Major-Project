@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { candidate, practice } from '@/lib/api';
 import { LearningModuleView, LearningTrackView } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+/* hero replaces PageHeader */
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -141,17 +141,21 @@ const Learning: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Learning tracks"
-        description="A module-by-module study plan built from your saved profile and the role you are aiming at."
-        actions={
-          track && (
-            <Button variant="outline" onClick={() => refresh.mutate()} loading={refresh.isLoading}>
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow text-signal">Grow your skills</p>
+            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Learning tracks.</h1>
+            <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">A module-by-module study plan built from your saved profile and the role you are aiming at.</p>
+          </div>
+          {track && (
+            <Button variant="outline" onClick={() => refresh.mutate()} loading={refresh.isLoading} className="shrink-0">
               <RefreshCw className="h-4 w-4" />Regenerate plan
             </Button>
-          )
-        }
-      />
+          )}
+        </div>
+      </motion.section>
 
       {preferred.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">

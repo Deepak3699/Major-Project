@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useQuery } from 'react-query';
 import { ArrowRight, Target } from 'lucide-react';
 import { candidate } from '@/lib/api';
-import { PageHeader } from '@/components/ui/page-header';
+/* hero replaces PageHeader */
 import { PageLoader } from '@/components/ui/spinner';
 import { JobCard } from '@/components/candidate/JobCard';
 
@@ -20,8 +20,15 @@ const WEIGHT_LABELS: Record<string, string> = { skills: 'Skills', experience: 'E
 const Recommendations: React.FC = () => {
   const { data, isLoading, error } = useQuery('candidate-recommendations', candidate.recommendations, { refetchInterval: 30000 });
   return (
-    <div className="space-y-4">
-      <PageHeader title="Recommended for you" description="Roles with a 70%+ match to your current profile appear here. Browse other trusted Indian listings in Discover jobs, where your match score is shown too." />
+    <div className="space-y-6">
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+        <div className="relative">
+          <p className="eyebrow text-signal">Personalized matches</p>
+          <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Recommended for you.</h1>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">Roles with a 70%+ match to your profile, with clear reasons and skill gaps. Browse all trusted listings in Discover jobs too.</p>
+        </div>
+      </motion.section>
       {isLoading ? (
         <PageLoader label="Matching jobs to your profile…" />
       ) : error ? (

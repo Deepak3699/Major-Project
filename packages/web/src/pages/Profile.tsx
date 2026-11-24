@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { Plus, Trash2, UploadCloud, UserRoundCheck } from 'lucide-react';
 import { candidate } from '@/lib/api';
 import { CandidateProfile } from '@/lib/types';
 import { useAuthStore } from '@/stores/auth';
-import { PageHeader } from '@/components/ui/page-header';
+/* hero replaces PageHeader */
 import { PageLoader } from '@/components/ui/spinner';
 
 const emptyProfile: CandidateProfile = { full_name:'', headline:'', contact_email:'', phone:'', location:'', summary:'', skills:[], preferred_roles:[], preferred_locations:[], remote_preference:'any', experience_years:0, education_level:'', salary_min:null, salary_currency:'INR', experience:[], projects:[], certifications:[], resume_filename:null };
@@ -50,8 +51,15 @@ const Profile: React.FC = () => {
 
   if (isLoading) return <PageLoader label="Loading your profile…" />;
   if (error) return <div className="card p-5 text-sm text-destructive">{(error as Error).message}</div>;
-  return <div className="space-y-5">
-    <PageHeader title="Your profile" description="The profile is the source of truth for job matching and application drafts. Resume extraction stays as a suggestion until you review and save it." />
+  return <div className="space-y-6">
+    <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+      <div className="relative">
+        <p className="eyebrow text-signal">Your identity</p>
+        <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Your profile.</h1>
+        <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">The source of truth for matching and application drafts. Resume extraction stays a suggestion until you review and save.</p>
+      </div>
+    </motion.section>
     <section className="card flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
       <div className="flex gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-dashed border-border-strong text-muted-foreground"><UploadCloud className="h-[18px] w-[18px]" strokeWidth={1.75} /></div>

@@ -5,7 +5,7 @@ import { ArrowUpRight, Clock3, FileText, MessageSquareText, Star } from 'lucide-
 import { candidate } from '@/lib/api';
 import { safeExternalUrl } from '@/lib/safe-url';
 import { CandidateApplication, ApplicationStatus } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+/* hero replaces PageHeader */
 import { PageLoader } from '@/components/ui/spinner';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -37,8 +37,15 @@ const Applications: React.FC = () => {
   const applications: CandidateApplication[] = data?.data || [];
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Application tracker" description="Record each step from saved role through interview, offer and joining. Status history is kept for every change." />
+    <div className="space-y-6">
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+        <div className="relative">
+          <p className="eyebrow text-signal">Track your journey</p>
+          <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Application tracker.</h1>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">From saved role to offer and joining - every step, status, and note in one clear place.</p>
+        </div>
+      </motion.section>
       {isLoading ? (
         <PageLoader label="Loading application history…" />
       ) : error ? (

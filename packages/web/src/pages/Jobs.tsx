@@ -5,7 +5,7 @@ import { BriefcaseBusiness, Search, SlidersHorizontal } from 'lucide-react';
 import { candidate } from '@/lib/api';
 import { JobCard } from '@/components/candidate/JobCard';
 import { PageLoader } from '@/components/ui/spinner';
-import { PageHeader } from '@/components/ui/page-header';
+/* PageHeader replaced by premium hero */
 import { EmptyState } from '@/components/ui/empty-state';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -48,12 +48,20 @@ const Jobs: React.FC = () => {
   const setFilter = (key: string, value: unknown) => setFilters((current) => ({ ...current, [key]: value, page: 1 }));
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Discover jobs" description="Search all trusted recent listings. Your profile match score is shown on each job when your profile is available." />
-      <form onSubmit={submit} className="card grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_200px_170px_auto] md:items-end">
+    <div className="space-y-6">
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
+        <div className="relative">
+          <p className="eyebrow text-signal">Discover opportunities</p>
+          <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Find your next role.</h1>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">Search trusted recent listings. Your profile match score appears on each job when your profile is ready.</p>
+        </div>
+      </motion.section>
+
+      <motion.form initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE, delay: 0.05 }} onSubmit={submit} className="card grid gap-3 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_200px_170px_auto] md:items-end">
         <label className="relative block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Role, company, or skill" className="input pl-9" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Role, company, or skill" className="input pl-10" />
         </label>
         <label className="relative">
           <span className="sr-only">Location</span>
@@ -68,8 +76,8 @@ const Jobs: React.FC = () => {
             <option value="onsite">On-site</option>
           </select>
         </label>
-        <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"><Search className="h-4 w-4" />Search</button>
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 md:col-span-4">
+        <button type="submit" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-hover hover:shadow-[0_8px_20px_-8px_hsl(var(--primary)/0.45)]"><Search className="h-4 w-4" />Search</button>
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 md:col-span-4">
           <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
           <span className="eyebrow">Posted within</span>
           {[7, 14, 30].map((days) => (
@@ -77,14 +85,14 @@ const Jobs: React.FC = () => {
               key={days}
               type="button"
               onClick={() => setFilter('days', days)}
-              className={`rounded-md border px-2.5 py-1 font-mono text-[11px] tabular-nums transition-colors ${filters.days === days ? 'border-signal/40 bg-signal-soft/50 text-foreground' : 'border-border text-muted-foreground hover:border-border-strong hover:text-foreground'}`}
+              className={`rounded-lg border px-3 py-1.5 font-mono text-[11px] tabular-nums transition-all ${filters.days === days ? 'border-signal/30 bg-signal-soft text-signal shadow-sm' : 'border-border text-muted-foreground hover:border-border-strong hover:text-foreground hover:bg-accent/50'}`}
             >
               {days} days
             </button>
           ))}
           <span className="ml-auto font-mono text-[11px] text-muted-foreground/80">Sorted by recent</span>
         </div>
-      </form>
+      </motion.form>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }} className="flex items-center justify-between">
         <p className="font-mono text-[11px] tabular-nums text-muted-foreground"><span className="text-foreground">{data?.pagination.total ?? 0}</span> matching jobs</p>
         {error && <span className="text-xs text-destructive">{(error as Error).message}</span>}

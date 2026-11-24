@@ -353,7 +353,7 @@ const Landing: React.FC = () => {
                   <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">Candidate workspace · public preview</span>
                 </div>
                 <h1 id="hero-heading" className="mt-6 max-w-xl text-[42px] font-semibold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-[56px] lg:text-[64px]">
-                  A job search,
+                  <span className="text-[hsl(20,40%,12%)] dark:text-[#EFDECD]">A job search,</span>
                   <span className="block text-signal">crafted with clarity.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-muted-foreground">

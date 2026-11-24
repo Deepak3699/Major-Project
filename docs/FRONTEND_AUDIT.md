@@ -30,10 +30,10 @@ Admin-only pages are route-guarded on the client **and** protected again on the 
 
 Documented in `packages/web/DESIGN_SPEC.md` and implemented with semantic Tailwind tokens:
 
-- Editorial instrument-panel layout: mono eyebrows, tight display type, restrained rules.
-- Ink/paper buttons, square-ish corners, crisp borders, low elevation.
-- Single `signal` ember accent; success/warning/danger/destructive soft variants.
-- Light and dark themes through CSS variables; no gradients, glassmorphism, neon or emoji.
+- Blue Atlas layout: mono eyebrows, tight display type, restrained rules.
+- Blue primary buttons with white labels, white cards, navy ink, crisp borders, low elevation.
+- Single `signal` blue accent; success/warning/danger/destructive soft variants.
+- Light and dark themes through CSS variables (cool paper / navy); no gradients, glassmorphism, neon or emoji.
 - Shared primitives under `components/ui`: button, input, textarea, select, badge, card, modal, toast, spinner, empty-state, stat-card, page-header, table, tabs, avatar, skeleton.
 
 ## 5. State and data
@@ -75,4 +75,4 @@ Gaps:
 
 `AuthShell.tsx` was restyled to the same flat ink/paper language, with a "Back to preview" link added to both sign-in and registration. All test-visible form copy and handlers are unchanged.
 
-The layout and component patterns were cross-checked against the owner-supplied reference image in `Doccumentation/` (welcome banner, profile completion ring and checklist, compact stat row, recommended-job cards with match badges, application progress stepper, preparation-centre tiles, credits/plan cards, sidebar career tagline). Per the owner's decision, only the information architecture and card patterns were adopted: the warm editorial tokens, flat surfaces and no-gradient rule from `DESIGN_SPEC.md` remain in force, so no blue palette, hero photograph or gradient was copied.
+The layout and component patterns were cross-checked against the owner-supplied reference image in `Doccumentation/` (welcome banner, profile completion ring and checklist, compact stat row, recommended-job cards with match badges, application progress stepper, preparation-centre tiles, credits/plan cards, sidebar career tagline). The owner first asked for layout-only adoption, then explicitly approved switching the token palette. The design system is now the owner-approved **Blue Atlas** system: cool paper, navy ink, blue primary/signal, with the reference image's information architecture. Gradients, glassmorphism and emoji remain banned.

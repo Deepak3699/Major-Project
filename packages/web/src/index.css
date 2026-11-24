@@ -11,144 +11,143 @@
 
 @layer base {
   :root {
-    /* Warm paper light theme */
-    --background: 44 24% 97%;          /* warm off-white paper */
-    --surface: 0 0% 100%;              /* card white */
-    --foreground: 30 9% 11%;           /* warm ink */
-    --muted: 45 14% 93%;
-    --muted-foreground: 31 7% 42%;
-    --accent: 44 16% 94%;
-    --accent-foreground: 30 9% 11%;
-    --border: 42 12% 88%;              /* hairline */
-    --border-strong: 40 10% 78%;
-    --input: 42 12% 86%;
-    --ring: 21 90% 48%;                /* ember focus */
+    /* Hiregen Blue — light theme: cool paper, deep navy ink, one blue accent */
+    --background: 210 40% 98%;
+    --surface: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 214 32% 96%;
+    --accent-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --border-strong: 213 20% 82%;
+    --input: 214 32% 89%;
+    --ring: 221 83% 48%;
 
-    --primary: 30 9% 11%;              /* ink button */
-    --primary-foreground: 45 24% 97%;  /* paper text */
-    --primary-hover: 30 8% 22%;
-    --primary-soft: 40 16% 93%;
+    --primary: 221 83% 48%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 221 83% 40%;
+    --primary-soft: 214 100% 96%;
 
-    --secondary: 44 14% 93%;
-    --secondary-foreground: 30 9% 11%;
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 222 47% 11%;
 
-    --destructive: 2 72% 46%;
+    --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-soft: 4 62% 95%;
+    --destructive-soft: 0 86% 97%;
 
     --success: 152 52% 30%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 148 38% 93%;
+    --success-soft: 150 40% 94%;
 
     --warning: 33 88% 40%;
     --warning-foreground: 0 0% 100%;
-    --warning-soft: 38 78% 93%;
+    --warning-soft: 38 92% 94%;
 
-    --info: 204 58% 40%;
+    --info: 214 90% 46%;
     --info-foreground: 0 0% 100%;
-    --info-soft: 202 48% 93%;
+    --info-soft: 214 100% 96%;
 
-    /* signal — the one saturated ember accent, used surgically */
-    --signal: 20 88% 46%;
+    /* signal — the one saturated blue accent, used surgically */
+    --signal: 221 83% 48%;
     --signal-foreground: 0 0% 100%;
-    --signal-soft: 21 92% 95%;
+    --signal-soft: 214 100% 96%;
 
-    --sidebar: 44 20% 98%;
-    --sidebar-foreground: 31 7% 42%;
-    --sidebar-muted: 44 16% 94%;
-    --sidebar-border: 42 12% 89%;
-    --sidebar-active: 30 9% 11%;
-    --sidebar-active-foreground: 44 24% 97%;
+    --sidebar: 210 40% 99%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-muted: 214 32% 96%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-active: 222 47% 13%;
+    --sidebar-active-foreground: 0 0% 100%;
 
-    --hot: 2 72% 46%;
-    --hot-soft: 4 62% 95%;
+    --hot: 0 72% 46%;
+    --hot-soft: 0 86% 97%;
     --warm: 33 88% 40%;
-    --warm-soft: 38 78% 93%;
-    --cold: 204 58% 40%;
-    --cold-soft: 202 48% 93%;
+    --warm-soft: 38 92% 94%;
+    --cold: 214 90% 46%;
+    --cold-soft: 214 100% 96%;
 
-    /* Legacy gradient hooks — kept so far pages still resolve them.
-       In the new system they resolve to flat editorial values. */
+    /* Legacy gradient hooks — kept so far pages still resolve them. */
     --grad-primary: none;
     --grad-mesh: none;
 
-    /* Editorial elevation: hairline first, shadow only to detach */
-    --glow-primary: 0 1px 2px rgb(28 25 23 / 0.12);
-    --glow-soft: 0 0 0 0.5px rgb(28 25 23 / 0.03), 0 1px 2px rgb(28 25 23 / 0.04);
-    --shadow-pop: 0 12px 32px -12px rgb(28 25 23 / 0.18);
-    --shadow-drawer: 16px 0 48px -24px rgb(28 25 23 / 0.2);
+    /* Flat elevation: hairline borders with a near-invisible lift */
+    --glow-primary: 0 1px 2px rgb(15 23 42 / 0.12);
+    --glow-soft: 0 0 0 0.5px rgb(15 23 42 / 0.03), 0 1px 2px rgb(15 23 42 / 0.04);
+    --shadow-pop: 0 12px 32px -12px rgb(15 23 42 / 0.22);
+    --shadow-drawer: 16px 0 48px -24px rgb(15 23 42 / 0.24);
 
     --radius: 0.625rem;
-    --grain-opacity: 0.028;
+    --grain-opacity: 0.022;
     --grain-mix: multiply;
   }
 
   html.dark {
     color-scheme: dark;
-    /* Warm graphite dark theme — no blue cast */
-    --background: 28 8% 8%;            /* near-black warm */
-    --surface: 30 7% 11.5%;
-    --foreground: 44 22% 92%;
-    --muted: 30 6% 16%;
-    --muted-foreground: 38 9% 60%;
-    --accent: 30 6% 18%;
-    --accent-foreground: 44 22% 92%;
-    --border: 32 7% 17%;
-    --border-strong: 34 6% 26%;
-    --input: 32 7% 17%;
-    --ring: 20 95% 62%;
+    /* Hiregen Blue — dark theme: deep navy surfaces, cool paper text */
+    --background: 222 47% 8%;
+    --surface: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --muted: 217 33% 16%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 98%;
+    --border: 217 33% 20%;
+    --border-strong: 216 20% 30%;
+    --input: 217 33% 20%;
+    --ring: 213 94% 68%;
 
-    --primary: 44 22% 91%;             /* paper button on ink */
-    --primary-foreground: 30 9% 10%;
-    --primary-hover: 44 26% 100%;
-    --primary-soft: 30 6% 17%;
+    --primary: 213 94% 68%;
+    --primary-foreground: 222 47% 11%;
+    --primary-hover: 213 94% 76%;
+    --primary-soft: 217 33% 18%;
 
-    --secondary: 30 6% 16%;
-    --secondary-foreground: 44 22% 92%;
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
 
-    --destructive: 2 68% 62%;
-    --destructive-foreground: 28 8% 8%;
-    --destructive-soft: 2 32% 15%;
+    --destructive: 0 72% 62%;
+    --destructive-foreground: 222 47% 8%;
+    --destructive-soft: 0 32% 16%;
 
     --success: 150 44% 56%;
-    --success-foreground: 28 8% 8%;
+    --success-foreground: 222 47% 8%;
     --success-soft: 152 24% 14%;
 
     --warning: 38 82% 60%;
-    --warning-foreground: 28 8% 8%;
+    --warning-foreground: 222 47% 8%;
     --warning-soft: 36 32% 14%;
 
-    --info: 202 62% 62%;
-    --info-foreground: 28 8% 8%;
-    --info-soft: 202 30% 14%;
+    --info: 213 94% 68%;
+    --info-foreground: 222 47% 8%;
+    --info-soft: 217 33% 18%;
 
-    --signal: 20 96% 58%;
-    --signal-foreground: 20 88% 8%;
-    --signal-soft: 20 34% 15%;
+    --signal: 213 94% 68%;
+    --signal-foreground: 222 47% 8%;
+    --signal-soft: 217 33% 18%;
 
-    --sidebar: 28 7% 9.5%;
-    --sidebar-foreground: 38 9% 60%;
-    --sidebar-muted: 30 6% 15%;
-    --sidebar-border: 32 6% 15%;
-    --sidebar-active: 44 22% 91%;
-    --sidebar-active-foreground: 30 9% 10%;
+    --sidebar: 222 47% 9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-muted: 217 33% 16%;
+    --sidebar-border: 217 33% 18%;
+    --sidebar-active: 213 94% 68%;
+    --sidebar-active-foreground: 222 47% 11%;
 
-    --hot: 2 68% 62%;
-    --hot-soft: 2 32% 15%;
+    --hot: 0 72% 62%;
+    --hot-soft: 0 32% 16%;
     --warm: 38 82% 60%;
     --warm-soft: 36 32% 14%;
-    --cold: 202 62% 62%;
-    --cold-soft: 202 30% 14%;
+    --cold: 213 94% 68%;
+    --cold-soft: 217 33% 18%;
 
     --grad-primary: none;
     --grad-mesh: none;
 
     --glow-primary: 0 1px 2px rgb(0 0 0 / 0.4);
-    --glow-soft: 0 0 0 0.5px rgb(255 255 255 / 0.02), 0 1px 2px rgb(0 0 0 / 0.3);
+    --glow-soft: 0 0 0 0.5px rgb(148 163 184 / 0.06), 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.55);
     --shadow-drawer: 16px 0 48px -24px rgb(0 0 0 / 0.6);
 
-    --grain-opacity: 0.05;
+    --grain-opacity: 0.04;
     --grain-mix: screen;
   }
 

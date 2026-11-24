@@ -1,9 +1,13 @@
-# Hiregen UI Design Spec — "Editorial Instrument Panel"
+# Hiregen UI Design Spec — "Blue Atlas"
 
-This is the binding design language for the full UI redesign. The foundation
+This is the binding design language for the full UI. The foundation
 (`src/index.css`, `tailwind.config.js`) and all `components/ui/*` primitives +
 chrome (`Sidebar`, `Header`, `Layout`, `AuthShell`, `Logo`, `CommandPalette`,
-`JobCard`) are ALREADY rewritten. Your job is to restyle pages to match.
+`JobCard`) implement it. Pages must use the same tokens.
+
+The palette is the owner-approved blue system from the reference image: cool
+near-white paper, deep navy ink, a single saturated blue for actions and
+highlights, and flat white cards. It works in both light and dark themes.
 
 ## Golden rules (non-negotiable)
 
@@ -15,24 +19,22 @@ chrome (`Sidebar`, `Header`, `Layout`, `AuthShell`, `Logo`, `CommandPalette`,
    and /password/i, a button matching /sign in/i, and error text /invalid credentials/i.
    `Duplicates.test.tsx` requires: "No duplicate candidates found.", "Failed to load
    duplicates", "Retry", "Merge into this", "Merge these leads?", "Merge leads".
-3. **Semantic tokens only.** Never `bg-white`, `text-black`, `text-gray-*`,
-   `bg-gray-*`, or blue-based hexes. Use: `bg-surface`, `bg-background`,
-   `text-foreground`, `text-muted-foreground`, `bg-muted`, `border-border`,
-   `border-border-strong`, `bg-accent`, status tokens (`success`, `warning`,
-   `info`, `destructive`, `signal` + their `-soft` forms, `hot/warm/cold`).
-   Everything must look intentional in BOTH light and dark themes — verify your
-   classes do not hardcode light values; `dark:` overrides are unnecessary because
-   index.css tokens flip for you.
+3. **Semantic tokens only.** Never raw hex values or ad-hoc `text-gray-*` /
+   `bg-gray-*` classes. Use: `bg-surface`, `bg-background`, `text-foreground`,
+   `text-muted-foreground`, `bg-muted`, `border-border`, `border-border-strong`,
+   `bg-accent`, status tokens (`success`, `warning`, `info`, `destructive`,
+   `signal` + their `-soft` forms). Everything must look intentional in BOTH
+   light and dark themes — verify your classes do not hardcode light values;
+   `dark:` overrides are unnecessary because index.css tokens flip for you.
 4. **Banned (AI-slop tells):** `rounded-2xl`/`rounded-3xl` on cards (use `rounded-lg`
    / `rounded-xl` max), gradients (`bg-gradient-*`, `bg-[image:var(--grad-*)]`,
    `.glass` classes), glow shadows (`shadow-glow*`, `shadow-card-hover`,
-   `shadow-float` except on real popovers), emoji, `text-gradient`,
-   `bg-primary/15` text-on-tinted active states, decorative blobs/rings,
-   exclamation-mark marketing copy, "Powered by AI" style phrases.
-5. **The one saturated accent is `signal` (ember).** Use it surgically: links on
-   hover underline (`decoration-signal`), focus cues, a single primary metric or
-   CTA emphasis, active filter ticks. Never large fills. Primary buttons are the
-   ink/paper `Button` default variant.
+   `shadow-float` except on real popovers), emoji, `text-gradient`, decorative
+   blobs/rings, exclamation-mark marketing copy, "Powered by AI" style phrases.
+5. **The one saturated accent is `signal` (blue).** Use it surgically: primary
+   buttons, links on hover, the active navigation pill, focus cues, a single
+   primary metric, match badges. Keep large fills to the ink/navy surfaces;
+   do not paint whole panels in signal blue.
 
 ## Vocabulary
 

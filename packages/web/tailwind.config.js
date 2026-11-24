@@ -59,12 +59,12 @@ module.exports = {
         surface: 'hsl(var(--surface))',
         'border-strong': 'hsl(var(--border-strong))',
         sidebar: {
-          DEFAULT: 'hsl(var(--surface))',
-          foreground: 'hsl(var(--foreground))',
-          muted: 'hsl(var(--muted))',
-          border: 'hsl(var(--border))',
-          active: 'hsl(var(--primary-soft))',
-          'active-foreground': 'hsl(var(--primary-hover))',
+          DEFAULT: 'hsl(var(--sidebar))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          muted: 'hsl(var(--sidebar-muted))',
+          border: 'hsl(var(--sidebar-border))',
+          active: 'hsl(var(--sidebar-active))',
+          'active-foreground': 'hsl(var(--sidebar-active-foreground))',
         },
         hot: {
           DEFAULT: 'hsl(var(--destructive))',

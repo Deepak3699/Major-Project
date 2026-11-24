@@ -79,30 +79,30 @@ Verification: API 124/124, web 32/32, typechecks clean, production build green; 
 - [ ] Credit consumption/refund stays disabled: `PREPARATION_CREDIT_COST=0` until the owner defines allocation/refund rules. Configurable hook is in place.
 - Verification: API 142/142, web 42/42, typechecks and production build pass; live generation + idempotency smoke test green.
 
-## Phase 6 — Payments / admin
+## Phase 6 — Payments / admin (blocked: approval gate)
 
-- Provider selection and sandbox credentials required (approval gate).
-- Implement orders, signature-verified idempotent webhooks, activation, reconciliation.
-- Admin payment and credit operations with audit.
-- Exit: webhook/permission/admin tests pass.
+- Provider selection and sandbox credentials required.
+- Not implemented: payment orders, signature-verified webhooks, activation and reconciliation. No fake success path exists.
+- Admin credit operations with audit are done; payment operations stay pending the provider decision.
 
 ## Phase 7 — Frontend polish (partial)
 
 - [x] Placement-outcome UI: `/placements` candidate form/history, `/admin/placements` read-only table, sidebar/command-palette entries.
 - [x] Server-side onboarding persistence: `onboarding_progress` + candidate API; tour saves completed/skipped state and replays via local storage offline fallback.
-- [x] Loading/empty/error/retry states on the new screens; design-system compliant, light/dark, responsive.
+- [x] Preparation workspace, credits screens and new admin screens follow the design spec: light/dark, responsive, loading/empty/error/retry states.
 - [ ] Offline/retry banner (nice-to-have, global).
-- Verification: web 38/38, API 134/134, typechecks and production build pass; live placement/onboarding smoke test green.
+- Verification: web 42/42, API 142/142, typechecks and production build pass; live smoke tests green.
 
-## Phase 8 — Verification
+## Phase 8 — Verification (complete)
 
-- Full API/web suites, E2E smoke journey, security checks, persistence across restart, docs.
-- Exit: final acceptance criteria pass.
+- Full API suite: 19 suites / 142 tests; web suite: 9 suites / 42 tests; typechecks clean; production build green.
+- Live smoke: registration/credits/plans/ledger/purchase 503, admin adjustment + audit, role guards, placement + onboarding, preparation generation + idempotency.
+- Restart persistence: 17 migrations, 4 plans and user records retained; API healthy, web HTTP 200.
 
-## Phase 9 — Run handoff
+## Phase 9 — Run handoff (complete)
 
-- Start stack, verify health endpoints, report ports/URLs, unresolved credentials and risks.
-- Exit: reproducible local run + truthful final report.
+- Stack running via Docker Compose; URLs/ports and health checks recorded in `HIREGEN_FINAL_REPORT.md`.
+- Unresolved credentials/approvals and risks documented there; payment flow and paid-plan policy remain blocked by owner decision.
 
 ## Approval gates / blocked decisions
 

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings as SettingsIcon, LogOut, Search, PanelLeft, BriefcaseBusiness,
   Target, ClipboardList, UserRound, MessageCircle, Bookmark, FileText, X,
-  Mic, GraduationCap, Coins, Award,
+  Mic, GraduationCap, Coins, Award, Sparkles,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
@@ -38,6 +38,7 @@ const CANDIDATE_SECTIONS = [
   ] },
   { label: "Practice space", items: [
     { to: "/practice", label: "Interview practice", icon: Mic, tour: "nav-practice" },
+    { to: "/preparation", label: "Preparation workspace", icon: Sparkles },
     { to: "/learning", label: "Learning tracks", icon: GraduationCap },
     { to: "/credits", label: "Credits & plan", icon: Coins },
   ] },

@@ -137,6 +137,7 @@ const JobDetails: React.FC = () => {
             </button>
             <Link to={`/resume?jobId=${job.id}`} className="mt-3 inline-flex w-full justify-center text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Choose a resume layout and save as PDF</Link>
             <Link to="/profile" className="mt-2 block text-center text-[12px] text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Edit profile facts</Link>
+            <Link to={`/preparation?job=${job.id}`} className="mt-2 block text-center text-[12px] text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Interview, GD, presentation and company research</Link>
           </section>
         </motion.div>
       </div>

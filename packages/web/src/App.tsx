@@ -30,6 +30,7 @@ const PracticeSession = lazy(() => import('@/pages/PracticeSession'));
 const Learning = lazy(() => import('@/pages/Learning'));
 const Credits = lazy(() => import('@/pages/Credits'));
 const Placements = lazy(() => import('@/pages/Placements'));
+const Preparation = lazy(() => import('@/pages/Preparation'));
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminJobs = lazy(() => import('@/pages/AdminJobs'));
 const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
@@ -88,6 +89,7 @@ function App() {
       <Route path="learning" element={isCandidate ? <Learning /> : <Navigate to="/dashboard" replace />} />
       <Route path="credits" element={isCandidate ? <Credits /> : <Navigate to="/dashboard" replace />} />
       <Route path="placements" element={isCandidate ? <Placements /> : <Navigate to="/dashboard" replace />} />
+      <Route path="preparation" element={isCandidate ? <Preparation /> : <Navigate to="/dashboard" replace />} />
       <Route path="profile" element={isCandidate ? <Profile /> : <Navigate to="/dashboard" replace />} />
       <Route path="settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/feedback" element={isAdmin ? <AdminFeedback /> : <Navigate to="/dashboard" replace />} />

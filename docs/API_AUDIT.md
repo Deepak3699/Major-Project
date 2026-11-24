@@ -95,3 +95,10 @@ All Fastify routes are mounted under `/api` by `server.ts`. Authentication is a 
 - Admin: `GET /admin/placements` (read-only, searchable, paginated).
 - A linked application must belong to the caller; company/role are derived from the application when not supplied. Placement reports never change role, plan, credits or application status.
 - Tests: `packages/api/test/engagement.test.ts` (8 tests) and `packages/web/src/pages/Placements.test.tsx` (6 tests).
+
+## 10. Implementation update — preparation (Phase 5)
+
+- Candidate-only: `POST /candidate/preparation/generate` (`job_id`, `module`, optional `idempotency_key`), `GET /candidate/preparation/artifacts` (job/module filters + pagination), `GET /candidate/preparation/artifacts/:id` (owner-scoped).
+- Only published, trusted jobs from the candidate feed can be prepared for. Candidate profile facts and job/company records are sanitised before reaching the provider.
+- Artifacts are resumable and idempotent; replaying a key returns the stored artifact without a second charge or generation. Credit cost is 0 by default and is refunded idempotently on failure only when explicitly configured.
+- Tests: `packages/api/test/preparation.test.ts` (8 tests) and `packages/web/src/pages/Preparation.test.tsx` (4 tests).

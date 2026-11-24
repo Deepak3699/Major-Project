@@ -362,6 +362,32 @@ export interface OnboardingProgress {
   updated_at: string | null;
 }
 
+/* -------------------------- Job preparation -------------------------- */
+
+export type PreparationModule = 'interview_prep' | 'group_discussion' | 'presentation' | 'company_research';
+
+export interface PreparationSource {
+  title: string;
+  url: string;
+  retrieved_at: string;
+  status: 'ingested' | 'unverified';
+}
+
+export interface PreparationArtifact {
+  id: string;
+  user_id: string;
+  job_id: string | null;
+  module: PreparationModule;
+  status: 'pending' | 'ready' | 'failed';
+  payload: Record<string, any>;
+  sources: PreparationSource[];
+  model: string;
+  credits_charged: number;
+  error: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /* ----------------------- AI practice (interviews + learning) ----------------------- */
 
 export type PracticeDifficulty = 'calm' | 'standard' | 'brutal';

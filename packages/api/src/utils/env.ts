@@ -39,6 +39,10 @@ const envSchema = z.object({
   BOOTSTRAP_ADMIN_EMAIL: z.string().optional(),
   BOOTSTRAP_ADMIN_PASSWORD: z.string().optional(),
   PRACTICE_FREE_MONTHLY_LIMIT: z.string().optional(),
+  // Cost of one generated preparation artifact. 0 (default) means the credit
+  // policy is not configured yet and no credits are consumed. Do not set a
+  // non-zero value until the product owner defines allocation/refund rules.
+  PREPARATION_CREDIT_COST: z.string().transform(Number).default('0'),
   // Payment integration is not implemented; the name is surfaced so the UI can
   // honestly report that billing is not configured.
   PAYMENT_PROVIDER: z.string().optional(),

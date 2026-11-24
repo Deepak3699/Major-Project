@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings, LogOut, Zap, CornerDownLeft, Command, BriefcaseBusiness, Target,
-  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap, Coins, Award,
+  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap, Coins, Award, Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { admin } from '@/lib/api';
@@ -58,6 +58,7 @@ export function CommandPalette() {
       { id: 'applications', label: 'Application tracker', icon: <ClipboardList />, group: 'Navigate', run: () => go('/applications') },
     { id: 'placements', label: 'Placement outcomes', icon: <Award />, group: 'Navigate', run: () => go('/placements') },
       { id: 'practice', label: 'Interview practice', icon: <Mic />, group: 'Navigate', run: () => go('/practice') },
+    { id: 'preparation', label: 'Preparation workspace', icon: <Sparkles />, group: 'Navigate', run: () => go('/preparation') },
       { id: 'learning', label: 'Learning tracks', icon: <GraduationCap />, group: 'Navigate', run: () => go('/learning') },
       { id: 'credits', label: 'Credits & plan', icon: <Coins />, group: 'Navigate', run: () => go('/credits') },
       { id: 'profile', label: 'Candidate profile', icon: <UserRound />, group: 'Navigate', run: () => go('/profile') },

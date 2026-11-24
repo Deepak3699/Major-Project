@@ -69,13 +69,15 @@ Verification: API 124/124, web 32/32, typechecks clean, production build green; 
 - Evaluate existing model with known profiles; document quality; keep explainability.
 - Exit: known-profile evaluation stable.
 
-## Phase 5 — AI preparation
+## Phase 5 — AI preparation (partial: content modules done, credit policy blocked)
 
-- Preserve interview prep + practice/bot (done).
-- Add company-research artifact with source URLs/timestamps.
-- Add GD preparation and presentation preparation modules.
-- Integrate credit consumption/refund **only after** policy decision; make cost configurable.
-- Exit: lifecycle + failure/refund tests pass.
+- [x] Preserved interview prep + practice/bot (existing voice interview and adaptive follow-ups unchanged).
+- [x] Added job-specific preparation modules: interview prep, group discussion, presentation, company research.
+- [x] Source URLs and retrieval timestamps retained; missing evidence is labelled, no fabricated company facts or citations.
+- [x] Server-side Gemini with strict validation and complete deterministic fallback; untrusted inputs sanitised.
+- [x] Artifacts persisted, listed, fetched and idempotent; UI `/preparation` with loading/empty/error/retry states.
+- [ ] Credit consumption/refund stays disabled: `PREPARATION_CREDIT_COST=0` until the owner defines allocation/refund rules. Configurable hook is in place.
+- Verification: API 142/142, web 42/42, typechecks and production build pass; live generation + idempotency smoke test green.
 
 ## Phase 6 — Payments / admin
 

@@ -94,3 +94,9 @@ Legacy candidate accounts created before this change are provisioned on their fi
 - Files: `database/schema/tables/210_engagement.sql` and `database/migrations/016_engagement.ts`. Both applied; `pgmigrations` records `016_engagement`.
 
 Note on JSONB writes: postgres.js infers a `jsonb` parameter type from `$n::jsonb` and serialises strings again. New writes therefore use `sql.json(value)` (with a test-friendly fallback) so arrays/objects are stored as real JSON values rather than JSON strings. Legacy rows with string-encoded JSON are left untouched.
+
+## 9. Implementation update — preparation artifacts (Phase 5)
+
+- `preparation_artifacts` — one row per generated artifact (`interview_prep`, `group_discussion`, `presentation`, `company_research`), with `status`, validated JSONB `payload`, JSONB `sources` (URL + retrieval timestamp + verification status), model, `credits_charged` and a unique `idempotency_key`.
+- Files: `database/schema/tables/220_preparation.sql` and `database/migrations/017_preparation.ts`. Both applied; `pgmigrations` records `017_preparation`.
+- `PREPARATION_CREDIT_COST` defaults to 0: no credits are consumed until an owner defines the policy. No existing row was changed.

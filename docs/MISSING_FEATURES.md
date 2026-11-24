@@ -43,13 +43,13 @@ Status legend: **Done**, **Partial**, **Missing**, **Blocked (decision/config)**
 
 | Requirement | Status | Evidence / gap |
 |---|---|---|
-| Interview preparation (role/company-specific) | Partial | Practice question generation uses role + profile; dedicated company research artifact missing |
+| Interview preparation (role/company-specific) | Done | `/preparation` artifact with question bank, answer frameworks, profile talking points and revision plan |
 | Interview bot with follow-ups, answer capture, feedback | Done | Adaptive follow-ups + grading + voice interview |
-| Group discussion (GD) preparation | Missing | Not implemented |
-| Presentation preparation | Missing | Not implemented |
-| Company research with citations | Missing | No artifact/source citations |
-| Provider keys/prompts server-side, untrusted input defense | Done | Server-side Gemini, Zod validation, template fallback |
-| Credit consumption/refund in preparation | Blocked (decision/config) | Practice quota is independent; credit policy undefined. `spendCredits`/`refundCredits` are ready but not wired |
+| Group discussion (GD) preparation | Done | Topics, opening points, balanced arguments, structure, participation tips, evaluation rubric |
+| Presentation preparation | Done | Slide-by-slide outline, speaking notes, likely questions, delivery guidance |
+| Company research with citations | Done | Source URLs + retrieval timestamps; unverified facts explicitly labelled, no invented developments |
+| Provider keys/prompts server-side, untrusted input defense | Done | Server-side Gemini, Zod validation, strict output validation, template fallback, sanitised inputs |
+| Credit consumption/refund in preparation | Blocked (decision/config) | `PREPARATION_CREDIT_COST=0` by default: no amount invented. Configurable hook calls `spendCredits` idempotently and refunds on failure when an owner sets a cost |
 
 ## Engagement / onboarding / admin
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -444,6 +444,19 @@ export const candidate = {
 export const engagementAdmin = {
   placements: async (search = '', limit = 25, offset = 0) =>
     (await api.get('/admin/placements', { params: { search, limit, offset } })).data as CreditPage<PlacementOutcome>,
+};
+
+export const preparation = {
+  artifacts: async (params: { job_id?: string; module?: PreparationModule; limit?: number; offset?: number } = {}) =>
+    (await api.get('/candidate/preparation/artifacts', { params })).data as CreditPage<PreparationArtifact>,
+  artifact: async (id: string) =>
+    (await api.get(`/candidate/preparation/artifacts/${id}`)).data as { artifact: PreparationArtifact },
+  generate: async (jobId: string, module: PreparationModule, idempotencyKey?: string) =>
+    (await api.post('/candidate/preparation/generate', {
+      job_id: jobId,
+      module,
+      idempotency_key: idempotencyKey,
+    })).data as { artifact: PreparationArtifact; already_processed: boolean },
 };
 
 export const practice = {

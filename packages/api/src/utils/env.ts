@@ -35,7 +35,13 @@ const envSchema = z.object({
   CIRCUIT_BREAKER_COOLDOWN_MINUTES: z.string().transform(Number).default('120'),
   ADMIN_EMAIL: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
+  // Brief-mandated bootstrap names. ADMIN_* remain as a documented legacy alias.
+  BOOTSTRAP_ADMIN_EMAIL: z.string().optional(),
+  BOOTSTRAP_ADMIN_PASSWORD: z.string().optional(),
   PRACTICE_FREE_MONTHLY_LIMIT: z.string().optional(),
+  // Payment integration is not implemented; the name is surfaced so the UI can
+  // honestly report that billing is not configured.
+  PAYMENT_PROVIDER: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;

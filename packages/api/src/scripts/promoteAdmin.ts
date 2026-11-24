@@ -11,11 +11,12 @@ import { hashPassword } from '../utils/crypto';
 import { env } from '../utils/env';
 
 async function main() {
-  const targetEmail = (process.argv[2] || env.ADMIN_EMAIL || 'admin@example.com').trim();
-  const password = (process.argv[3] || env.ADMIN_PASSWORD || 'change-me-please-32').trim();
+  const targetEmail = String(process.argv[2] || env.BOOTSTRAP_ADMIN_EMAIL || env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = String(process.argv[3] || env.BOOTSTRAP_ADMIN_PASSWORD || env.ADMIN_PASSWORD || '').trim();
 
   if (!targetEmail) {
     console.error('❌ Please provide an email: npm run make:admin your-email@example.com');
+    process.exitCode = 1;
     return;
   }
 
@@ -29,21 +30,24 @@ async function main() {
     console.info('\n' + '═'.repeat(60));
     console.info(`🎉 \x1b[1m\x1b[32mSUCCESS: "${targetEmail}" is now an ADMIN!\x1b[0m`);
     console.info('═'.repeat(60));
-    console.info('👉 Ab aap browser (http://localhost:5173) par is email se login karein.');
-    console.info('   Aapko saare leads, admin controls aur settings dikhenge.\n');
+    console.info('👉 Sign in with the existing password for this account.\n');
   } else {
+    if (!password || password.length < 8) {
+      console.error('❌ A new admin needs a password of at least 8 characters (third argument or BOOTSTRAP_ADMIN_PASSWORD).');
+      process.exitCode = 1;
+      return;
+    }
     const hash = await hashPassword(password);
     await sql`
       INSERT INTO users (email, password_hash, role, api_keys)
       VALUES (${targetEmail}, ${hash}, 'admin', '{}')
-      ON CONFLICT (email) DO UPDATE SET role = 'admin'`;
+      ON CONFLICT (email) DO NOTHING`;
     console.info('\n' + '═'.repeat(60));
     console.info(`🎉 \x1b[1m\x1b[32mSUCCESS: New ADMIN user created!\x1b[0m`);
     console.info('═'.repeat(60));
     console.info(`  • Email:    \x1b[36m${targetEmail}\x1b[0m`);
-    console.info(`  • Password: \x1b[36m${password}\x1b[0m`);
     console.info('  • Role:     \x1b[32madmin\x1b[0m');
-    console.info('👉 Ab aap browser (http://localhost:5173) par login karein.\n');
+    console.info('👉 Sign in with the password you supplied.\n');
   }
 }
 

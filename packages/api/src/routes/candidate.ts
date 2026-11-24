@@ -38,7 +38,7 @@ function currentUser(request: FastifyRequest) {
 }
 
 function isCandidate(request: FastifyRequest, reply: FastifyReply): boolean {
-  if (currentUser(request).role === 'candidate') return true;
+  if (['candidate', 'user'].includes(currentUser(request).role)) return true;
   reply.status(403).send({ error: 'Candidate account required' });
   return false;
 }
@@ -189,10 +189,10 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
     const parsed = z.object({ password:z.string().min(1).max(256) }).safeParse(request.body);
     if (!parsed.success) return reply.status(400).send({ error:'Enter your password to confirm account deletion' });
     const user = currentUser(request);
-    const rows = await getDB().unsafe('SELECT password_hash FROM users WHERE id=$1 AND role=\'candidate\'', [user.id]);
+    const rows = await getDB().unsafe("SELECT password_hash FROM users WHERE id=$1 AND role IN ('candidate','user')", [user.id]);
     if (!rows.length || !(await comparePassword(parsed.data.password,(rows[0] as any).password_hash))) return reply.status(401).send({ error:'Password did not match' });
     await logAuditEvent({ user_id:user.id, action:'delete_candidate_account', resource_type:'user', resource_id:user.id, details:{ reason:'candidate_self_service_request' } });
-    await getDB().unsafe('DELETE FROM users WHERE id=$1 AND role=\'candidate\'', [user.id]);
+    await getDB().unsafe("DELETE FROM users WHERE id=$1 AND role IN ('candidate','user')", [user.id]);
     return { deleted:true };
   });
 
@@ -496,7 +496,7 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
     const sql = getDB();
     const results = await Promise.all([
       sql.unsafe("SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE review_status='published') AS published, COUNT(*) FILTER (WHERE review_status='pending') AS pending, COUNT(*) FILTER (WHERE review_status='quarantined') AS quarantined, COUNT(*) FILTER (WHERE COALESCE(posted_at,first_seen_at)>=NOW()-INTERVAL '7 days') AS fresh_7d FROM job_postings WHERE is_active=true"),
-      sql.unsafe("SELECT COUNT(*) AS total FROM users WHERE role='candidate'"),
+      sql.unsafe("SELECT COUNT(*) AS total FROM users WHERE role IN ('candidate','user')"),
       sql.unsafe('SELECT status,COUNT(*) AS count FROM applications GROUP BY status'),
       sql.unsafe('SELECT source_name,consecutive_failures,last_success_at,last_failure_reason,circuit_open_until FROM source_health ORDER BY source_name'),
       sql.unsafe('SELECT COUNT(*) AS total FROM candidate_feedback WHERE moderation_status=\'pending\''),

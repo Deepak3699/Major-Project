@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from 'react-query';
-import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, FileText, GraduationCap, MapPin, Mic, Target, TrendingUp } from 'lucide-react';
-import { candidate, practice } from '@/lib/api';
+import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, Coins, FileText, GraduationCap, MapPin, Mic, Target, TrendingUp } from 'lucide-react';
+import { candidate, practice, credits } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { JobCard } from '@/components/candidate/JobCard';
 import { PageLoader } from '@/components/ui/spinner';
@@ -30,6 +30,7 @@ const CandidateDashboard: React.FC = () => {
   // warms nothing new and stays in sync after a session is graded.
   const { data: subData } = useQuery('practice-subscription', practice.subscription);
   const { data: sessionsData } = useQuery('practice-sessions', practice.sessions);
+  const { data: creditsData } = useQuery('credits-overview', credits.overview);
   if (isLoading) return <PageLoader label="Loading your job workspace…" />;
 
   const profile = profileData?.profile;
@@ -152,6 +153,28 @@ const CandidateDashboard: React.FC = () => {
             <div className="mt-2 space-y-0.5">
               <QuickAction to="/practice" icon={Mic} label="Rehearse a mock interview" />
               <QuickAction to="/learning" icon={GraduationCap} label="Open learning tracks" />
+            </div>
+          </section>
+
+          {/* Preparation credits */}
+          <section className="card p-5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="eyebrow">Preparation credits</p>
+              <Coins className="h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
+            </div>
+            <p className="mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] text-foreground tabular-nums">
+              {creditsData?.wallet.balance ?? '—'}
+            </p>
+            <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">
+              {creditsData ? `${creditsData.plan.name} plan` : 'loading plan'}
+            </p>
+            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
+              {creditsData?.wallet.signup_granted
+                ? 'Your 2-credit welcome grant is active. Every change is recorded in the ledger.'
+                : 'Server-tracked preparation credits with a full transaction history.'}
+            </p>
+            <div className="mt-2 space-y-0.5">
+              <QuickAction to="/credits" icon={Coins} label="Open credits & plan" />
             </div>
           </section>
 

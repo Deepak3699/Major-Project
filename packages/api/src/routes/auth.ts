@@ -5,6 +5,7 @@ import { getRedis } from '../utils/redis';
 import { hashPassword, comparePassword } from '../utils/crypto';
 import { authenticate } from '../middleware/auth';
 import { env } from '../utils/env';
+import { provisionCandidateAccount } from '../utils/credits';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -31,20 +32,32 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       [email],
     );
 
-    // If user doesn't exist yet, check if it's default admin credentials and auto-bootstrap
+    // If the user doesn't exist yet, allow a one-time bootstrap from explicit
+    // environment credentials. There is no hardcoded default, and an existing
+    // account is never silently promoted to admin.
     if (!user || user.length === 0) {
-      const defaultAdminEmail = (env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
-      const defaultAdminPass = (env.ADMIN_PASSWORD || 'change-me-please-32').trim();
+      const bootstrapEmail = String(env.BOOTSTRAP_ADMIN_EMAIL || env.ADMIN_EMAIL || '').trim().toLowerCase();
+      const bootstrapPass = String(env.BOOTSTRAP_ADMIN_PASSWORD || env.ADMIN_PASSWORD || '').trim();
 
-      if (email.toLowerCase() === defaultAdminEmail && password === defaultAdminPass) {
+      if (!bootstrapEmail || !bootstrapPass) {
+        return reply.status(401).send({ error: 'Invalid credentials. Please check your email and password.' });
+      }
+
+      if (email.toLowerCase() === bootstrapEmail && password === bootstrapPass) {
         const hash = await hashPassword(password);
-        user = await sql.unsafe(
+        const created = await sql.unsafe(
           `INSERT INTO users (email, password_hash, role, api_keys)
            VALUES ($1, $2, 'admin', '{}')
-           ON CONFLICT (email) DO UPDATE SET role = 'admin'
+           ON CONFLICT (email) DO NOTHING
            RETURNING id, email, password_hash, role`,
           [email, hash],
         );
+        if (!created || created.length === 0) {
+          return reply.status(401).send({
+            error: 'An account with this email already exists. Use the administrator bootstrap script to review access.',
+          });
+        }
+        user = created;
       } else {
         return reply.status(401).send({ error: 'Invalid credentials. Please check your email and password.' });
       }
@@ -92,7 +105,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     if (!parseResult.success) {
       return reply.status(400).send({ error: 'Invalid input', details: parseResult.error.issues });
     }
-    const { email, password } = parseResult.data;
+    const email = parseResult.data.email.trim().toLowerCase();
+    const { password } = parseResult.data;
     const sql = getDB();
 
     const existing = await sql.unsafe(
@@ -106,17 +120,38 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const hashedPassword = await hashPassword(password);
 
-    const result = await sql.unsafe(
-      `INSERT INTO users (email, password_hash, role, api_keys)
-       VALUES ($1, $2, 'candidate', '{}')
-       RETURNING id, email, role`,
-      [email, hashedPassword],
-    );
+    // User + FREE plan + wallet + exactly one 2-credit grant commit together.
+    // The unique signup-grant index makes retries safe even under a race.
+    const run = async (tx: { unsafe: (query: string, params?: any[]) => Promise<any[]> }) => {
+      const inserted = await tx.unsafe(
+        `INSERT INTO users (email, password_hash, role, api_keys)
+         VALUES ($1, $2, 'user', '{}')
+         RETURNING id, email, role`,
+        [email, hashedPassword],
+      );
+      const created = inserted[0] as any;
+      await provisionCandidateAccount(tx, created.id);
+      return inserted;
+    };
 
-    return reply.status(201).send({
-      message: 'User registered',
-      user: result[0],
-    });
+    try {
+      const result = typeof (sql as any).begin === 'function'
+        ? await (sql as any).begin(run)
+        : await run(sql as any);
+
+      return reply.status(201).send({
+        message: 'User registered',
+        user: result[0],
+        security_role: 'USER',
+        plan: 'FREE',
+        initial_credits: 2,
+      });
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        return reply.status(409).send({ error: 'User already exists' });
+      }
+      throw err;
+    }
   });
 
   fastify.post('/logout', { preHandler: [authenticate] }, async (req, reply) => {

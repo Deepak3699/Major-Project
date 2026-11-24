@@ -146,7 +146,7 @@ export interface Pagination {
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'sales_rep' | 'viewer' | 'candidate';
+  role: 'admin' | 'sales_rep' | 'viewer' | 'candidate' | 'user';
 }
 
 export interface CandidateProfile {
@@ -258,6 +258,108 @@ export interface LoginResponse {
   token_type: string;
   expires_in: number;
   user: { id: string; email: string; role: string };
+}
+
+/* ----------------------- Plans, credits and ledger ----------------------- */
+
+export interface CreditPlan {
+  code: string;
+  name: string;
+  price_paise: number;
+  currency: string;
+  credits_included: number | null;
+  features: string[];
+  status?: string;
+  source?: string;
+  started_at?: string | null;
+  expires_at?: string | null;
+}
+
+export interface CreditWallet {
+  user_id: string;
+  balance: number;
+  lifetime_granted: number;
+  lifetime_used: number;
+  signup_granted: boolean;
+  plan: CreditPlan;
+}
+
+export type CreditKind = 'signup_grant' | 'purchase' | 'consumption' | 'refund' | 'admin_adjustment' | 'expiry';
+
+export interface CreditLedgerEntry {
+  id: string;
+  user_id?: string;
+  user_email?: string | null;
+  delta: number;
+  balance_after: number;
+  kind: CreditKind;
+  reason: string;
+  ref_type: string | null;
+  ref_id: string | null;
+  idempotency_key?: string | null;
+  created_at: string;
+  actor_email?: string | null;
+}
+
+export interface PaymentState {
+  enabled: boolean;
+  provider: string | null;
+  reason: string;
+}
+
+export interface CreditsOverview {
+  wallet: CreditWallet;
+  plan: CreditPlan;
+  plans: CreditPlan[];
+  payments: PaymentState;
+  free_initial_credits: number;
+  free_plan_code: string;
+}
+
+export interface CreditPage<T> {
+  data: T[];
+  pagination: { limit: number; offset: number; total: number };
+}
+
+export interface AdminCreditWallet {
+  user_id: string;
+  email: string;
+  role: string;
+  balance: number;
+  lifetime_granted: number;
+  lifetime_used: number;
+  updated_at: string;
+  plan_code: string | null;
+  plan_status: string | null;
+  plan_name: string | null;
+  last_activity_at: string | null;
+}
+
+/* --------------------- Placement outcomes / onboarding -------------------- */
+
+export type PlacementOutcomeKind = 'offer_received' | 'joined';
+
+export interface PlacementOutcome {
+  id: string;
+  user_id?: string;
+  user_email?: string | null;
+  application_id: string | null;
+  job_posting_id: string | null;
+  company_name: string;
+  role_title: string;
+  outcome: PlacementOutcomeKind;
+  joined_on: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OnboardingProgress {
+  completed_steps: string[];
+  last_step: number;
+  completed: boolean;
+  skipped: boolean;
+  updated_at: string | null;
 }
 
 /* ----------------------- AI practice (interviews + learning) ----------------------- */

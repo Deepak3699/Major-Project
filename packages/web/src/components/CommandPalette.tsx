@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings, LogOut, Zap, CornerDownLeft, Command, BriefcaseBusiness, Target,
-  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap,
+  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap, Coins, Award,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { admin } from '@/lib/api';
@@ -48,7 +48,7 @@ export function CommandPalette() {
 
   const go = (path: string) => { navigate(path); setOpen(false); };
   const isAdmin = user?.role === 'admin';
-  const isCandidate = user?.role === 'candidate';
+  const isCandidate = user?.role === 'candidate' || user?.role === 'user';
 
   const commands = useMemo<Cmd[]>(() => {
     const candidateNav: Cmd[] = [
@@ -56,8 +56,10 @@ export function CommandPalette() {
       { id: 'jobs', label: 'Discover jobs', icon: <BriefcaseBusiness />, group: 'Navigate', run: () => go('/jobs') },
       { id: 'recommendations', label: 'Recommended jobs', icon: <Target />, group: 'Navigate', run: () => go('/recommendations') },
       { id: 'applications', label: 'Application tracker', icon: <ClipboardList />, group: 'Navigate', run: () => go('/applications') },
+    { id: 'placements', label: 'Placement outcomes', icon: <Award />, group: 'Navigate', run: () => go('/placements') },
       { id: 'practice', label: 'Interview practice', icon: <Mic />, group: 'Navigate', run: () => go('/practice') },
       { id: 'learning', label: 'Learning tracks', icon: <GraduationCap />, group: 'Navigate', run: () => go('/learning') },
+      { id: 'credits', label: 'Credits & plan', icon: <Coins />, group: 'Navigate', run: () => go('/credits') },
       { id: 'profile', label: 'Candidate profile', icon: <UserRound />, group: 'Navigate', run: () => go('/profile') },
     ];
     const legacyNav: Cmd[] = [
@@ -72,6 +74,8 @@ export function CommandPalette() {
       { id: 'dashboard', label: 'Platform overview', icon: <LayoutDashboard />, group: 'Navigate', run: () => go('/dashboard') },
       { id: 'jobs', label: 'Job quality review', icon: <BriefcaseBusiness />, group: 'Navigate', run: () => go('/jobs') },
       { id: 'feedback', label: 'Candidate feedback', icon: <MessageCircle />, group: 'Navigate', run: () => go('/admin/feedback') },
+    { id: 'placements', label: 'Placement outcomes', icon: <Award />, group: 'Navigate', run: () => go('/admin/placements') },
+      { id: 'credits', label: 'Credits ledger', icon: <Coins />, group: 'Navigate', run: () => go('/admin/credits') },
       { id: 'settings', label: 'System settings', icon: <Settings />, group: 'Navigate', run: () => go('/settings') },
     ] : legacyNav;
     const actions: Cmd[] = [

@@ -53,3 +53,7 @@ packages/scrapers/source_health.json
 /tmp/
 /code.py
 /packages/scrapers/logs/*.log
+/packages/*/*.log
+
+# Owner-supplied brief; not application source.
+/Doccumentation/

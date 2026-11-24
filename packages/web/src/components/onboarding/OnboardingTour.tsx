@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { motion } from 'framer-motion';
 import { Compass, GraduationCap, Mic, Search, Target, UserRound, BriefcaseBusiness, Settings, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
+import { candidate } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/components/ui/cn';
 
@@ -179,15 +180,50 @@ const OnboardingTour = () => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [serverProgress, setServerProgress] = useState<{ completed: boolean; skipped: boolean } | null | undefined>(undefined);
   const nextRef = useRef<HTMLButtonElement>(null);
 
-  // First-run auto-open: once per browser, shortly after the shell settles.
+  const stepKey = useCallback(
+    (index: number) => `${isAdmin ? 'admin' : 'candidate'}-${index + 1}`,
+    [isAdmin],
+  );
+
+  // Server-side onboarding state wins across browsers; local storage remains the
+  // fast path when the API is unavailable.
   useEffect(() => {
     if (!user?.role) return;
+    if (isAdmin) { setServerProgress(null); return; }
+    let cancelled = false;
+    candidate.onboarding()
+      .then(({ progress }) => { if (!cancelled) setServerProgress(progress); })
+      .catch(() => { if (!cancelled) setServerProgress(null); });
+    return () => { cancelled = true; };
+  }, [user?.role, isAdmin]);
+
+  const persist = useCallback((currentStep: number, completed: boolean, skipped: boolean) => {
+    if (isAdmin) return;
+    const viewed = Array.from({ length: completed ? steps.length : currentStep + 1 }, (_, index) => stepKey(index));
+    candidate.saveOnboarding({
+      completed_steps: viewed,
+      last_step: Math.min(currentStep, 49),
+      completed,
+      skipped,
+    }).catch(() => { /* offline: local completion flag still applies */ });
+  }, [isAdmin, stepKey, steps.length]);
+
+  // First-run auto-open: once per browser, shortly after the shell settles and
+  // after the server confirms the tour has not already been finished elsewhere.
+  useEffect(() => {
+    if (!user?.role) return;
+    if (serverProgress === undefined) return;
     if (isTutorialDone()) return;
+    if (serverProgress?.completed || serverProgress?.skipped) {
+      markTutorialDone();
+      return;
+    }
     const timer = window.setTimeout(() => { setStep(0); setOpen(true); }, 1100);
     return () => window.clearTimeout(timer);
-  }, [user?.role]);
+  }, [user?.role, serverProgress]);
 
   // Replay from the Header avatar menu.
   useEffect(() => {
@@ -213,15 +249,20 @@ const OnboardingTour = () => {
     };
   }, [open, step, steps]);
 
-  const close = useCallback(() => {
+  const close = useCallback((finished = false) => {
     markTutorialDone();
     setOpen(false);
-  }, []);
+    persist(step, finished, !finished);
+  }, [persist, step]);
 
   const next = useCallback(() => {
-    if (step >= steps.length - 1) close();
-    else setStep((s) => s + 1);
-  }, [step, steps.length, close]);
+    if (step >= steps.length - 1) close(true);
+    else {
+      const upcoming = step + 1;
+      setStep(upcoming);
+      persist(upcoming, false, false);
+    }
+  }, [step, steps.length, close, persist]);
 
   const back = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
 
@@ -345,7 +386,7 @@ const OnboardingTour = () => {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={close}>
+            <Button variant="ghost" size="sm" onClick={() => close(false)}>
               {isLast ? 'Close' : 'Skip'}
             </Button>
             {step > 0 && (

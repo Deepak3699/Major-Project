@@ -14,7 +14,7 @@ const Layout: React.FC = () => {
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
   const location = useLocation();
-  const isCandidate = useAuthStore((state) => state.user?.role === "candidate");
+  const isCandidate = useAuthStore((state) => state.user?.role === "candidate" || state.user?.role === "user");
 
   useEffect(() => {
     const goOffline = () => setOnline(false);

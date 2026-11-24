@@ -90,20 +90,32 @@ async function main() {
 
   // Step 4: Bootstrap Admin Account
   console.info('\n👤 Step 4/4: Setting up admin account...');
-  const email = (env.ADMIN_EMAIL || 'admin@example.com').trim();
-  const password = (env.ADMIN_PASSWORD || 'change-me-please-32').trim();
+  const email = String(env.BOOTSTRAP_ADMIN_EMAIL || env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = String(env.BOOTSTRAP_ADMIN_PASSWORD || env.ADMIN_PASSWORD || '').trim();
 
   try {
-    const existing = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`;
-    if (existing.length > 0) {
-      console.info(`   ℹ️  Admin user already exists in database.`);
+    if (!email || !password) {
+      console.info('   ℹ️  BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD not set — skipping admin bootstrap.');
+      console.info('      Set them in .env or run: npm run bootstrap:admin');
+    } else if (password.length < 8) {
+      console.error('   ❌ BOOTSTRAP_ADMIN_PASSWORD must be at least 8 characters — skipping admin bootstrap.');
     } else {
-      const hash = await hashPassword(password);
-      await sql`
-        INSERT INTO users (email, password_hash, role, api_keys)
-        VALUES (${email}, ${hash}, 'admin', '{}')
-        ON CONFLICT (email) DO UPDATE SET role = 'admin'`;
-      console.info(`   ✅ Created admin account: \x1b[32m${email}\x1b[0m`);
+      const existing = await sql`SELECT id FROM users WHERE role = 'admin' LIMIT 1`;
+      if (existing.length > 0) {
+        console.info(`   ℹ️  Admin user already exists in database.`);
+      } else {
+        const hash = await hashPassword(password);
+        const created = await sql`
+          INSERT INTO users (email, password_hash, role, api_keys)
+          VALUES (${email}, ${hash}, 'admin', '{}')
+          ON CONFLICT (email) DO NOTHING
+          RETURNING id`;
+        if (created.length > 0) {
+          console.info(`   ✅ Created admin account: \x1b[32m${email}\x1b[0m`);
+        } else {
+          console.info(`   ℹ️  ${email} already exists — run npm run make:admin to promote deliberately.`);
+        }
+      }
     }
   } catch (err: any) {
     console.error('   ❌ Could not seed admin account:', err.message);

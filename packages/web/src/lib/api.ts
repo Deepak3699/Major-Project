@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -426,6 +426,24 @@ export const candidate = {
   trainRecommendationModel: async () => (await api.post('/candidate/admin/recommendations/train')).data as { trained: boolean; model: string; training_examples: number; validation_examples?: number; training_source: string; training_task?: string; created_at: string; metrics?: Record<string, number> },
   adminFeedback: async (status: 'pending' | 'approved' | 'rejected' = 'pending') => (await api.get('/candidate/admin/feedback', { params:{ status } })).data as { data:Array<any> },
   moderateFeedback: async (id:string, moderation_status:'approved'|'rejected') => (await api.patch(`/candidate/admin/feedback/${id}`, { moderation_status })).data,
+  placements: async (limit = 20, offset = 0) =>
+    (await api.get('/candidate/placements', { params: { limit, offset } })).data as CreditPage<PlacementOutcome>,
+  reportPlacement: async (values: {
+    application_id?: string;
+    company_name?: string;
+    role_title?: string;
+    outcome: PlacementOutcome['outcome'];
+    joined_on?: string;
+    notes?: string;
+  }) => (await api.post('/candidate/placements', values)).data as { placement: PlacementOutcome },
+  onboarding: async () => (await api.get('/candidate/onboarding')).data as { progress: OnboardingProgress },
+  saveOnboarding: async (values: Partial<Pick<OnboardingProgress, 'completed_steps' | 'last_step' | 'completed' | 'skipped'>>) =>
+    (await api.put('/candidate/onboarding', values)).data as { progress: OnboardingProgress },
+};
+
+export const engagementAdmin = {
+  placements: async (search = '', limit = 25, offset = 0) =>
+    (await api.get('/admin/placements', { params: { search, limit, offset } })).data as CreditPage<PlacementOutcome>,
 };
 
 export const practice = {
@@ -456,6 +474,25 @@ export const practiceAdmin = {
   reject: async (id: string, note?: string) => (await api.post(`/practice/upgrades/${id}/reject`, { note })).data as { ok: boolean },
   grant: async (values: { email: string; plan: 'free' | 'pro'; expires_in_days?: number }) =>
     (await api.post('/practice/grant', values)).data as { ok: boolean; user_id: string; plan: string; expires_at: string | null },
+};
+
+export const credits = {
+  overview: async () => (await api.get('/candidate/credits')).data as CreditsOverview,
+  plans: async () => (await api.get('/candidate/plans')).data as { plans: CreditsOverview['plans']; payments: CreditsOverview['payments']; free_initial_credits: number },
+  ledger: async (limit = 20, offset = 0) =>
+    (await api.get('/candidate/credits/ledger', { params: { limit, offset } })).data as CreditPage<CreditLedgerEntry>,
+  purchase: async () => (await api.post('/candidate/credits/purchase')).data as { ok: boolean },
+};
+
+export const creditsAdmin = {
+  wallets: async (search = '', limit = 25, offset = 0) =>
+    (await api.get('/admin/credits/wallets', { params: { search, limit, offset } })).data as CreditPage<AdminCreditWallet>,
+  ledger: async (params: { user_id?: string; kind?: string; limit?: number; offset?: number } = {}) =>
+    (await api.get('/admin/credits/ledger', { params })).data as CreditPage<CreditLedgerEntry>,
+  wallet: async (userId: string) =>
+    (await api.get(`/admin/credits/wallet/${userId}`)).data as { wallet: CreditsOverview['wallet'] },
+  adjust: async (values: { user_id: string; delta: number; reason: string; idempotency_key?: string }) =>
+    (await api.post('/admin/credits/adjust', values)).data as { wallet: CreditsOverview['wallet']; entry: CreditLedgerEntry | null; already_processed: boolean },
 };
 
 export const health = {

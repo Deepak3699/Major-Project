@@ -15,6 +15,7 @@ You can run this project **Without Docker** (pure local setup) or **With Docker*
 5. Generate role-specific resume and email drafts from confirmed profile facts. Gemini is optional; a local template is used when no API key is configured. Review every draft before use.
 6. Open the employer's application page yourself, then track saved, applied, screening, interview, offer, rejection, withdrawal and joining milestones.
 7. Practice with the AI interviewer under **Practice**. The free plan includes a monthly interview quota (`PRACTICE_FREE_MONTHLY_LIMIT`, default 3); requesting a Pro upgrade unlocks unlimited sessions after admin approval, and saved learning tracks adapt to the profile and the selected target role. Learning tracks are unlimited on every plan.
+8. Open **Credits & plan** to see the server-side balance, the plan catalog (FREE ₹0, CLASSIC ₹199, CLASSIC PLUS ₹499, BRO ₹799) and every ledger entry. Checkout stays disabled until a payment provider and paid-plan credit allocations are configured by the owner.
 
 The app never submits applications automatically or attempts to bypass CAPTCHA, anti-bot checks, access controls or source terms. Scraping defaults to official ATS connectors and selected public feeds. Other connectors are filtered unless an operator has reviewed access permissions and adds them to `SCRAPE_PERMITTED_SOURCES`. See [the implementation alignment notes](docs/IMPLEMENTATION_ALIGNMENT.md) for the detailed mapping to the project blueprint.
 
@@ -59,8 +60,10 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=change-this-to-a-long-random-string
 ENCRYPTION_SECRET=change-this-to-another-long-random-string-min-32-chars
 
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=change-me-please-32
+# First administrator. Set both, then run `npm run bootstrap:admin`.
+# There is no default password and no account is promoted silently.
+BOOTSTRAP_ADMIN_EMAIL=
+BOOTSTRAP_ADMIN_PASSWORD=
 ```
 
 ---
@@ -82,7 +85,7 @@ ADMIN_PASSWORD=change-me-please-32
 > **What `npm run db:init` does automatically:**
 > 1. Runs the declarative base schema (`database/schema/` tables, constraints, functions, triggers, indexes) using a pure Node.js runner.
 > 2. Applies all forward migrations (`database/migrations/`).
-> 3. Seeds the initial bootstrap admin account from `.env`.
+> 3. Seeds the initial bootstrap admin account from `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` when both are set.
 
 ---
 
@@ -154,15 +157,16 @@ The scraper worker queues one catch-up scrape at boot (Redis prevents duplicate 
 
 ## 🔑 Login & First Access
 
-For Docker mode, sign in at **http://localhost:5174** with the admin credentials from `.env`:
+For Docker mode, sign in at **http://localhost:5174** with the administrator you bootstrapped:
 
 ```ini
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=change-me-please-32
-Or Create a New Account 
+BOOTSTRAP_ADMIN_EMAIL=you@example.com
+BOOTSTRAP_ADMIN_PASSWORD=a-strong-password
 ```
 
-> Candidate sign-up at `/register` creates a candidate account. Use the admin credentials above for job review, source health, settings, and legacy recruiter operations.
+Or create a new candidate account at `/register`. Every new candidate gets the FREE plan, a server-side wallet, and exactly **2 initial preparation credits** recorded in an append-only ledger.
+
+> Candidate sign-up at `/register` creates a candidate account. Use the bootstrapped administrator for job review, source health, settings, credit adjustments, and legacy recruiter operations.
 
 ---
 

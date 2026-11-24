@@ -19,9 +19,11 @@ const TITLES: Array<{ match: RegExp; title: string; section: string }> = [
   { match: /^\/practice\/session\/[^/]+/, title: "Interview session", section: "Practice" },
   { match: /^\/practice/, title: "Interview practice", section: "Practice" },
   { match: /^\/learning/, title: "Learning tracks", section: "Practice" },
+  { match: /^\/credits/, title: "Credits & plan", section: "Account" },
   { match: /^\/profile/, title: "Candidate profile", section: "Account" },
   { match: /^\/admin\/feedback/, title: "Candidate feedback", section: "Insights" },
   { match: /^\/admin\/practice/, title: "Practice subscriptions", section: "Insights" },
+  { match: /^\/admin\/credits/, title: "Credits ledger", section: "Insights" },
   { match: /^\/leads\/[^/]+/, title: "Lead detail", section: "Pipeline" },
   { match: /^\/leads/, title: "Leads", section: "Pipeline" },
   { match: /^\/companies/, title: "Companies", section: "Data" },
@@ -52,7 +54,7 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = user?.role === "admin";
-  const isPlatformUser = isAdmin || user?.role === "candidate";
+  const isPlatformUser = isAdmin || user?.role === "candidate" || user?.role === "user";
   const pageTitle = isAdmin && /^\/jobs/.test(location.pathname) ? { title: 'Job review', section: 'Jobs' } : usePageTitle(location.pathname);
 
   const [runs, setRuns] = useState<Run[]>([]);

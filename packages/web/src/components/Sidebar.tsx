@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings as SettingsIcon, LogOut, Search, PanelLeft, BriefcaseBusiness,
   Target, ClipboardList, UserRound, MessageCircle, Bookmark, FileText, X,
-  Mic, GraduationCap,
+  Mic, GraduationCap, Coins, Award,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
@@ -31,6 +31,7 @@ const CANDIDATE_SECTIONS = [
     { to: "/recommendations", label: "For you", icon: Target, tour: "nav-for-you" },
     { to: "/saved", label: "Saved jobs", icon: Bookmark },
     { to: "/applications", label: "Applications", icon: ClipboardList },
+    { to: "/placements", label: "Placement outcomes", icon: Award },
     { to: "/contacts", label: "Employer contacts", icon: Contact },
     { to: "/resume", label: "Resume studio", icon: FileText },
     { to: "/profile", label: "My profile", icon: UserRound },
@@ -38,6 +39,7 @@ const CANDIDATE_SECTIONS = [
   { label: "Practice space", items: [
     { to: "/practice", label: "Interview practice", icon: Mic, tour: "nav-practice" },
     { to: "/learning", label: "Learning tracks", icon: GraduationCap },
+    { to: "/credits", label: "Credits & plan", icon: Coins },
   ] },
 ];
 const ADMIN_SECTIONS = [
@@ -52,7 +54,9 @@ const ADMIN_SECTIONS = [
     { to: "/duplicates", label: "Duplicates", icon: GitMerge },
     { to: "/analytics", label: "Analytics", icon: TrendingUp },
     { to: "/admin/feedback", label: "Candidate feedback", icon: MessageCircle },
+    { to: "/admin/placements", label: "Placement outcomes", icon: Award },
     { to: "/admin/practice", label: "Practice subscriptions", icon: Mic, tour: "nav-admin-practice" },
+    { to: "/admin/credits", label: "Credits ledger", icon: Coins },
     { to: "/settings", label: "System settings", icon: SettingsIcon },
   ] },
 ];
@@ -143,7 +147,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   const { user, logout, revokeCurrentToken } = useAuthStore();
   const navigate = useNavigate();
   const isAdmin = user?.role === "admin";
-  const isCandidate = user?.role === "candidate";
+  const isCandidate = user?.role === "candidate" || user?.role === "user";
   const onLogout = async () => { await revokeCurrentToken(); await logout(); navigate("/login"); };
   const openPalette = () => window.dispatchEvent(new Event("hiregen:open-palette"));
 

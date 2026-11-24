@@ -28,10 +28,14 @@ const CandidateContacts = lazy(() => import('@/pages/CandidateContacts'));
 const Practice = lazy(() => import('@/pages/Practice'));
 const PracticeSession = lazy(() => import('@/pages/PracticeSession'));
 const Learning = lazy(() => import('@/pages/Learning'));
+const Credits = lazy(() => import('@/pages/Credits'));
+const Placements = lazy(() => import('@/pages/Placements'));
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminJobs = lazy(() => import('@/pages/AdminJobs'));
 const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
 const AdminPractice = lazy(() => import('@/pages/AdminPractice'));
+const AdminCredits = lazy(() => import('@/pages/AdminCredits'));
+const AdminPlacements = lazy(() => import('@/pages/AdminPlacements'));
 
 function RouteFallback() {
   return <div className="flex h-[60vh] items-center justify-center" role="status" aria-live="polite"><div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground/70" /><span className="sr-only">Loading…</span></div>;
@@ -44,7 +48,7 @@ function App() {
   if (!isAuthenticated) return <Routes><Route path="/login" element={<Login />} /><Route path="/register" element={<Register />} /><Route path="*" element={<Login />} /></Routes>;
 
   const isAdmin = user?.role === 'admin';
-  const isCandidate = user?.role === 'candidate';
+  const isCandidate = user?.role === 'candidate' || user?.role === 'user';
   if (!isAdmin && !isCandidate) {
     return (
       <ErrorBoundary><Suspense fallback={<RouteFallback />}><Routes>
@@ -82,10 +86,14 @@ function App() {
       <Route path="practice" element={isCandidate ? <Practice /> : <Navigate to="/dashboard" replace />} />
       <Route path="practice/session/:id" element={isCandidate ? <PracticeSession /> : <Navigate to="/dashboard" replace />} />
       <Route path="learning" element={isCandidate ? <Learning /> : <Navigate to="/dashboard" replace />} />
+      <Route path="credits" element={isCandidate ? <Credits /> : <Navigate to="/dashboard" replace />} />
+      <Route path="placements" element={isCandidate ? <Placements /> : <Navigate to="/dashboard" replace />} />
       <Route path="profile" element={isCandidate ? <Profile /> : <Navigate to="/dashboard" replace />} />
       <Route path="settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/feedback" element={isAdmin ? <AdminFeedback /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/practice" element={isAdmin ? <AdminPractice /> : <Navigate to="/dashboard" replace />} />
+      <Route path="admin/credits" element={isAdmin ? <AdminCredits /> : <Navigate to="/dashboard" replace />} />
+      <Route path="admin/placements" element={isAdmin ? <AdminPlacements /> : <Navigate to="/dashboard" replace />} />
       <Route path="leads" element={isAdmin ? <Leads /> : <Navigate to="/dashboard" replace />} />
       <Route path="leads/:id" element={isAdmin ? <LeadDetail /> : <Navigate to="/dashboard" replace />} />
       <Route path="companies" element={isAdmin ? <Companies /> : <Navigate to="/dashboard" replace />} />

@@ -52,7 +52,7 @@ function currentUser(request: FastifyRequest) {
 }
 
 function isCandidate(request: FastifyRequest, reply: FastifyReply): boolean {
-  if (currentUser(request).role === 'candidate') return true;
+  if (['candidate', 'user'].includes(currentUser(request).role)) return true;
   reply.status(403).send({ error: 'Candidate account required' });
   return false;
 }

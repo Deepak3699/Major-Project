@@ -2,14 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from 'react-query';
-import { ArrowRight, ArrowUpRight, Bell, Bookmark, BriefcaseBusiness, CheckCircle2, CircleUserRound, Coins, FileText, GraduationCap, MapPin, Mic, Target, TrendingUp } from 'lucide-react';
+import {
+  ArrowRight, ArrowUpRight, Bookmark, BriefcaseBusiness, Check, CheckCircle2,
+  CircleUserRound, Coins, FileText, GraduationCap, MapPin, Mic, Presentation,
+  Target, Users,
+} from 'lucide-react';
 import { candidate, practice, credits } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { JobCard } from '@/components/candidate/JobCard';
 import { PageLoader } from '@/components/ui/spinner';
 import { StatCard } from '@/components/ui/stat-card';
 import { cn } from '@/components/ui/cn';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -19,6 +22,67 @@ const rise = (delay = 0) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.3, ease: EASE, delay },
 });
+
+const PREP_MODULES = [
+  { title: 'Mock interview', body: 'Questions, grading and adaptive follow-ups.', to: '/practice', icon: Mic },
+  { title: 'Group discussion', body: 'Topics, arguments and participation tips.', to: '/preparation', icon: Users },
+  { title: 'Presentation', body: 'Slide outline, speaking notes and questions.', to: '/preparation', icon: Presentation },
+  { title: 'Company research', body: 'Cited sources, with gaps labelled honestly.', to: '/preparation', icon: BriefcaseBusiness },
+];
+
+function CompletionRing({ value }: { value: number }) {
+  const safe = Math.max(0, Math.min(100, Number(value) || 0));
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <svg width="76" height="76" viewBox="0 0 76 76" role="img" aria-label={`Profile ${safe}% complete`}>
+      <circle cx="38" cy="38" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="6" />
+      <circle
+        cx="38" cy="38" r={radius} fill="none" stroke="hsl(var(--signal))" strokeWidth="6"
+        strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - safe / 100)}
+        transform="rotate(-90 38 38)"
+      />
+      <text x="38" y="42" textAnchor="middle" className="font-mono text-[14px] tabular-nums" style={{ fill: 'hsl(var(--foreground))' }}>
+        {safe}%
+      </text>
+    </svg>
+  );
+}
+
+function ProgressStepper({ statuses }: { statuses: Record<string, number> }) {
+  const stages = [
+    { key: 'APPLIED', label: 'Applied' },
+    { key: 'INTERVIEW', label: 'Interview' },
+    { key: 'OFFER', label: 'Offer' },
+    { key: 'JOINED', label: 'Joined' },
+  ];
+  const reached = stages.reduce((best, stage, index) => (Number(statuses?.[stage.key] || 0) > 0 ? index : best), -1);
+  return (
+    <ol className="mt-4 flex items-start" aria-label="Application progress">
+      {stages.map((stage, index) => {
+        const done = index <= reached;
+        return (
+          <li key={stage.key} className="flex flex-1 flex-col items-center text-center">
+            <div className="flex w-full items-center">
+              <span className={cn('h-px flex-1', index === 0 ? 'bg-transparent' : done ? 'bg-signal' : 'bg-border')} />
+              <span
+                className={cn(
+                  'grid h-6 w-6 shrink-0 place-items-center rounded-full border font-mono text-[10px] tabular-nums',
+                  done ? 'border-signal bg-signal text-signal-foreground' : 'border-border bg-background text-muted-foreground',
+                )}
+                aria-current={index === reached + 1 ? 'step' : undefined}
+              >
+                {done ? <Check className="h-3 w-3" aria-hidden /> : index + 1}
+              </span>
+              <span className={cn('h-px flex-1', index === stages.length - 1 ? 'bg-transparent' : done && index < reached ? 'bg-signal' : 'bg-border')} />
+            </div>
+            <span className={cn('mt-2 text-[11px]', done ? 'font-medium text-foreground' : 'text-muted-foreground')}>{stage.label}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 const CandidateDashboard: React.FC = () => {
   const user = useAuthStore((state) => state.user);
@@ -38,49 +102,89 @@ const CandidateDashboard: React.FC = () => {
   const topJobs = recommendations?.data?.slice(0, 3) || [];
   const recentApps = apps?.data?.slice(0, 4) || [];
   const completion = Number(summary?.profile_completion || 0);
-  const activeCount = Object.entries(summary?.application_statuses || {}).filter(([status]) => !['REJECTED', 'WITHDRAWN', 'JOINED'].includes(status)).reduce((sum, [, count]) => sum + count, 0);
-  const progressChart = [
-    { stage: 'Saved', roles: summary?.application_statuses?.SAVED || 0 },
-    { stage: 'Applied', roles: summary?.application_statuses?.APPLIED || 0 },
-    { stage: 'Screening', roles: summary?.application_statuses?.SCREENING || 0 },
-    { stage: 'Interview', roles: summary?.application_statuses?.INTERVIEW || 0 },
-    { stage: 'Offers', roles: summary?.application_statuses?.OFFER || 0 },
-  ];
-  const strengthTone = completion >= 80 ? 'bg-success' : completion >= 50 ? 'bg-info' : 'bg-warning';
-
+  const statuses = summary?.application_statuses || {};
+  const activeCount = Object.entries(statuses).filter(([status]) => !['REJECTED', 'WITHDRAWN', 'JOINED'].includes(status)).reduce((sum, [, count]) => sum + count, 0);
   const pCompleted = (sessionsData?.sessions || []).filter((s) => s.status === 'completed');
   const pLastScore = pCompleted[0]?.overall_score ?? null;
   const pSub = subData?.subscription;
   const pQuota = pSub && !pSub.unlimited && pSub.monthly_limit != null
     ? { used: Math.min(pSub.used_this_month, pSub.monthly_limit), limit: pSub.monthly_limit }
     : null;
-  const pScoreTone = pLastScore == null
-    ? 'text-muted-foreground'
-    : pLastScore >= 80 ? 'text-success' : pLastScore >= 55 ? 'text-warning' : 'text-destructive';
+
+  const profileChecks = [
+    { label: 'Basic details', done: Boolean(profile?.full_name || profile?.headline) },
+    { label: 'Education', done: Boolean(profile?.education_level || (profile as any)?.education?.length) },
+    { label: 'Skills', done: ((profile?.skills as string[]) || []).length > 0 },
+    { label: 'Experience', done: ((profile?.experience as unknown[]) || []).length > 0 },
+  ];
+  const offerCount = Number(statuses.OFFER || 0) + Number(statuses.JOINED || 0);
+  const progressMessage = offerCount > 0
+    ? 'You have an offer milestone to review.'
+    : Number(statuses.INTERVIEW || 0) > 0
+      ? 'An interview is in progress. Keep preparing.'
+      : Number(statuses.APPLIED || 0) > 0
+        ? 'You are on track. Keep the momentum going.'
+        : 'Save a role to start tracking your progress.';
 
   return (
     <div className="space-y-4">
-      {/* Page head */}
-      <motion.section {...rise(0)} className="min-w-0">
-        <p className="eyebrow">Your career space</p>
-        <div className="mt-1 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.022em] text-foreground text-balance">Good to see you, {firstName}.</h1>
-            <p className="mt-1.5 max-w-phi-body text-sm leading-relaxed text-muted-foreground">Your job search, applications, and preparation tools are together here. Start with roles that fit the experience and skills you have confirmed.</p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Link to="/jobs" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover">Explore jobs <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/profile" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-sm font-medium text-foreground transition-colors hover:border-border-strong hover:bg-accent/60"><CircleUserRound className="h-4 w-4 text-muted-foreground" />Edit profile</Link>
+      {/* Welcome banner + profile completion, mirroring the reference layout */}
+      <motion.section {...rise(0)} className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="card overflow-hidden">
+          <div className="flex flex-col gap-5 px-6 py-7 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="eyebrow">Your career space</p>
+              <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.028em] text-foreground">Welcome back, {firstName}.</h1>
+              <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-muted-foreground">
+                Your next opportunity is a step away. Start with roles that fit the experience and skills you confirmed.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <Link to="/recommendations" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover">
+                  Explore recommended jobs <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link to="/profile" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-[13px] font-medium text-foreground transition-colors hover:border-border-strong hover:bg-accent/60">
+                  <CircleUserRound className="h-4 w-4 text-muted-foreground" /> Edit profile
+                </Link>
+              </div>
+            </div>
+            <span aria-hidden className="hidden h-24 w-px bg-border xl:block" />
+            <p className="hidden max-w-[11rem] font-mono text-[10.5px] uppercase leading-relaxed tracking-[0.06em] text-muted-foreground xl:block">
+              Evidence first · you decide · you apply
+            </p>
           </div>
         </div>
+
+        <section className="card p-5" aria-labelledby="profile-completion-heading">
+          <div className="flex items-center gap-4">
+            <CompletionRing value={completion} />
+            <div className="min-w-0">
+              <p id="profile-completion-heading" className="eyebrow">Profile completion</p>
+              <p className="mt-1.5 text-[13px] font-medium text-foreground">{completion >= 80 ? 'Looking strong' : completion >= 50 ? 'Good progress' : 'A few details left'}</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">More detail, closer matches.</p>
+            </div>
+          </div>
+          <ul className="mt-4 space-y-2 border-t border-border pt-3">
+            {profileChecks.map((check) => (
+              <li key={check.label} className="flex items-center gap-2 text-[12.5px]">
+                <span className={cn('grid h-4 w-4 shrink-0 place-items-center rounded-full border', check.done ? 'border-success bg-success-soft text-success' : 'border-border text-muted-foreground')}>
+                  {check.done ? <Check className="h-2.5 w-2.5" aria-hidden /> : null}
+                </span>
+                <span className={check.done ? 'text-foreground' : 'text-muted-foreground'}>{check.label}</span>
+              </li>
+            ))}
+          </ul>
+          <Link to="/profile" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">
+            Complete profile <ArrowUpRight className="h-3 w-3" />
+          </Link>
+        </section>
       </motion.section>
 
       {/* Stat row */}
       <motion.section {...rise(0.05)} className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard icon={BriefcaseBusiness} label="Fresh jobs" value={summary?.fresh_jobs_7d ?? 0} hint="Added in the last 7 days" />
-        <StatCard icon={Target} label="Profile strength" value={completion + '%'} hint="Used to personalize matches" />
-        <StatCard icon={TrendingUp} label="Applications" value={summary?.application_total ?? 0} hint={activeCount + ' currently active'} />
-        <StatCard icon={CheckCircle2} label="Offers & joined" value={(summary?.application_statuses?.OFFER || 0) + (summary?.application_statuses?.JOINED || 0)} hint="Your latest milestones" />
+        <StatCard icon={BriefcaseBusiness} label="Active jobs" value={summary?.fresh_jobs_7d ?? 0} hint="Fresh in the last 7 days" />
+        <StatCard icon={Target} label="Applied" value={summary?.application_total ?? 0} hint={activeCount + ' currently active'} />
+        <StatCard icon={Coins} label="Preparation credits" value={creditsData?.wallet.balance ?? '—'} hint={creditsData ? `${creditsData.plan.name} plan` : 'Loading plan'} />
+        <StatCard icon={CheckCircle2} label="Offers & joined" value={offerCount} hint="Your latest milestones" />
       </motion.section>
 
       {!summary?.has_profile && (
@@ -100,10 +204,10 @@ const CandidateDashboard: React.FC = () => {
         <motion.section {...rise(0.15)} className="min-w-0 space-y-3">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="eyebrow">Picked for your profile</p>
-              <h2 className="mt-1 text-lg font-semibold tracking-[-0.014em] text-foreground">Recommended jobs</h2>
+              <p className="eyebrow">Recommended for you</p>
+              <h2 className="mt-1 text-lg font-semibold tracking-[-0.014em] text-foreground">Jobs that match your profile</h2>
             </div>
-            <Link to="/recommendations" className="group inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">See all <ArrowRight className="h-3.5 w-3.5" /></Link>
+            <Link to="/recommendations" className="group inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
           </div>
           {topJobs.length ? (
             <div className="space-y-3">
@@ -119,122 +223,85 @@ const CandidateDashboard: React.FC = () => {
         </motion.section>
 
         <motion.div {...rise(0.2)} className="space-y-4">
-          {/* Interview practice */}
-          <section className="card p-5">
-            <div className="flex items-start justify-between gap-2">
-              <p className="eyebrow">Interview practice</p>
-              <Mic className="h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
-            </div>
-            <p className={cn('mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] tabular-nums', pScoreTone)}>
-              {pLastScore ?? '—'}
-            </p>
-            <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">
-              {pLastScore != null ? '/100 · last scored session' : 'no scored sessions yet'}
-            </p>
-            {pQuota ? (
-              <div className="mt-3">
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="presentation">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-500', pQuota.used >= pQuota.limit ? 'bg-warning' : 'bg-foreground')}
-                    style={{ width: `${(pQuota.used / pQuota.limit) * 100}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
-                  {pQuota.used >= pQuota.limit
-                    ? 'Free quota used up — request Pro to keep rehearsing.'
-                    : `${pQuota.limit - pQuota.used} free session${pQuota.limit - pQuota.used === 1 ? '' : 's'} left this month.`}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
-                {pSub ? 'Pro plan — unlimited rehearsals.' : 'AI mock interviews, graded question by question.'}
-              </p>
-            )}
-            <div className="mt-2 space-y-0.5">
-              <QuickAction to="/practice" icon={Mic} label="Rehearse a mock interview" />
-              <QuickAction to="/learning" icon={GraduationCap} label="Open learning tracks" />
-            </div>
-          </section>
-
-          {/* Preparation credits */}
-          <section className="card p-5">
-            <div className="flex items-start justify-between gap-2">
-              <p className="eyebrow">Preparation credits</p>
-              <Coins className="h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
-            </div>
-            <p className="mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] text-foreground tabular-nums">
-              {creditsData?.wallet.balance ?? '—'}
-            </p>
-            <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">
-              {creditsData ? `${creditsData.plan.name} plan` : 'loading plan'}
-            </p>
-            <p className="mt-3 text-[12px] leading-relaxed text-muted-foreground">
-              {creditsData?.wallet.signup_granted
-                ? 'Your 2-credit welcome grant is active. Every change is recorded in the ledger.'
-                : 'Server-tracked preparation credits with a full transaction history.'}
-            </p>
-            <div className="mt-2 space-y-0.5">
-              <QuickAction to="/credits" icon={Coins} label="Open credits & plan" />
-            </div>
-          </section>
-
-          {/* Profile strength */}
-          <section className="card p-5">
-            <div className="flex items-start justify-between gap-2">
-              <p className="eyebrow">Profile strength</p>
-              <Target className="h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
-            </div>
-            <p className="mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] text-foreground tabular-nums">{completion}%</p>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" role="presentation">
-              <div className={`h-full rounded-full ${strengthTone} transition-all duration-500`} style={{ width: `${completion}%` }} />
-            </div>
-            <p className="mt-3 text-[13px] font-medium text-foreground">{completion >= 80 ? 'Looking strong' : completion >= 50 ? 'Good progress' : 'Build your profile'}</p>
-            <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">More detail, closer matches. {completion >= 100 ? 'Your profile is ready for matching.' : 'Add the missing details when you have a moment.'}</p>
-            <Link to="/profile" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Review profile <ArrowUpRight className="h-3 w-3" /></Link>
-          </section>
-
           {/* Application progress */}
-          <section className="card p-5">
+          <section className="card p-5" aria-labelledby="application-progress-heading">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="eyebrow">Your activity</p>
-                <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Application progress</h2>
+                <h2 id="application-progress-heading" className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Application progress</h2>
               </div>
-              <TrendingUp className="mt-0.5 h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-muted-foreground/60" strokeWidth={1.75} />
             </div>
-            <div className="mt-4 h-44 w-full">
-              {summary?.application_total ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={progressChart} margin={{ top: 8, right: 4, bottom: 0, left: -24 }}>
-                    <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                    <XAxis dataKey="stage" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                    <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))', background: 'hsl(var(--surface))', fontSize: 12 }} />
-                    <Bar dataKey="roles" fill="hsl(var(--foreground))" radius={[3, 3, 0, 0]} maxBarSize={28} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-[12px] leading-relaxed text-muted-foreground">When you save or apply to a role, your progress will show here.</div>
-              )}
+            <ProgressStepper statuses={statuses} />
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-success/25 bg-success-soft px-3 py-2.5">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
+              <p className="text-[12px] leading-relaxed text-foreground/85">{progressMessage}</p>
             </div>
             <Link to="/applications" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">Open application tracker <ArrowRight className="h-3 w-3" /></Link>
           </section>
 
-          {/* Quick actions */}
-          <section className="card p-5">
-            <p className="eyebrow">Quick actions</p>
-            <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Keep momentum</h2>
+          {/* Continue preparation */}
+          <section className="card p-5" aria-labelledby="continue-prep-heading">
+            <p className="eyebrow">Continue your preparation</p>
+            <h2 id="continue-prep-heading" className="mt-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground">Practice, then build for the role.</h2>
+            <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+              {pQuota
+                ? `${pQuota.limit - pQuota.used} free interview session${pQuota.limit - pQuota.used === 1 ? '' : 's'} left this month.`
+                : pSub?.unlimited ? 'Pro plan — unlimited rehearsals.' : 'AI mock interviews, graded question by question.'}
+            </p>
             <div className="mt-3 space-y-0.5">
-              <QuickAction to="/saved" icon={Bookmark} label="Review saved jobs" />
-              <QuickAction to="/resume" icon={FileText} label="Prepare a role-specific resume" />
-              <QuickAction to="/applications" icon={Bell} label="Check application updates" />
+              <QuickAction to="/preparation" icon={FileText} label="Open preparation workspace" />
+              <QuickAction to="/practice" icon={Mic} label="Rehearse a mock interview" />
+              <QuickAction to="/learning" icon={GraduationCap} label="Open learning tracks" />
             </div>
+            <p className="mt-3 border-t border-border pt-3 font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted-foreground">
+              {pLastScore != null ? `Last scored session: ${pLastScore}/100` : 'No scored session yet'}
+            </p>
+          </section>
+
+          {/* Career stats */}
+          <section className="card p-5" aria-labelledby="career-stats-heading">
+            <p id="career-stats-heading" className="eyebrow">Your career stats</p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Stat value={summary?.application_total ?? 0} label="Applications" />
+              <Stat value={Number(statuses.SCREENING || 0) + Number(statuses.INTERVIEW || 0)} label="In process" />
+              <Stat value={offerCount} label="Offers" />
+              <Stat value={creditsData?.wallet.balance ?? 0} label="Credits" />
+            </div>
+            <Link to="/credits" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">
+              View credits & ledger <ArrowUpRight className="h-3 w-3" />
+            </Link>
           </section>
         </motion.div>
       </div>
 
+      {/* Preparation center */}
+      <motion.section {...rise(0.23)} className="space-y-3" aria-labelledby="prep-center-heading">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="eyebrow">Preparation center</p>
+            <h2 id="prep-center-heading" className="mt-1 text-lg font-semibold tracking-[-0.014em] text-foreground">Build for the role, not in general.</h2>
+          </div>
+          <Link to="/preparation" className="group inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {PREP_MODULES.map(({ title, body, to, icon: Icon }, index) => (
+            <motion.div key={title} {...rise(Math.min(0.24 + index * 0.04, 0.36))}>
+              <Link to={to} className="card group flex h-full flex-col p-4 transition-colors hover:border-border-strong">
+                <span aria-hidden className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-background text-foreground">
+                  <Icon className="h-4 w-4" strokeWidth={1.75} />
+                </span>
+                <h3 className="mt-3 text-[13.5px] font-semibold text-foreground">{title}</h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{body}</p>
+                <p className="mt-auto pt-4 font-mono text-[10px] uppercase tracking-[0.05em] text-muted-foreground">No credits charged</p>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </motion.section>
+
       {/* Recent applications */}
-      <motion.section {...rise(0.25)} className="space-y-3">
+      <motion.section {...rise(0.28)} className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="eyebrow">Stay on top of replies</p>
@@ -271,6 +338,15 @@ function QuickAction({ to, icon: Icon, label }: { to: string; icon: any; label: 
       <span className="flex items-center gap-2.5"><Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" strokeWidth={1.75} />{label}</span>
       <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
     </Link>
+  );
+}
+
+function Stat({ value, label }: { value: number | string; label: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-background/60 px-3 py-2.5">
+      <p className="font-mono text-[20px] tabular-nums leading-none text-foreground">{value}</p>
+      <p className="mt-1.5 text-[11.5px] text-muted-foreground">{label}</p>
+    </div>
   );
 }
 

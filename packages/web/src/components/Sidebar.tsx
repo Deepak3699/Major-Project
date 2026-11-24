@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth";
 import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings as SettingsIcon, LogOut, Search, PanelLeft, BriefcaseBusiness,
   Target, ClipboardList, UserRound, MessageCircle, Bookmark, FileText, X,
-  Mic, GraduationCap, Coins, Award, Sparkles,
+  Mic, GraduationCap, Coins, Award, Sparkles, ArrowUpRight,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
@@ -116,6 +116,21 @@ function Nav({ collapsed, isAdmin, isCandidate, onNavigate }: { collapsed: boole
   );
 }
 
+function SidebarPromo({ collapsed, isCandidate }: { collapsed: boolean; isCandidate: boolean }) {
+  if (!isCandidate || collapsed) return null;
+  return (
+    <div className="mx-2.5 mb-2 rounded-lg border border-sidebar-border bg-sidebar-muted/40 p-3">
+      <p className="text-[12.5px] font-semibold leading-tight text-foreground">Your career, our priority.</p>
+      <Link
+        to="/credits"
+        className="mt-2 inline-flex items-center gap-1 text-[11.5px] text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Preparation credits <ArrowUpRight className="h-3 w-3" aria-hidden />
+      </Link>
+    </div>
+  );
+}
+
 function Footer({ collapsed, email, role, onLogout, onCommand }: { collapsed: boolean; email?: string | null; role?: string | null; onLogout: () => void; onCommand: () => void }) {
   return (
     <div className="border-t border-sidebar-border p-2.5">
@@ -189,6 +204,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
       <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 64 : 232 }}>
         <Header compact={collapsed} />
         <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
+        <SidebarPromo collapsed={collapsed} isCandidate={isCandidate} />
         <Footer collapsed={collapsed} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
       </aside>
 
@@ -202,6 +218,7 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
               <button type="button" onClick={onDrawerClose} aria-label="Close menu" className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <Nav collapsed={false} isAdmin={isAdmin} isCandidate={isCandidate} onNavigate={onDrawerClose} />
+            <SidebarPromo collapsed={false} isCandidate={isCandidate} />
             <Footer collapsed={false} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
           </aside>
         </div>

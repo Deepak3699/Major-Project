@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight, BriefcaseBusiness, Building2, Check, ClipboardList,
-  Compass, Lock, Mic, Moon, Search, ShieldCheck, Sun, Target, UserRound,
+  ArrowRight, BriefcaseBusiness, Building2, Check, ClipboardList, Coins,
+  Compass, Lock, Mic, Moon, Presentation, Search, ShieldCheck, Sun, Target,
+  UserRound, Users,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
@@ -76,10 +77,29 @@ function PublicHeader() {
 }
 
 const PREVIEW_ROWS = [
-  { role: 'Role 01', employer: 'Sample employer', signal: 'Evidence checked' },
-  { role: 'Role 02', employer: 'Sample employer', signal: 'Source verified' },
-  { role: 'Role 03', employer: 'Sample employer', signal: 'Profile aligned' },
+  { role: 'Role 01', employer: 'Sample employer', meta: 'Hybrid · 2–4 yrs', match: '92%' },
+  { role: 'Role 02', employer: 'Sample employer', meta: 'Remote · 3–5 yrs', match: '86%' },
+  { role: 'Role 03', employer: 'Sample employer', meta: 'On-site · 1–3 yrs', match: '81%' },
 ];
+
+const PREP_TILES = [
+  { icon: Mic, label: 'Mock interview' },
+  { icon: Users, label: 'Group discussion' },
+  { icon: Presentation, label: 'Presentation' },
+  { icon: BriefcaseBusiness, label: 'Company research' },
+];
+
+function PreviewRing() {
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <svg width="60" height="60" viewBox="0 0 60 60" role="img" aria-label="Sample profile 75 percent complete">
+      <circle cx="30" cy="30" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
+      <circle cx="30" cy="30" r={radius} fill="none" stroke="hsl(var(--signal))" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * 0.25} transform="rotate(-90 30 30)" />
+      <text x="30" y="34" textAnchor="middle" className="font-mono text-[12px] tabular-nums" style={{ fill: 'hsl(var(--foreground))' }}>75%</text>
+    </svg>
+  );
+}
 
 function ProductPreview() {
   return (
@@ -93,7 +113,7 @@ function ProductPreview() {
         <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">Hiregen · workspace</span>
         <Badge variant="muted">Sample</Badge>
       </div>
-      <div className="grid sm:grid-cols-[9.5rem_minmax(0,1fr)]">
+      <div className="grid sm:grid-cols-[8.5rem_minmax(0,1fr)]">
         <div className="hidden border-r border-border bg-muted/30 p-3 sm:block" aria-hidden>
           <p className="eyebrow px-1">Workspace</p>
           <ul className="mt-3 space-y-px">
@@ -104,45 +124,95 @@ function ProductPreview() {
               { icon: Mic, label: 'Practice' },
               { icon: BriefcaseBusiness, label: 'Credits' },
             ].map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2 rounded-md px-1.5 py-2 text-[11.5px] text-muted-foreground">
+              <li key={label} className="flex items-center gap-2 rounded-md px-1.5 py-2 text-[11px] text-muted-foreground">
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{label}</span>
               </li>
             ))}
           </ul>
+          <div className="mt-4 rounded-lg border border-sidebar-border bg-sidebar-muted/40 p-2.5">
+            <p className="text-[11px] font-semibold leading-tight text-foreground">Your career, our priority.</p>
+            <p className="mt-1.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">Credits → preparation</p>
+          </div>
         </div>
 
         <div className="min-w-0 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="eyebrow">For you · sample order</p>
-            <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">3 roles</span>
-          </div>
-          <ul className="mt-3 space-y-2">
-            {PREVIEW_ROWS.map((row, index) => (
-              <li key={row.role} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-3 py-2.5">
-                <div className="min-w-0">
-                  <p className="text-[12.5px] font-medium text-foreground">{row.role}</p>
-                  <p className="text-[11.5px] text-muted-foreground">{row.employer}</p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.05em] text-muted-foreground">
-                  <Check className="h-3 w-3 text-success" aria-hidden />
-                  {row.signal}
-                </span>
-                <span aria-hidden className="sr-only">Preview row {index + 1}</span>
-              </li>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { icon: BriefcaseBusiness, label: 'Active jobs', value: '12' },
+              { icon: ClipboardList, label: 'Applied', value: '08' },
+              { icon: Coins, label: 'Credits', value: '02' },
+              { icon: Target, label: 'Matches', value: '03' },
+            ].map(({ icon: Icon, label, value }) => (
+              <div key={label} className="rounded-lg border border-border bg-background/60 px-2 py-2">
+                <Icon className="h-3 w-3 text-muted-foreground" aria-hidden />
+                <p className="mt-1 font-mono text-[15px] tabular-nums leading-none text-foreground">{value}</p>
+                <p className="mt-1 truncate font-mono text-[8.5px] uppercase tracking-[0.04em] text-muted-foreground">{label}</p>
+              </div>
             ))}
-          </ul>
+          </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-border bg-background/60 px-3 py-2.5">
-              <p className="eyebrow">Credits</p>
-              <p className="mt-1 font-mono text-[22px] tabular-nums leading-none text-foreground">2</p>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">FREE plan</p>
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="eyebrow">Recommended for you</p>
+                <span className="font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted-foreground">3 roles</span>
+              </div>
+              <ul className="mt-2 space-y-1.5">
+                {PREVIEW_ROWS.map((row) => (
+                  <li key={row.role} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-2.5 py-2">
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium text-foreground">{row.role}</p>
+                      <p className="truncate text-[10.5px] text-muted-foreground">{row.employer} · {row.meta}</p>
+                    </div>
+                    <span className="rounded-md border border-signal/25 bg-signal-soft px-1.5 py-0.5 font-mono text-[9.5px] tabular-nums text-signal">{row.match} match</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="eyebrow mt-3">Preparation center</p>
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {PREP_TILES.map(({ icon: Icon, label }) => (
+                  <div key={label} className="rounded-lg border border-border bg-background/60 px-1.5 py-2 text-center">
+                    <Icon className="mx-auto h-3.5 w-3.5 text-foreground" aria-hidden />
+                    <p className="mt-1 truncate text-[8.5px] text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="rounded-lg border border-border bg-background/60 px-3 py-2.5">
-              <p className="eyebrow">Interview</p>
-              <p className="mt-1.5 text-[12.5px] font-medium text-foreground">Practice session</p>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">Score + feedback</p>
+
+            <div className="space-y-2">
+              <div className="rounded-lg border border-border bg-background/60 px-2.5 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <PreviewRing />
+                  <div>
+                    <p className="eyebrow">Profile completion</p>
+                    <p className="mt-1 text-[11px] font-medium text-foreground">A few details left</p>
+                  </div>
+                </div>
+                <ul className="mt-2 space-y-1 border-t border-border pt-2">
+                  {['Basic details', 'Education', 'Skills', 'Experience'].map((item, index) => (
+                    <li key={item} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className={cn('grid h-3 w-3 place-items-center rounded-full border', index < 3 ? 'border-success bg-success-soft text-success' : 'border-border')}>
+                        {index < 3 ? <Check className="h-2 w-2" aria-hidden /> : null}
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-lg border border-border bg-background/60 px-2.5 py-2.5">
+                <p className="eyebrow">Application progress</p>
+                <ol className="mt-2 flex items-center" aria-label="Sample application progress">
+                  {['Applied', 'Interview', 'Offer', 'Joined'].map((stage, index) => (
+                    <li key={stage} className="flex flex-1 flex-col items-center gap-1 text-center">
+                      <span className={cn('grid h-4 w-4 place-items-center rounded-full border font-mono text-[8px]', index < 2 ? 'border-signal bg-signal text-signal-foreground' : 'border-border text-muted-foreground')}>
+                        {index < 2 ? <Check className="h-2 w-2" aria-hidden /> : index + 1}
+                      </span>
+                      <span className="text-[8.5px] text-muted-foreground">{stage}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           </div>
         </div>

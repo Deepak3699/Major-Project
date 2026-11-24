@@ -17,7 +17,7 @@
 | `packages/api/src/utils/preparation.ts`, `routes/preparation.ts` | Grounded interview/GD/presentation/company-research generation with template fallback, idempotency, configurable cost hook | Brief preparation pipeline |
 | `packages/api/src/routes/engagement.ts`, `engagement-admin.ts` | Placement reporting/history and onboarding save/load | Brief engagement items |
 | `packages/api/src/routes/practice.ts`, `utils/practice-ai.ts` (earlier commits) | Adaptive follow-ups, intro chaining, cap 3 | Interview bot requirement |
-| Web | `Landing.tsx` public preview; `AuthShell.tsx` flat ink/paper restyle; new credits, placement and preparation screens; routes, navigation and dashboard links | Engagement before login and a consistent premium UI |
+| Web | `Landing.tsx` public preview; `AuthShell.tsx` flat ink/paper restyle; dashboard restructured around the reference image's welcome banner, profile ring, stat row, match badges, application stepper and preparation tiles; credits/plan cards and policy strip; sidebar career tagline | Engagement before login, reference-aligned information architecture and a consistent premium UI |
 | Web shell (`App.tsx`, `Sidebar`, `Header`, `CommandPalette`, `Layout`, `CandidateDashboard`, `JobDetails`) | Routes, navigation, dashboard credit card, links into preparation | Complete the journey |
 | `packages/web/src/components/onboarding/OnboardingTour.tsx` | Server-side progress persistence with offline fallback | Onboarding continuity |
 | `docs/*.md`, `README.md`, `.env.example`, `.gitignore` | Audits, phased plan, honest setup instructions, placeholders only | Required documentation |

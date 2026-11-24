@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { AlertCircle, ArrowRight, Check, Coins, History, Lock, Sparkles } from 'lucide-react';
 import { credits } from '@/lib/api';
@@ -98,16 +99,21 @@ const Credits: React.FC = () => {
 
       <div className="card overflow-hidden">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="eyebrow">Available balance</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="font-mono text-[38px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-foreground">{wallet.balance}</span>
-              <span className="text-[13px] text-muted-foreground">preparation credits</span>
+          <div className="flex items-start gap-3">
+            <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-border bg-background text-foreground">
+              <Coins className="h-5 w-5" strokeWidth={1.75} />
+            </span>
+            <div>
+              <p className="eyebrow">Current balance</p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="font-mono text-[38px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-foreground">{wallet.balance}</span>
+                <span className="text-[13px] text-muted-foreground">preparation credits</span>
+              </div>
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
+                <Badge variant={plan.code === 'FREE' ? 'muted' : 'signal'}>{plan.name}</Badge>
+                <span>{plan.code === 'FREE' ? 'Free plan' : `Active until ${plan.expires_at ? formatDateTime(plan.expires_at) : 'further notice'}`}</span>
+              </p>
             </div>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
-              <Badge variant={plan.code === 'FREE' ? 'muted' : 'signal'}>{plan.name}</Badge>
-              <span>{plan.code === 'FREE' ? 'Free plan' : `Active until ${plan.expires_at ? formatDateTime(plan.expires_at) : 'further notice'}`}</span>
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {wallet.signup_granted && (
@@ -115,6 +121,9 @@ const Credits: React.FC = () => {
                 <Check className="h-3 w-3 text-success" /> {free_initial_credits}-credit welcome grant applied
               </span>
             )}
+            <Button asChild>
+              <Link to="/preparation"><Sparkles className="h-4 w-4" />Use for preparation</Link>
+            </Button>
             <Button variant="outline" asChild>
               <a href="#ledger"><History className="h-4 w-4" />View ledger</a>
             </Button>
@@ -132,8 +141,8 @@ const Credits: React.FC = () => {
       <section className="card overflow-hidden" aria-labelledby="plans-heading">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
           <div>
-            <p id="plans-heading" className="eyebrow">Plan catalog</p>
-            <p className="mt-1 text-[12.5px] text-muted-foreground">Prices are fixed. Paid-plan credit allocations stay configurable until the owner defines them.</p>
+            <p id="plans-heading" className="eyebrow">Choose your plan</p>
+            <p className="mt-1 text-[12.5px] text-muted-foreground">Known prices, no invented entitlements. Paid-plan credits and billing stay configurable.</p>
           </div>
           <Badge variant="outline">Billing not configured</Badge>
         </div>
@@ -165,7 +174,7 @@ const Credits: React.FC = () => {
                   </ul>
                 )}
                 <Button variant={current ? 'outline' : 'default'} size="sm" className="mt-auto" disabled title={payments.reason}>
-                  {current ? 'Current plan' : 'Upgrade'} <ArrowRight className="h-3.5 w-3.5" />
+                  {current ? 'Current plan' : 'Get started'} <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
             );
@@ -177,6 +186,21 @@ const Credits: React.FC = () => {
             {payments.reason}
           </p>
         </div>
+      </section>
+
+      <section className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3 lg:grid-cols-5" aria-label="Credit and billing policies">
+        {[
+          { title: 'Credits ledger', detail: 'Every change recorded' },
+          { title: 'Use for preparation', detail: 'Role-specific modules' },
+          { title: 'Plan selection', detail: 'Administrator controlled' },
+          { title: 'Payment security', detail: 'Provider verification pending' },
+          { title: 'Refund policy', detail: 'Owner decision pending' },
+        ].map((item) => (
+          <div key={item.title} className="bg-surface px-3.5 py-3">
+            <p className="text-[12px] font-medium text-foreground">{item.title}</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">{item.detail}</p>
+          </div>
+        ))}
       </section>
 
       <section id="ledger" className="card overflow-hidden" aria-labelledby="ledger-heading">

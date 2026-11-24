@@ -18,25 +18,25 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
   return (
     <div className="flex min-h-screen bg-background">
       {/* Narrative panel */}
-      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[hsl(168,28%,11%)] p-10 text-[hsl(42,22%,95%)] lg:flex xl:p-14">
-        <div aria-hidden className="pointer-events-none absolute inset-0 border-r border-[hsl(165,16%,20%)]" />
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[hsl(156,58%,45%/0.12)]" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-16 right-10 h-48 w-48 rounded-full border border-[hsl(156,58%,45%/0.08)]" />
+      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[hsl(22,32%,15%)] p-10 text-[hsl(33,34%,94%)] lg:flex xl:p-14">
+        <div aria-hidden className="pointer-events-none absolute inset-0 border-r border-[hsl(22,22%,24%)]" />
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full border border-[hsl(14,46%,58%/0.14)]" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-16 right-10 h-48 w-48 rounded-full border border-[hsl(14,46%,58%/0.08)]" />
 
         <div className="relative flex items-center gap-2.5">
-          <span aria-hidden className="h-3 w-3 rounded-[3px] bg-[hsl(156,58%,45%)]" />
+          <span aria-hidden className="h-3 w-3 rounded-[3px] bg-[hsl(14,46%,58%)]" />
           <span className="text-[19px] font-semibold tracking-[-0.032em]">Hiregen</span>
         </div>
 
         <div className="relative max-w-md">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[hsl(150,7%,62%)]">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[hsl(28,14%,62%)]">
             Job intelligence, without the noise
           </p>
           <h1 className="mt-4 text-[36px] font-semibold leading-[1.1] tracking-[-0.03em] xl:text-[40px]">
             Your next role,
-            <span className="block text-[hsl(156,55%,52%)]">prepared with care.</span>
+            <span className="block text-[hsl(14,52%,64%)]">prepared with care.</span>
           </h1>
-          <p className="mt-5 max-w-sm text-[14px] leading-relaxed text-[hsl(150,7%,72%)]">
+          <p className="mt-5 max-w-sm text-[14px] leading-relaxed text-[hsl(30,16%,72%)]">
             A premium workspace for discovery, preparation and honest application tracking.
           </p>
           <ul className="mt-9 space-y-px">
@@ -46,17 +46,17 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 + i * 0.06, duration: 0.35, ease: EASE }}
-                className="group flex h-11 items-center gap-3 border-t border-[hsl(165,16%,20%)] last:border-b"
+                className="group flex h-11 items-center gap-3 border-t border-[hsl(22,22%,24%)] last:border-b"
               >
-                <span className="font-mono text-[10px] text-[hsl(156,55%,52%)]">0{i + 1}</span>
-                <span className="text-[13.5px] leading-snug text-[hsl(42,18%,78%)] transition-colors group-hover:text-[hsl(42,22%,95%)]">{line}</span>
-                <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-[hsl(150,7%,45%)] transition-colors group-hover:text-[hsl(156,55%,52%)]" />
+                <span className="font-mono text-[10px] text-[hsl(14,52%,64%)]">0{i + 1}</span>
+                <span className="text-[13.5px] leading-snug text-[hsl(33,24%,78%)] transition-colors group-hover:text-[hsl(33,34%,94%)]">{line}</span>
+                <ArrowUpRight className="ml-auto h-3.5 w-3.5 text-[hsl(28,12%,46%)] transition-colors group-hover:text-[hsl(14,52%,64%)]" />
               </motion.li>
             ))}
           </ul>
         </div>
 
-        <p className="relative font-mono text-[11px] text-[hsl(150,7%,52%)]">© {new Date().getFullYear()} Hiregen</p>
+        <p className="relative font-mono text-[11px] text-[hsl(28,12%,52%)]">© {new Date().getFullYear()} Hiregen</p>
       </div>
 
       {/* Form panel */}

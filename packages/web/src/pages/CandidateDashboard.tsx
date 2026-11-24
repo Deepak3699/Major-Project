@@ -129,58 +129,66 @@ const CandidateDashboard: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Welcome banner + profile completion, mirroring the reference layout */}
-      <motion.section {...rise(0)} className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="card overflow-hidden">
-          <div className="flex flex-col gap-5 px-6 py-7 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="eyebrow">Your career space</p>
-              <h1 className="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.028em] text-foreground">Welcome back, {firstName}.</h1>
-              <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-muted-foreground">
-                Your next opportunity is a step away. Start with roles that fit the experience and skills you confirmed.
+      {/* Welcome banner + profile completion */}
+      <motion.section {...rise(0)} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-[hsl(22,32%,15%)] p-6 text-[hsl(33,34%,94%)] sm:p-8">
+          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border border-[hsl(14,46%,58%/0.16)]" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-20 right-20 h-48 w-48 rounded-full border border-[hsl(14,46%,58%/0.1)]" />
+          <div aria-hidden className="pointer-events-none absolute right-0 top-0 h-full w-1/3 bg-[hsl(14,46%,58%/0.04)]" />
+          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 max-w-2xl">
+              <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[hsl(14,46%,64%)]">Your career space</p>
+              <h1 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.032em] sm:text-[40px]">
+                Welcome back, {firstName}.
+              </h1>
+              <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-[hsl(30,18%,74%)]">
+                Your next opportunity is closer than it looks. Pick a role that fits your confirmed skills, prepare with intent, and track every step with confidence.
               </p>
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <Link to="/recommendations" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover">
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link to="/recommendations" className="inline-flex h-11 items-center gap-2 rounded-lg bg-[hsl(14,46%,58%)] px-5 text-[13px] font-semibold text-[hsl(22,32%,12%)] transition-colors hover:bg-[hsl(14,50%,64%)]">
                   Explore recommended jobs <ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link to="/profile" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-[13px] font-medium text-foreground transition-colors hover:border-border-strong hover:bg-accent/60">
-                  <CircleUserRound className="h-4 w-4 text-muted-foreground" /> Edit profile
+                <Link to="/profile" className="inline-flex h-11 items-center gap-2 rounded-lg border border-[hsl(33,34%,94%/0.18)] bg-[hsl(33,34%,94%/0.04)] px-5 text-[13px] font-medium text-[hsl(33,34%,94%)] transition-colors hover:bg-[hsl(33,34%,94%/0.08)]">
+                  <CircleUserRound className="h-4 w-4 text-[hsl(14,46%,64%)]" /> Edit profile
                 </Link>
               </div>
             </div>
-            <svg aria-hidden viewBox="0 0 220 110" className="hidden h-24 w-56 shrink-0 xl:block" preserveAspectRatio="xMidYMid slice">
-              <rect x="0" y="62" width="34" height="48" fill="hsl(var(--primary))" opacity="0.35" />
-              <rect x="38" y="40" width="28" height="70" fill="hsl(var(--primary))" opacity="0.55" />
-              <rect x="70" y="18" width="38" height="92" fill="hsl(var(--primary))" opacity="0.75" />
-              <rect x="112" y="50" width="26" height="60" fill="hsl(var(--primary))" opacity="0.4" />
-              <rect x="142" y="30" width="34" height="80" fill="hsl(var(--primary))" opacity="0.65" />
-              <rect x="180" y="56" width="40" height="54" fill="hsl(var(--primary))" opacity="0.45" />
-              {[74, 82, 90, 98].map((y) => <rect key={y} x="78" y={y} width="22" height="3" fill="hsl(var(--background))" opacity="0.35" />)}
-              {[146, 154, 162].map((y) => <rect key={y} x="148" y={y} width="22" height="3" fill="hsl(var(--background))" opacity="0.35" />)}
-            </svg>
+            <div className="hidden shrink-0 sm:block">
+              <div className="rounded-2xl border border-[hsl(33,34%,94%/0.12)] bg-[hsl(33,34%,94%/0.04)] p-4 backdrop-blur-[1px]">
+                <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[hsl(30,18%,68%)]">Today&apos;s focus</p>
+                <p className="mt-2 font-mono text-[30px] tabular-nums leading-none text-[hsl(33,34%,94%)]">{summary?.fresh_jobs_7d ?? 0}</p>
+                <p className="mt-1 text-[12px] text-[hsl(30,18%,72%)]">fresh roles this week</p>
+                <div className="mt-4 flex items-center gap-2 border-t border-[hsl(33,34%,94%/0.1)] pt-3">
+                  <span className="h-2 w-2 rounded-full bg-[hsl(14,46%,58%)]" aria-hidden />
+                  <span className="text-[11px] text-[hsl(30,18%,72%)]">Profile {completion}% complete</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <section className="card p-5" aria-labelledby="profile-completion-heading">
+        <section className="card flex flex-col p-5 sm:p-6" aria-labelledby="profile-completion-heading">
           <div className="flex items-center gap-4">
-            <CompletionRing value={completion} />
+            <div className="rounded-full bg-primary-soft p-1">
+              <CompletionRing value={completion} />
+            </div>
             <div className="min-w-0">
               <p id="profile-completion-heading" className="eyebrow">Profile completion</p>
-              <p className="mt-1.5 text-[13px] font-medium text-foreground">{completion >= 80 ? 'Looking strong' : completion >= 50 ? 'Good progress' : 'A few details left'}</p>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">More detail, closer matches.</p>
+              <p className="mt-1.5 text-[14px] font-semibold text-foreground">{completion >= 80 ? 'Looking strong' : completion >= 50 ? 'Good progress' : 'A few details left'}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">Complete your profile for closer, higher-confidence matches.</p>
             </div>
           </div>
-          <ul className="mt-4 space-y-2 border-t border-border pt-3">
+          <ul className="mt-5 space-y-2.5 border-t border-border pt-4">
             {profileChecks.map((check) => (
-              <li key={check.label} className="flex items-center gap-2 text-[12.5px]">
-                <span className={cn('grid h-4 w-4 shrink-0 place-items-center rounded-full border', check.done ? 'border-success bg-success-soft text-success' : 'border-border text-muted-foreground')}>
-                  {check.done ? <Check className="h-2.5 w-2.5" aria-hidden /> : null}
+              <li key={check.label} className="flex items-center gap-2.5 text-[12.5px]">
+                <span className={cn('grid h-5 w-5 shrink-0 place-items-center rounded-full border', check.done ? 'border-success/30 bg-success-soft text-success' : 'border-border bg-background text-muted-foreground')}>
+                  {check.done ? <Check className="h-3 w-3" aria-hidden /> : null}
                 </span>
                 <span className={check.done ? 'text-foreground' : 'text-muted-foreground'}>{check.label}</span>
               </li>
             ))}
           </ul>
-          <Link to="/profile" className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:underline hover:decoration-signal hover:underline-offset-4">
+          <Link to="/profile" className="mt-4 inline-flex items-center gap-1 text-[12px] font-medium text-signal transition-colors hover:text-primary-hover hover:underline hover:decoration-signal hover:underline-offset-4">
             Complete profile <ArrowUpRight className="h-3 w-3" />
           </Link>
         </section>
@@ -294,12 +302,12 @@ const CandidateDashboard: React.FC = () => {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {PREP_MODULES.map(({ title, body, to, icon: Icon }, index) => (
             <motion.div key={title} {...rise(Math.min(0.24 + index * 0.04, 0.36))}>
-              <Link to={to} className="card group flex h-full flex-col p-4 transition-colors hover:border-border-strong">
-                <span aria-hidden className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-background text-foreground">
+              <Link to={to} className="card group flex h-full flex-col p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-signal/25 hover:shadow-pop">
+                <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl border border-signal/15 bg-signal-soft text-signal transition-colors group-hover:bg-signal group-hover:text-signal-foreground">
                   <Icon className="h-4 w-4" strokeWidth={1.75} />
                 </span>
-                <h3 className="mt-3 text-[13.5px] font-semibold text-foreground">{title}</h3>
-                <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{body}</p>
+                <h3 className="mt-4 text-[13.5px] font-semibold text-foreground">{title}</h3>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{body}</p>
                 <p className="mt-auto pt-4 font-mono text-[10px] uppercase tracking-[0.05em] text-muted-foreground">No credits charged</p>
               </Link>
             </motion.div>

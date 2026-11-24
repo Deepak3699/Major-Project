@@ -1,14 +1,14 @@
-# Hiregen UI Design Spec — "Verdant Atelier"
+# Hiregen UI Design Spec — "Terracotta Atelier"
 
 This is the binding design language for the full UI. The foundation
 (`src/index.css`, `tailwind.config.js`) and all `components/ui/*` primitives +
 chrome (`Sidebar`, `Header`, `Layout`, `AuthShell`, `Logo`, `CommandPalette`,
 `JobCard`) implement it. Pages must use the same tokens.
 
-The palette is a premium editorial system: warm ivory paper, deep charcoal-green
-ink, and a single refined emerald for actions and highlights. Surfaces stay flat
-and confident, with hairline borders and restrained elevation. It works in both
-light and dark themes.
+The palette is a premium warm editorial system: almond-beige paper, walnut-brown
+ink, and a single dusty terracotta signal for actions and highlights. Surfaces
+stay flat and confident, with hairline borders and restrained elevation. It
+works in both light and dark themes.
 
 ## Golden rules (non-negotiable)
 
@@ -32,10 +32,10 @@ light and dark themes.
    `.glass` classes), glow shadows (`shadow-glow*`, `shadow-card-hover`,
    `shadow-float` except on real popovers), emoji, `text-gradient`, decorative
    blobs/rings, exclamation-mark marketing copy, "Powered by AI" style phrases.
-5. **The one saturated accent is `signal` (emerald).** Use it surgically: primary
+5. **The one saturated accent is `signal` (dusty terracotta).** Use it surgically: primary
    buttons, links on hover, the active navigation pill, focus cues, a single
-   primary metric, match badges. Keep large fills to deep ink surfaces; do not
-   paint whole panels in signal green.
+   primary metric, match badges. Keep large fills to deep walnut ink surfaces; do not
+   paint whole panels in signal terracotta.
 
 ## Vocabulary
 

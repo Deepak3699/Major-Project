@@ -4,151 +4,150 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Hiregen design system — "Verdant Atelier"
-   Warm ivory paper / deep charcoal surfaces, deep emerald ink for actions,
-   a single refined emerald signal, hairline borders, tabular mono numerals.
-   Premium, editorial, flat — no gradients, no glassmorphism, no emoji.
+   Hiregen design system — "Terracotta Atelier"
+   Almond-beige paper, walnut-brown ink, dusty terracotta signal. Warm,
+   premium, editorial, flat — no gradients, no glassmorphism, no emoji.
 --------------------------------------------------------------------------- */
 
 @layer base {
   :root {
-    /* Verdant Atelier — light theme: warm ivory, deep ink, refined emerald */
-    --background: 42 30% 97%;
-    --surface: 0 0% 100%;
-    --foreground: 168 24% 12%;
-    --muted: 42 18% 93%;
-    --muted-foreground: 160 8% 40%;
-    --accent: 45 20% 94%;
-    --accent-foreground: 168 24% 12%;
-    --border: 42 14% 88%;
-    --border-strong: 150 8% 76%;
-    --input: 42 14% 86%;
-    --ring: 160 84% 25%;
+    /* Terracotta Atelier — light theme: almond beige, walnut brown, dusty terracotta */
+    --background: 32 36% 95%;
+    --surface: 30 33% 98%;
+    --foreground: 22 32% 16%;
+    --muted: 30 28% 91%;
+    --muted-foreground: 24 14% 42%;
+    --accent: 28 30% 92%;
+    --accent-foreground: 22 32% 16%;
+    --border: 28 22% 86%;
+    --border-strong: 24 18% 74%;
+    --input: 28 22% 84%;
+    --ring: 12 43% 46%;
 
-    --primary: 160 84% 25%;
-    --primary-foreground: 42 30% 98%;
-    --primary-hover: 160 84% 20%;
-    --primary-soft: 152 42% 94%;
+    --primary: 12 43% 46%;
+    --primary-foreground: 33 40% 98%;
+    --primary-hover: 12 45% 40%;
+    --primary-soft: 14 45% 93%;
 
-    --secondary: 42 18% 93%;
-    --secondary-foreground: 168 24% 12%;
+    --secondary: 30 28% 91%;
+    --secondary-foreground: 22 32% 16%;
 
-    --destructive: 2 68% 46%;
+    --destructive: 2 66% 46%;
     --destructive-foreground: 0 0% 100%;
     --destructive-soft: 4 70% 96%;
 
-    --success: 152 58% 30%;
+    --success: 142 34% 34%;
     --success-foreground: 0 0% 100%;
-    --success-soft: 150 42% 94%;
+    --success-soft: 140 30% 93%;
 
-    --warning: 35 90% 42%;
+    --warning: 34 85% 42%;
     --warning-foreground: 0 0% 100%;
-    --warning-soft: 40 90% 94%;
+    --warning-soft: 38 85% 93%;
 
-    --info: 190 55% 38%;
+    --info: 200 35% 40%;
     --info-foreground: 0 0% 100%;
-    --info-soft: 190 45% 94%;
+    --info-soft: 200 35% 93%;
 
-    /* signal — refined emerald accent, used surgically */
-    --signal: 160 84% 25%;
-    --signal-foreground: 42 30% 98%;
-    --signal-soft: 152 42% 94%;
+    /* signal — dusty terracotta accent, used surgically */
+    --signal: 12 43% 46%;
+    --signal-foreground: 33 40% 98%;
+    --signal-soft: 14 45% 93%;
 
-    --sidebar: 168 28% 11%;
-    --sidebar-foreground: 42 22% 95%;
-    --sidebar-muted: 165 20% 16%;
-    --sidebar-border: 165 16% 20%;
-    --sidebar-active: 156 58% 45%;
-    --sidebar-active-foreground: 168 28% 9%;
+    --sidebar: 22 32% 15%;
+    --sidebar-foreground: 33 34% 94%;
+    --sidebar-muted: 22 26% 20%;
+    --sidebar-border: 22 22% 24%;
+    --sidebar-active: 14 46% 58%;
+    --sidebar-active-foreground: 22 32% 12%;
 
-    --hot: 2 68% 46%;
+    --hot: 2 66% 46%;
     --hot-soft: 4 70% 96%;
-    --warm: 35 90% 42%;
-    --warm-soft: 40 90% 94%;
-    --cold: 190 55% 38%;
-    --cold-soft: 190 45% 94%;
+    --warm: 34 85% 42%;
+    --warm-soft: 38 85% 93%;
+    --cold: 200 35% 40%;
+    --cold-soft: 200 35% 93%;
 
     /* Legacy gradient hooks — kept resolving; flat by design. */
     --grad-primary: none;
     --grad-mesh: none;
 
-    /* Flat elevation: hairline borders with a near-invisible lift */
-    --glow-primary: 0 1px 2px rgb(20 35 30 / 0.14);
-    --glow-soft: 0 0 0 0.5px rgb(20 35 30 / 0.04), 0 1px 2px rgb(20 35 30 / 0.05);
-    --shadow-pop: 0 16px 40px -16px rgb(20 35 30 / 0.22);
-    --shadow-drawer: 16px 0 48px -24px rgb(20 35 30 / 0.28);
+    /* Flat elevation: hairline borders with a warm near-invisible lift */
+    --glow-primary: 0 1px 2px rgb(58 36 24 / 0.14);
+    --glow-soft: 0 0 0 0.5px rgb(58 36 24 / 0.04), 0 1px 2px rgb(58 36 24 / 0.05);
+    --shadow-pop: 0 16px 40px -16px rgb(58 36 24 / 0.22);
+    --shadow-drawer: 16px 0 48px -24px rgb(58 36 24 / 0.3);
 
     --radius: 0.625rem;
-    --grain-opacity: 0.024;
+    --grain-opacity: 0.026;
     --grain-mix: multiply;
   }
 
   html.dark {
     color-scheme: dark;
-    /* Verdant Atelier — dark theme: deep charcoal, warm ivory, luminous emerald */
-    --background: 168 18% 7%;
-    --surface: 168 14% 10%;
-    --foreground: 42 22% 94%;
-    --muted: 165 12% 15%;
-    --muted-foreground: 150 7% 62%;
-    --accent: 165 12% 16%;
-    --accent-foreground: 42 22% 94%;
-    --border: 165 10% 19%;
-    --border-strong: 160 8% 30%;
-    --input: 165 10% 19%;
-    --ring: 156 55% 52%;
+    /* Terracotta Atelier — dark theme: deep walnut, almond text, warm terracotta */
+    --background: 22 24% 8%;
+    --surface: 22 20% 11%;
+    --foreground: 33 30% 93%;
+    --muted: 22 16% 16%;
+    --muted-foreground: 28 12% 64%;
+    --accent: 22 16% 17%;
+    --accent-foreground: 33 30% 93%;
+    --border: 22 14% 20%;
+    --border-strong: 24 12% 30%;
+    --input: 22 14% 20%;
+    --ring: 14 52% 62%;
 
-    --primary: 156 55% 52%;
-    --primary-foreground: 168 28% 9%;
-    --primary-hover: 156 55% 60%;
-    --primary-soft: 160 20% 16%;
+    --primary: 14 52% 62%;
+    --primary-foreground: 22 32% 12%;
+    --primary-hover: 14 55% 68%;
+    --primary-soft: 18 20% 17%;
 
-    --secondary: 165 12% 16%;
-    --secondary-foreground: 42 22% 94%;
+    --secondary: 22 16% 17%;
+    --secondary-foreground: 33 30% 93%;
 
-    --destructive: 2 68% 62%;
-    --destructive-foreground: 168 18% 7%;
-    --destructive-soft: 2 28% 15%;
+    --destructive: 2 66% 62%;
+    --destructive-foreground: 22 24% 8%;
+    --destructive-soft: 2 26% 15%;
 
-    --success: 152 48% 54%;
-    --success-foreground: 168 18% 7%;
-    --success-soft: 152 22% 14%;
+    --success: 142 34% 52%;
+    --success-foreground: 22 24% 8%;
+    --success-soft: 142 20% 14%;
 
-    --warning: 38 82% 60%;
-    --warning-foreground: 168 18% 7%;
-    --warning-soft: 36 28% 14%;
+    --warning: 38 78% 58%;
+    --warning-foreground: 22 24% 8%;
+    --warning-soft: 36 24% 14%;
 
-    --info: 186 52% 58%;
-    --info-foreground: 168 18% 7%;
-    --info-soft: 186 24% 14%;
+    --info: 200 40% 60%;
+    --info-foreground: 22 24% 8%;
+    --info-soft: 200 22% 14%;
 
-    --signal: 156 55% 52%;
-    --signal-foreground: 168 28% 9%;
-    --signal-soft: 160 20% 16%;
+    --signal: 14 52% 62%;
+    --signal-foreground: 22 32% 12%;
+    --signal-soft: 18 20% 17%;
 
-    --sidebar: 168 22% 8%;
-    --sidebar-foreground: 42 22% 94%;
-    --sidebar-muted: 165 14% 14%;
-    --sidebar-border: 165 10% 17%;
-    --sidebar-active: 156 55% 52%;
-    --sidebar-active-foreground: 168 28% 9%;
+    --sidebar: 22 28% 9%;
+    --sidebar-foreground: 33 30% 93%;
+    --sidebar-muted: 22 20% 14%;
+    --sidebar-border: 22 14% 18%;
+    --sidebar-active: 14 52% 62%;
+    --sidebar-active-foreground: 22 32% 12%;
 
-    --hot: 2 68% 62%;
-    --hot-soft: 2 28% 15%;
-    --warm: 38 82% 60%;
-    --warm-soft: 36 28% 14%;
-    --cold: 186 52% 58%;
-    --cold-soft: 186 24% 14%;
+    --hot: 2 66% 62%;
+    --hot-soft: 2 26% 15%;
+    --warm: 38 78% 58%;
+    --warm-soft: 36 24% 14%;
+    --cold: 200 40% 60%;
+    --cold-soft: 200 22% 14%;
 
     --grad-primary: none;
     --grad-mesh: none;
 
     --glow-primary: 0 1px 2px rgb(0 0 0 / 0.45);
-    --glow-soft: 0 0 0 0.5px rgb(220 235 225 / 0.05), 0 1px 2px rgb(0 0 0 / 0.35);
+    --glow-soft: 0 0 0 0.5px rgb(245 235 225 / 0.04), 0 1px 2px rgb(0 0 0 / 0.35);
     --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.55);
     --shadow-drawer: 16px 0 48px -24px rgb(0 0 0 / 0.65);
 
-    --grain-opacity: 0.035;
+    --grain-opacity: 0.034;
     --grain-mix: screen;
   }
 

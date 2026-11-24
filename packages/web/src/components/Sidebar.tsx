@@ -119,11 +119,12 @@ function Nav({ collapsed, isAdmin, isCandidate, onNavigate }: { collapsed: boole
 function SidebarPromo({ collapsed, isCandidate }: { collapsed: boolean; isCandidate: boolean }) {
   if (!isCandidate || collapsed) return null;
   return (
-    <div className="mx-2.5 mb-2 rounded-lg border border-sidebar-border bg-sidebar-muted/40 p-3">
-      <p className="text-[12.5px] font-semibold leading-tight text-sidebar-foreground">Your career, our priority.</p>
+    <div className="mx-2.5 mb-2 rounded-xl border border-[hsl(14,46%,58%/0.22)] bg-[hsl(14,46%,58%/0.08)] p-3.5">
+      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[hsl(14,46%,68%)]">Premium workspace</p>
+      <p className="mt-1.5 text-[12.5px] font-semibold leading-snug text-sidebar-foreground">Your career, our priority.</p>
       <Link
         to="/credits"
-        className="mt-2 inline-flex items-center gap-1 text-[11.5px] text-sidebar-foreground transition-colors hover:text-sidebar-foreground"
+        className="mt-2.5 inline-flex items-center gap-1 text-[11.5px] text-[hsl(33,30%,82%)] transition-colors hover:text-sidebar-foreground"
       >
         Preparation credits <ArrowUpRight className="h-3 w-3" aria-hidden />
       </Link>

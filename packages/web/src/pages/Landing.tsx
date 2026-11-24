@@ -567,20 +567,20 @@ const Landing: React.FC = () => {
 
         {/* Closing CTA */}
         <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-8 lg:pb-20" aria-labelledby="cta-heading">
-          <div className="relative overflow-hidden rounded-2xl border border-[hsl(165,16%,20%)] bg-[hsl(168,28%,11%)] px-6 py-14 text-[hsl(42,22%,95%)] sm:px-10">
-            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border border-[hsl(156,58%,45%/0.14)]" />
-            <div aria-hidden className="pointer-events-none absolute bottom-0 left-10 h-32 w-32 rounded-full border border-[hsl(156,58%,45%/0.08)]" />
+          <div className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-[hsl(22,32%,15%)] px-6 py-14 text-[hsl(33,34%,94%)] sm:px-10">
+            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full border border-[hsl(14,46%,58%/0.14)]" />
+            <div aria-hidden className="pointer-events-none absolute bottom-0 left-10 h-32 w-32 rounded-full border border-[hsl(14,46%,58%/0.08)]" />
             <div className="relative mx-auto max-w-3xl text-center">
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[hsl(156,55%,52%)]">Ready when you are</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[hsl(14,52%,64%)]">Ready when you are</p>
               <h2 id="cta-heading" className="mt-4 text-[34px] font-semibold leading-[1.1] tracking-[-0.032em] sm:text-[44px]">Start with a profile. Everything else follows.</h2>
-              <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-[hsl(150,7%,72%)]">
+              <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-[hsl(30,16%,72%)]">
                 Create an account, confirm your details and receive two preparation credits. The tour shows you where everything lives.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Button asChild size="lg" className="h-11 bg-[hsl(156,55%,52%)] px-6 text-[hsl(168,28%,9%)] hover:bg-[hsl(156,55%,58%)]">
+                <Button asChild size="lg" className="h-11 bg-[hsl(14,46%,58%)] px-6 text-[hsl(22,32%,12%)] hover:bg-[hsl(14,50%,64%)]">
                   <Link to="/register">Create free account <ArrowRight className="h-4 w-4" /></Link>
                 </Button>
-                <Button asChild size="lg" variant="ghost" className="h-11 px-6 text-[hsl(42,22%,95%)] hover:bg-[hsl(42,22%,95%/0.08)] hover:text-[hsl(42,22%,95%)]">
+                <Button asChild size="lg" variant="ghost" className="h-11 px-6 text-[hsl(33,34%,94%)] hover:bg-[hsl(33,34%,94%/0.08)] hover:text-[hsl(33,34%,94%)]">
                   <Link to="/login">Sign in</Link>
                 </Button>
               </div>

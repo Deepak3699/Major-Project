@@ -81,7 +81,7 @@ const Layout: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto w-full max-w-content space-y-5 p-4 pb-20 sm:p-6 sm:space-y-6 md:pb-8 lg:p-8"
+              className="mx-auto w-full max-w-content space-y-5 p-4 pb-20 sm:p-5 sm:space-y-5 md:pb-6 lg:p-6"
             >
               <Suspense fallback={<PageSkeleton />}>
                 <Outlet />

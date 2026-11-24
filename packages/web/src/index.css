@@ -256,7 +256,7 @@
 
   /* Editorial flat card: hairline border, near-invisible lift */
   .card {
-    @apply rounded-2xl border bg-surface;
+    @apply rounded-xl border bg-surface;
     border-color: hsl(var(--border));
     box-shadow: var(--glow-soft);
     transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;

@@ -411,7 +411,7 @@ const Landing: React.FC = () => {
                 key={feature.title}
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
+                viewport={{ once: true, amount: 0.15 }}
                 transition={{ duration: 0.35, delay: index * 0.04, ease: EASE }}
               >
                 <FeatureCard {...feature} index={index} />
@@ -435,7 +435,7 @@ const Landing: React.FC = () => {
             </div>
             <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, index) => (
-                <motion.li key={step.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.06, ease: EASE }} className="glass-gloss-soft relative rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
+                <motion.li key={step.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.35, delay: index * 0.06, ease: EASE }} className="glass-gloss-soft relative rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-signal/25 bg-signal-soft font-mono text-[11px] tabular-nums text-signal">0{index + 1}</span>
                   <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.014em] text-foreground">{step.title}</h3>
                   <p className="mt-2 text-[13px] leading-relaxed text-foreground/78">{step.body}</p>
@@ -463,7 +463,7 @@ const Landing: React.FC = () => {
                   'Presentation outline with speaking notes and likely questions',
                   'Company research with source URLs and retrieval timestamps',
                 ].map((line, index) => (
-                  <motion.li key={line} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-30px' }} transition={{ duration: 0.3, delay: index * 0.06, ease: EASE }} className="flex gap-3 text-[13.5px] leading-relaxed text-foreground/85">
+                  <motion.li key={line} initial={{ opacity: 0, x: -10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.3, delay: index * 0.06, ease: EASE }} className="flex gap-3 text-[13.5px] leading-relaxed text-foreground/85">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-signal/25 bg-signal-soft text-signal">
                       <Check className="h-3 w-3" aria-hidden />
                     </span>
@@ -487,7 +487,7 @@ const Landing: React.FC = () => {
                   { index: '03', title: 'Sources and evidence notes', detail: 'URLs, retrieval time, and gaps called out plainly' },
                   { index: '04', title: 'Revision plan', detail: 'Focused actions to review before the conversation' },
                 ].map((row, i) => (
-                  <motion.div key={row.index} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-20px' }} transition={{ duration: 0.3, delay: i * 0.05, ease: EASE }} className="flex gap-4 px-5 py-4">
+                  <motion.div key={row.index} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.3, delay: i * 0.05, ease: EASE }} className="flex gap-4 px-5 py-4">
                     <span className="font-mono text-[11px] font-semibold tabular-nums text-signal">{row.index}</span>
                     <div>
                       <p className="text-[14px] font-medium text-foreground">{row.title}</p>
@@ -516,7 +516,7 @@ const Landing: React.FC = () => {
             </div>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {PLANS.map((plan, index) => (
-                <motion.div key={plan.code} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className={cn('glass-gloss-soft flex flex-col rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1', plan.code === 'FREE' && 'border-signal/30 shadow-[0_16px_40px_-24px_hsl(var(--signal)/0.25)]')}>
+                <motion.div key={plan.code} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className={cn('glass-gloss-soft flex flex-col rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1', plan.code === 'FREE' && 'border-signal/30 shadow-[0_16px_40px_-24px_hsl(var(--signal)/0.25)]')}>
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">{plan.code}</p>
                     {plan.code === 'FREE' && <Badge variant="success">Available</Badge>}
@@ -560,7 +560,7 @@ const Landing: React.FC = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {TRUST.map((item, index) => (
-                <motion.div key={item.title} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className="glass-gloss-soft rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
+                <motion.div key={item.title} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.15 }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className="glass-gloss-soft rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
                   <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl border border-signal/15 bg-signal-soft/70 text-signal">
                     <item.icon className="h-4 w-4" strokeWidth={1.75} />
                   </span>

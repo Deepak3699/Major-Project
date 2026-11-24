@@ -102,12 +102,12 @@ function PreviewRing() {
 }
 
 function ProductPreview() {
-  const glassPanel = 'rounded-xl border border-[hsl(var(--border)/0.65)] bg-[hsl(var(--surface)/0.62)] backdrop-blur-md shadow-[0_1px_0_hsl(var(--surface)/0.8)_inset]';
+  const glassPanel = 'rounded-xl border border-[hsl(var(--border)/0.75)] bg-[hsl(var(--surface)/0.94)] shadow-[0_1px_0_hsl(36,40%,99%,0.9)_inset,0_8px_20px_-16px_hsl(22,32%,16%,0.12)]';
   return (
     <div className="relative">
       <div aria-hidden className="absolute -inset-4 rounded-[2rem] bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.14),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(var(--primary)/0.08),transparent_50%)] blur-sm" />
       <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.35)] backdrop-blur-sm" />
-      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--surface)/0.58)] shadow-[0_24px_60px_-20px_hsl(var(--foreground)/0.18)] backdrop-blur-xl" aria-label="Illustrative AI JobPilot workspace preview">
+      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--surface)/0.90)] shadow-[0_24px_60px_-20px_hsl(22,32%,16%,0.18)] backdrop-blur-xl" aria-label="Illustrative AI JobPilot workspace preview">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--surface)/0.45),hsl(var(--surface)/0.15))]" />
         <div className="relative flex items-center justify-between gap-3 border-b border-[hsl(var(--border)/0.6)] bg-[hsl(var(--surface)/0.45)] px-4 py-3 backdrop-blur-md">
           <div aria-hidden className="flex items-center gap-1.5">
@@ -141,7 +141,7 @@ function ProductPreview() {
             </div>
           </div>
 
-          <div className="min-w-0 bg-[hsl(var(--background)/0.25)] p-4 sm:p-5">
+          <div className="min-w-0 bg-[hsl(34,38%,95%,0.45)] p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 { icon: BriefcaseBusiness, label: 'Active jobs', value: '12' },

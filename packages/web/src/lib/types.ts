@@ -304,6 +304,7 @@ export interface PracticeQuestion {
 export interface PracticeAnswerResult {
   question: PracticeQuestion;
   grade: { score: number; strengths: string[]; improvements: string[] };
+  follow_up?: PracticeQuestion | null;
 }
 
 export interface PracticeFinishResult {

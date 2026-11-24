@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import { ArrowLeft, ArrowRight, Check, Minus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Mic, Minus, Square, Trash2, Volume2 } from 'lucide-react';
 import { practice } from '@/lib/api';
 import { PracticeQuestion, PracticeSessionSummary } from '@/lib/types';
 import { PageHeader } from '@/components/ui/page-header';
@@ -12,13 +12,15 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { PageLoader } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
+import { InterviewerAvatar, type InterviewerState } from '@/components/interview/InterviewerAvatar';
+import { useInterviewerSpeech, useVoiceAnswers } from '@/components/interview/speech';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 const CATEGORY_LABEL: Record<string, string> = {
-  intro: 'Background', technical: 'Technical', project: 'Project deep-dive', behavioral: 'Behavioral', case: 'Scenario', general: 'General',
+  intro: 'Background', technical: 'Technical', project: 'Project deep-dive', behavioral: 'Behavioral', case: 'Scenario', general: 'General', follow_up: 'Follow-up',
 };
 
 const DIFFICULTY_LABEL: Record<string, string> = { calm: 'Calm', standard: 'Standard', brutal: 'Stress' };
@@ -144,7 +146,19 @@ const AnswerPanel = ({ sessionId, question, index, total, isLast, onAnswered, on
   onNext: () => void;
 }) => {
   const [text, setText] = useState('');
+  const [voiceOn, setVoiceOn] = useState(() => {
+    try { return localStorage.getItem('jobpilot:voice-interview') !== '0'; } catch { return true; }
+  });
+  const [micArmed, setMicArmed] = useState(false);
+  const micArmedRef = useRef(false);
+  micArmedRef.current = micArmed;
   const { toast } = useToast();
+
+  const speech = useInterviewerSpeech();
+  const voice = useVoiceAnswers({
+    onFinal: (chunk) => setText((prev) => `${prev ? `${prev.trimEnd()} ` : ''}${chunk}`.slice(0, 6000)),
+  });
+
   const answerMutation = useMutation(
     (answer: string) => practice.answer(sessionId, { question_id: question.id, answer }),
     {
@@ -153,50 +167,156 @@ const AnswerPanel = ({ sessionId, question, index, total, isLast, onAnswered, on
     },
   );
 
+  // Aria reads each question aloud; if the candidate has armed the mic, the
+  // answer window opens automatically as soon as she finishes speaking.
+  useEffect(() => {
+    if (!voiceOn || !speech.supported || question.feedback) return;
+    speech.speak(question.question, {
+      onEnd: () => {
+        if (micArmedRef.current && voice.supported) voice.start();
+      },
+    });
+    return () => speech.cancel();
+  }, [question.id, voiceOn]);
+
+  const toggleVoice = () => {
+    const next = !voiceOn;
+    setVoiceOn(next);
+    try { localStorage.setItem('jobpilot:voice-interview', next ? '1' : '0'); } catch { /* storage can be disabled */ }
+    if (!next) {
+      speech.cancel();
+      voice.stop();
+    } else if (!question.feedback && speech.supported) {
+      speech.speak(question.question);
+    }
+  };
+
+  const startAnswering = () => {
+    setMicArmed(true);
+    speech.cancel();
+    voice.start();
+  };
+
+  const avatarState: InterviewerState = question.feedback
+    ? 'idle'
+    : speech.speaking ? 'speaking'
+      : voice.listening ? 'listening'
+        : answerMutation.isLoading ? 'thinking' : 'idle';
+
   return (
-    <motion.div key={question.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
-      <div className="flex items-center gap-2">
+    <motion.div key={question.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-5 py-2.5">
         <p className="eyebrow">Question {index + 1} of {total}</p>
         <Badge variant="muted">{CATEGORY_LABEL[question.category] || question.category}</Badge>
         {question.topic && <Badge variant="outline">{question.topic}</Badge>}
+        {question.category === 'follow_up' && <Badge variant="signal">From your last answer</Badge>}
+        <div className="ml-auto flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => speech.speak(question.question)}
+            disabled={!speech.supported}
+            title="Replay the question aloud"
+            aria-label="Replay the question aloud"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          >
+            <Volume2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={toggleVoice}
+            aria-pressed={voiceOn}
+            className={cn(
+              'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors',
+              voiceOn
+                ? 'border-signal/40 bg-signal-soft text-foreground'
+                : 'border-border bg-surface text-muted-foreground hover:bg-accent',
+            )}
+          >
+            <Mic className="h-3 w-3" /> Voice {voiceOn ? 'on' : 'off'}
+          </button>
+        </div>
       </div>
-      <p className="mt-3 max-w-phi-body text-[17px] font-medium leading-relaxed tracking-[-0.01em] text-foreground">{question.question}</p>
-      <p className="mt-1 text-[12px] text-muted-foreground">Answer in four to six specific sentences — the grader reads only what you write here.</p>
 
-      {!question.feedback ? (
-        <div className="mt-4 space-y-3">
-          <Textarea
-            aria-label={`Your answer to question ${index + 1}`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={6000}
-            rows={9}
-            placeholder="Situation, what you did, and how it turned out."
-          />
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{text.trim().length} / 6000</p>
-            <Button onClick={() => answerMutation.mutate(text.trim())} loading={answerMutation.isLoading} disabled={text.trim().length < 10}>
-              Submit answer
-            </Button>
+      <div className="p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
+          <InterviewerAvatar state={avatarState} pulse={speech.pulse} className="h-44 w-full shrink-0 sm:h-auto sm:w-36" />
+          <div className="min-w-0 flex-1">
+            <p className="max-w-phi-body text-[17px] font-medium leading-relaxed tracking-[-0.01em] text-foreground">{question.question}</p>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
+              {question.feedback
+                ? 'Graded from your own answer — the breakdown below explains the score.'
+                : voiceOn && speech.supported
+                  ? 'Aria asks aloud. Answer by voice (words land below, editable) or just type — four to six specific sentences.'
+                  : 'Answer in four to six specific sentences — the grader reads only what you write here.'}
+            </p>
+            {!question.feedback && !micArmed && voiceOn && voice.supported && (
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
+                <Mic className="h-3 w-3" /> One click arms the mic — after that every question flows automatically
+              </p>
+            )}
           </div>
         </div>
-      ) : (
-        <div className="mt-4 border-t border-border pt-4">
-          <div className="flex items-center gap-2.5">
-            <span className={cn('grid h-9 w-9 place-items-center rounded-lg border font-mono text-[14px] font-semibold tabular-nums', scoreClass(question.score))}>
-              {question.score ?? '–'}
-            </span>
-            <p className="text-[12.5px] text-muted-foreground">Graded from your own answer — the breakdown below explains the score.</p>
+
+        {!question.feedback ? (
+          <div className="mt-4 space-y-3">
+            <Textarea
+              aria-label={`Your answer to question ${index + 1}`}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={6000}
+              rows={9}
+              placeholder={voice.listening ? 'Listening… speak naturally, or type here.' : 'Situation, what you did, and how it turned out.'}
+            />
+            {voice.listening && (
+              <p className="flex items-center gap-2 text-[12.5px] italic text-muted-foreground" aria-live="polite">
+                <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-success" aria-hidden />
+                {voice.partial ? `“${voice.partial}”` : 'Listening — go ahead.'}
+              </p>
+            )}
+            {voice.error && <p className="text-[12px] text-destructive">{voice.error}</p>}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="font-mono text-[11px] tabular-nums text-muted-foreground">{text.trim().length} / 6000</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {voiceOn && voice.supported && (
+                  voice.listening ? (
+                    <Button variant="outline" size="default" onClick={() => voice.stop()} className="border-success/50 text-success">
+                      <Square className="h-3.5 w-3.5 fill-current" /> Stop answering
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={startAnswering} disabled={answerMutation.isLoading}>
+                      <Mic className="h-4 w-4" /> Answer by voice
+                    </Button>
+                  )
+                )}
+                <Button onClick={() => answerMutation.mutate(text.trim())} loading={answerMutation.isLoading} disabled={text.trim().length < 10}>
+                  Submit answer
+                </Button>
+              </div>
+            </div>
+            {voiceOn && !voice.supported && (
+              <p className="text-[12px] text-muted-foreground">
+                Voice answers need Chrome or Edge — Aria still reads questions aloud where supported, and typing works everywhere.
+              </p>
+            )}
           </div>
-          <FeedbackGrid feedback={question.feedback} />
-          <p className="mt-4 rounded-lg bg-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground/90">{question.answer}</p>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={onNext}>
-              {isLast ? 'Review the full session' : 'Next question'}<ArrowRight className="h-4 w-4" />
-            </Button>
+        ) : (
+          <div className="mt-4 border-t border-border pt-4">
+            <div className="flex items-center gap-2.5">
+              <span className={cn('grid h-9 w-9 place-items-center rounded-lg border font-mono text-[14px] font-semibold tabular-nums', scoreClass(question.score))}>
+                {question.score ?? '–'}
+              </span>
+              <p className="text-[12.5px] text-muted-foreground">Scored out of 100, with the strengths and gaps to fix.</p>
+            </div>
+            <FeedbackGrid feedback={question.feedback} />
+            <p className="mt-4 rounded-lg bg-muted px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground/90">{question.answer}</p>
+            <div className="mt-4 flex justify-end">
+              <Button onClick={onNext}>
+                {isLast ? 'Review the full session' : 'Next question'}<ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </motion.div>
   );
 };

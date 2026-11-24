@@ -16,7 +16,7 @@
     --surface: 36 40% 99%;
     --foreground: 20 34% 14%;
     --muted: 31 28% 91%;
-    --muted-foreground: 22 14% 38%;
+    --muted-foreground: 22 18% 32%;
     --accent: 30 30% 92%;
     --accent-foreground: 20 34% 14%;
     --border: 28 20% 85%;
@@ -420,18 +420,18 @@
   .shine-border { position: relative; }
   .shine-border::after { content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; background:linear-gradient(135deg,hsl(var(--signal)/.35),transparent 40%,transparent 60%,hsl(var(--signal)/.15)); -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
   .glass-gloss {
-    background: linear-gradient(180deg, hsl(var(--surface) / 0.72), hsl(var(--surface) / 0.52));
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid hsl(var(--border) / 0.65);
-    box-shadow: 0 1px 0 hsl(var(--surface) / 0.85) inset, 0 20px 40px -24px hsl(var(--foreground) / 0.12);
-  }
-  .glass-gloss-soft {
-    background: linear-gradient(180deg, hsl(var(--surface) / 0.55), hsl(var(--surface) / 0.38));
+    background: linear-gradient(180deg, hsl(36 42% 99% / 0.98), hsl(33 34% 96% / 0.96));
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid hsl(var(--border) / 0.55);
-    box-shadow: 0 1px 0 hsl(var(--surface) / 0.7) inset;
+    border: 1px solid hsl(28 22% 82% / 0.9);
+    box-shadow: 0 1px 0 hsl(36 40% 100% / 0.95) inset, 0 18px 40px -24px hsl(22 32% 16% / 0.16);
+  }
+  .glass-gloss-soft {
+    background: linear-gradient(180deg, hsl(36 42% 99% / 0.97), hsl(34 34% 96% / 0.95));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid hsl(28 20% 84% / 0.9);
+    box-shadow: 0 1px 0 hsl(36 40% 100% / 0.9) inset, 0 12px 30px -22px hsl(22 32% 16% / 0.12);
   }
 }
 

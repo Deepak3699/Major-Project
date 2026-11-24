@@ -336,7 +336,8 @@ const Landing: React.FC = () => {
 
       <main id="main">
         {/* Hero */}
-        <section className="relative overflow-hidden border-b border-border" aria-labelledby="hero-heading">
+        <section className="relative overflow-hidden border-b border-border bg-[linear-gradient(180deg,hsl(36,40%,99%),hsl(34,38%,95%))]" aria-labelledby="hero-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(14,50%,93%,0.9),transparent_45%),radial-gradient(ellipse_at_bottom_left,hsl(32,36%,92%,0.7),transparent_40%)]" />
           <div aria-hidden className="pointer-events-none absolute inset-0">
             <div className="absolute -right-24 top-0 h-[28rem] w-[28rem] rounded-full border border-signal/10" />
             <div className="absolute -right-8 top-16 h-[20rem] w-[20rem] rounded-full border border-signal/8" />

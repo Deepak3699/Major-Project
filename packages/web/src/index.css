@@ -12,25 +12,25 @@
 @layer base {
   :root {
     /* Terracotta Atelier — light theme: almond beige, walnut brown, dusty terracotta */
-    --background: 32 36% 95%;
-    --surface: 30 33% 98%;
-    --foreground: 22 32% 16%;
-    --muted: 30 28% 91%;
-    --muted-foreground: 24 14% 42%;
-    --accent: 28 30% 92%;
-    --accent-foreground: 22 32% 16%;
-    --border: 28 22% 86%;
-    --border-strong: 24 18% 74%;
-    --input: 28 22% 84%;
-    --ring: 12 43% 46%;
+    --background: 34 38% 95%;
+    --surface: 36 40% 99%;
+    --foreground: 20 34% 14%;
+    --muted: 31 28% 91%;
+    --muted-foreground: 22 14% 38%;
+    --accent: 30 30% 92%;
+    --accent-foreground: 20 34% 14%;
+    --border: 28 20% 85%;
+    --border-strong: 22 16% 72%;
+    --input: 28 20% 84%;
+    --ring: 12 46% 44%;
 
-    --primary: 12 43% 46%;
-    --primary-foreground: 33 40% 98%;
-    --primary-hover: 12 45% 40%;
-    --primary-soft: 14 45% 93%;
+    --primary: 12 46% 44%;
+    --primary-foreground: 36 40% 98%;
+    --primary-hover: 12 48% 38%;
+    --primary-soft: 14 50% 93%;
 
-    --secondary: 30 28% 91%;
-    --secondary-foreground: 22 32% 16%;
+    --secondary: 31 28% 91%;
+    --secondary-foreground: 20 34% 14%;
 
     --destructive: 2 66% 46%;
     --destructive-foreground: 0 0% 100%;
@@ -49,9 +49,9 @@
     --info-soft: 200 35% 93%;
 
     /* signal — dusty terracotta accent, used surgically */
-    --signal: 12 43% 46%;
-    --signal-foreground: 33 40% 98%;
-    --signal-soft: 14 45% 93%;
+    --signal: 12 46% 44%;
+    --signal-foreground: 36 40% 98%;
+    --signal-soft: 14 50% 93%;
 
     --sidebar: 22 32% 15%;
     --sidebar-foreground: 33 34% 94%;

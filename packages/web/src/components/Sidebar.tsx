@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useNavigate, Link } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth";
 import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
@@ -76,18 +76,19 @@ function NavItem({ to, label, icon: Icon, collapsed, onNavigate, tour }: NavItem
       className={({ isActive }) =>
         cn(
           "group relative flex h-10 min-h-10 items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-150",
-          collapsed ? "justify-center px-0" : "px-3",
-          "text-sidebar-foreground/82 hover:bg-sidebar-muted/80 hover:text-sidebar-foreground",
-          isActive && "!bg-sidebar-active !text-sidebar-active-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]",
+          collapsed ? "justify-center px-0 mx-1" : "px-3",
+          "text-sidebar-foreground/72 hover:bg-sidebar-muted/60 hover:text-sidebar-foreground",
+          isActive && "bg-[hsl(14,46%,58%/0.14)] text-[#EFDECD]",
         )
       }
     >
       {({ isActive }) => (
         <>
+          {isActive && !collapsed && <span aria-hidden className="absolute left-0 top-2.5 h-5 w-[3px] rounded-r-full bg-[hsl(14,52%,62%)]" />}
           <Icon
             className={cn(
               "h-[18px] w-[18px] shrink-0 transition-colors",
-              isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100",
+              isActive ? "text-[hsl(14,52%,62%)] opacity-100" : "opacity-65 group-hover:opacity-100",
             )}
             strokeWidth={isActive ? 2 : 1.8}
           />
@@ -115,22 +116,6 @@ function Nav({ collapsed, isAdmin, isCandidate, onNavigate }: { collapsed: boole
   );
 }
 
-function SidebarPromo({ collapsed, isCandidate }: { collapsed: boolean; isCandidate: boolean }) {
-  if (!isCandidate || collapsed) return null;
-  return (
-    <div className="mx-3 mb-3 rounded-2xl border border-[hsl(14,46%,58%/0.2)] bg-[linear-gradient(180deg,hsl(14,46%,58%,0.12),hsl(14,46%,58%,0.05))] p-4">
-      <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[hsl(14,52%,68%)]">Premium workspace</p>
-      <p className="mt-2 text-[13px] font-semibold leading-snug text-sidebar-foreground">Your career, our priority.</p>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-sidebar-foreground/65">Track progress, prepare smarter, and stay focused.</p>
-      <Link
-        to="/credits"
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[hsl(14,46%,58%/0.25)] bg-[hsl(14,46%,58%/0.1)] px-2.5 py-1.5 text-[11.5px] font-medium text-[hsl(33,34%,92%)] transition-colors hover:bg-[hsl(14,46%,58%/0.16)]"
-      >
-        Preparation credits <ArrowUpRight className="h-3 w-3" aria-hidden />
-      </Link>
-    </div>
-  );
-}
 
 function Footer({ collapsed, email, role, onLogout, onCommand }: { collapsed: boolean; email?: string | null; role?: string | null; onLogout: () => void; onCommand: () => void }) {
   return (
@@ -202,10 +187,9 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
   return (
     <>
       {/* Desktop rail */}
-      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar md:flex", EASE)} style={{ width: collapsed ? 72 : 252 }}>
+      <aside data-tour="sidebar" className={cn("relative z-20 hidden h-full shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-[linear-gradient(180deg,hsl(22,30%,14%),hsl(22,28%,11%))] md:flex", EASE)} style={{ width: collapsed ? 72 : 256 }}>
         <Header compact={collapsed} />
         <Nav collapsed={collapsed} isAdmin={isAdmin} isCandidate={isCandidate} />
-        <SidebarPromo collapsed={collapsed} isCandidate={isCandidate} />
         <Footer collapsed={collapsed} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
       </aside>
 
@@ -219,7 +203,6 @@ const Sidebar = ({ drawerOpen = false, onDrawerClose }: { drawerOpen?: boolean; 
               <button type="button" onClick={onDrawerClose} aria-label="Close menu" className="grid h-8 w-8 place-items-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-muted hover:text-sidebar-foreground"><X className="h-4 w-4" /></button>
             </div>
             <Nav collapsed={false} isAdmin={isAdmin} isCandidate={isCandidate} onNavigate={onDrawerClose} />
-            <SidebarPromo collapsed={false} isCandidate={isCandidate} />
             <Footer collapsed={false} email={user?.email} role={user?.role} onLogout={onLogout} onCommand={openPalette} />
           </aside>
         </div>

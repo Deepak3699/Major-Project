@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence, useInView, useReducedMotion } from 'framer-motion';
 import { useQuery } from 'react-query';
 import {
-  ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, CheckCircle2,
-  CircleUserRound, Coins, MapPin, Mic, Presentation,
-  Target, Users, TrendingUp, Clock, LayoutGrid, ListChecks, BookOpen,
-} from 'lucide-react';
+  ArrowRight, ArrowUpRight, BriefcaseBusiness, Brain, Check,
+  CheckCircle2, Clock, Coins, Flame, GraduationCap, MapPin,
+  Menu, Mic, Pause, Play, Plus, Search, Sparkles, Star,
+  TrendingUp, Wind, Briefcase, LayoutGrid, ListChecks, BookOpen, User, Target,
+} from "lucide-react";
 import { candidate, practice, credits } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { JobCard } from '@/components/candidate/JobCard';
@@ -14,316 +15,515 @@ import { PageLoader } from '@/components/ui/spinner';
 import { cn } from '@/components/ui/cn';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const rise = (delay = 0, y = 14) => ({
-  initial: { opacity: 0, y }, animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: EASE, delay },
-});
 
-type Section = 'snapshot' | 'jobs' | 'applications' | 'preparation';
-const SECTIONS: { id: Section; label: string; icon: any }[] = [
-  { id: 'snapshot', label: 'Snapshot', icon: LayoutGrid },
-  { id: 'jobs', label: 'Recommended Jobs', icon: BriefcaseBusiness },
-  { id: 'applications', label: 'Applications', icon: ListChecks },
-  { id: 'preparation', label: 'Preparation', icon: BookOpen },
-];
+function rise(delay = 0, y = 16) {
+  return {
+    initial: { opacity: 0, y },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.55, ease: EASE, delay },
+  };
+}
 
-const PREP_MODULES = [
-  { title: 'Mock interview', body: 'Practice real questions with adaptive AI follow-ups.', to: '/practice', icon: Mic },
-  { title: 'Group discussion', body: 'Build confident arguments and clear participation.', to: '/preparation', icon: Users },
-  { title: 'Presentation', body: 'Structure slides, speaking notes, and Q&A.', to: '/preparation', icon: Presentation },
-  { title: 'Company research', body: 'Cited insights with honest gaps, never guesses.', to: '/preparation', icon: BriefcaseBusiness },
-  { title: 'Skill gap analysis', body: 'Map your strengths to real posting requirements.', to: '/recommendations', icon: Target },
-];
+function fade(delay = 0) {
+  return {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    transition: { duration: 0.5, ease: EASE, delay },
+  };
+}
+
+function slideIn(delay = 0, y = 20) {
+  return {
+    initial: { opacity: 0, x: -20 },
+    animate: { opacity: 1, x: 0 },
+    transition: { duration: 0.5, ease: EASE, delay },
+  };
+}
 
 function greeting() {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+  const suffix = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  return `Good ${suffix}`;
 }
 
-function CompletionRing({ value }: { value: number }) {
-  const safe = Math.max(0, Math.min(100, Number(value) || 0));
-  const r = 34; const c = 2 * Math.PI * r;
+function StatStack({ icon, label, value, change, isTrendUp }: {
+  icon: any;
+  label: string;
+  value: string | number;
+  change?: string;
+  isTrendUp?: boolean;
+}) {
+  const ref = useInView({ once: true });
   return (
-    <div className="relative grid place-items-center">
-      <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label={`Profile ${safe}% complete`}>
-        <defs><linearGradient id="home-ring" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="hsl(12 46% 44%)" /><stop offset="100%" stopColor="hsl(24 38% 52%)" /></linearGradient></defs>
-        <circle cx="46" cy="46" r={r} fill="none" stroke="hsl(28 20% 86%)" strokeWidth="7" />
-        <motion.circle cx="46" cy="46" r={r} fill="none" stroke="url(#home-ring)" strokeWidth="7" strokeLinecap="round" strokeDasharray={c}
-          initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - safe / 100) }} transition={{ duration: 1, ease: EASE, delay: 0.2 }} transform="rotate(-90 46 46)" />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center"><span className="font-mono text-[16px] font-semibold tabular-nums text-foreground">{safe}%</span></div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, hint, delay }: { icon: any; label: string; value: React.ReactNode; hint: string; delay: number }) {
-  return (
-    <motion.div {...rise(delay)} whileHover={{ y: -3, transition: { duration: 0.2 } }} className="glass-gloss-soft group relative overflow-hidden rounded-2xl p-5">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signal/50 via-signal/15 to-transparent" />
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-foreground/55">{label}</p>
-          <p className="mt-2 font-mono text-[28px] font-semibold leading-none tabular-nums tracking-tight text-foreground">{value}</p>
-          <p className="mt-2 text-[12px] text-foreground/65">{hint}</p>
+    <motion.div ref={ref} initial={{ opacity: 0, y: 20, scale: 0.95 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6, ease: EASE }} className="group relative overflow-hidden rounded-3xl border border-[#C4775F]/15 bg-[#E8D5C3]/8 p-6 transition-all duration-500 hover:shadow-[0_20px_50px_-12px_hsl(12/46%/44%/0.15)] hover:border-[#C4775F]/25 hover:bg-[#E8D5C3]/12">
+      <div aria-hidden className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-[#C4775F]/5 blur-3xl transition-transform duration-700 group-hover:scale-110" />
+      <div className="relative z-10 flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <p className="font-serif text-[11px] uppercase tracking-[0.18em] text-[#493126]/50">{label}</p>
+          <p className="mt-4 font-sans text-[32px] font-semibold tracking-[-0.025em] text-[#493126] dark:text-[#F0E4D8]">{value}</p>
+          {change && (
+            <p className={cn("mt-2 text-xs font-medium flex items-center gap-1", isTrendUp ? "text-[#C4775F]" : "text-[#747B59]")}>
+              {isTrendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+              {change}
+            </p>
+          )}
         </div>
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-signal/15 bg-signal-soft/70 text-signal transition-all duration-300 group-hover:bg-signal group-hover:text-signal-foreground"><Icon className="h-5 w-5" strokeWidth={1.75} /></span>
+        <motion.div whileHover={{ rotate: 2, scale: 1.05 }} className="relative z-10 flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#C4775F]/10 text-[#C4775F]">
+          <icon className="h-8 w-8" strokeWidth={1.8} />
+        </motion.div>
       </div>
     </motion.div>
   );
 }
 
-function Status({ status }: { status: string }) {
-  const tone = status === 'OFFER' || status === 'JOINED' ? 'border-success/25 bg-success-soft text-success'
-    : status === 'REJECTED' ? 'border-destructive/25 bg-destructive-soft text-destructive'
-    : 'border-border bg-muted text-foreground/65';
-  return <span className={cn('inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.04em]', tone)}>{status.replace(/_/g, ' ')}</span>;
+function GlowCard({
+  children, className, delay = 0, showGlow = true, onClick
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  showGlow?: boolean;
+  onClick?: () => void;
+}) {
+  const ref = useInView({ once: true });
+  return (
+    <motion.ref
+      ref={ref as any}
+      initial={{ opacity: 0, y: 24, scale: 0.98 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6, ease: EASE, delay }}
+      className={cn(
+        "relative overflow-hidden rounded-3xl border p-6 transition-all duration-500 hover:shadow-[0_25px_60px_-15px_hsl(12/46%/44%/0.12)]",
+        !showGlow && "border-[#747B59]/10 bg-[#F8F2EA]/5",
+        showGlow && "border-[#C4775F]/15 bg-[#E8D5C3]/8",
+        onClick && "cursor-pointer hover:scale-[1.01]"
+      )}
+    >
+      {showGlow && (
+        <div aria-hidden className="pointer-events-none absolute -top-20 -left-20 h-40 w-40 rounded-full bg-[#C4775F]/8 blur-3xl transition-transform duration-700" />
+      )}
+      {children}
+    </motion.ref>
+  );
+}
+
+function ProgressBar({ progress, color }: { progress: number; color?: string }) {
+  const colorValue = color || "#C4775F";
+  const ref = useInView({ once: true });
+  return (
+    <div ref={ref as any} className="relative h-2 overflow-hidden rounded-full bg-[#E8D5C3]/20">
+      <motion.div
+        initial={{ width: 0 }}
+        whileInView={{ width: `${Math.min(100, progress)}%` }}
+        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+        className="h-full bg-[#C4775F]"
+        style={{ boxShadow: `0 0 20px ${colorValue}60` }}
+      />
+    </div>
+  );
+}
+
+function StatusPulse({ type, message }: { type: 'success' | 'neutral' | 'warning'; message: string }) {
+  const pulseColors = {
+    success: "border-[#747B59]/20 bg-[#F8F2EA]/5 text-[#747B59]",
+    neutral: "border-[#C4775F]/20 bg-[#E8D5C3]/10 text-[#C4775F]",
+    warning: "border-[#C4775F]/30 bg-[#E8D5C3]/15 text-[#C4775F]/90",
+  };
+  const icon = type === 'success' ? <CheckCircle2 className="h-5 w-5" /> : <TrendingUp className="h-5 w-5" />;
+  const ref = useInView({ once: true });
+  return (
+    <motion.div
+      ref={ref as any}
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6, ease: EASE, delay: 0.1 }}
+      className={cn("mt-5 flex items-center gap-4 rounded-2xl border px-6 py-4", pulseColors[type])}
+    >
+      <div className="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl bg-[#493126]/5" aria-hidden>
+        {icon}
+      </div>
+      <p className="text-[14px] font-medium leading-relaxed text-[#493126] dark:text-[#F0E4D8]">{message}</p>
+    </motion.div>
+  );
+}
+
+function ActionCard({ icon, title, description, color }: {
+  icon: any;
+  title: string;
+  description: string;
+  color: string;
+}) {
+  const ref = useInView({ once: true });
+  return (
+    <motion.div
+      ref={ref as any}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: EASE }}
+      whileHover={{ y: -4, transition: { duration: 0.3 } }}
+      className="group relative overflow-hidden rounded-3xl border p-6 transition-all duration-500 hover:shadow-[0_20px_45px_-12px_rgba(196,119,95,0.1)] hover:border-[#C4775F]/20"
+    >
+      <motion.div
+        animate={{ rotate: [0, 5, 0] }}
+        transition={{ duration: 20, alternate: true, repeat: Infinity }}
+        className="absolute -top-20 -right-20 h-32 w-32 rounded-full bg-[#C4775F]/5 blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+      />
+      <div className="relative z-10">
+        <div className={cn("mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#C4775F]/10 text-[#C4775F] transition-transform duration-500 group-hover:scale-110", color === 'almond' && "bg-[#E8D5C3]/10 text-[#E8D5C3]", color === 'walnut' && "bg-[#493126]/10 text-[#747B59]")} aria-hidden>
+          <icon className="h-7 w-7" strokeWidth={1.75} />
+        </div>
+        <p className="font-semibold text-[15px] leading-tight text-[#493126] dark:text-[#F0E4D8]">{title}</p>
+        <p className="mt-2 text-[12px] leading-relaxed text-[#747B59]">{description}</p>
+        <Link
+          className="mt-4 inline-flex items-center gap-1 text-[12px] font-medium text-[#C4775F] transition-all group-hover:gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+          href="#"
+        >
+          Open <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
+function StatusIndicator({ current, label }: { current: number; label: string }) {
+  const ref = useInView({ once: true });
+  return (
+    <motion.div ref={ref as any} initial={{ width: 0 }} whileInView={{ width: `${Math.max(6, Math.min(100, current * 20))}%` }} transition={{ duration: 0.8, ease: EASE }} className="h-2 rounded-full bg-[#C4775F]" />
+  );
 }
 
 const CandidateDashboard: React.FC = () => {
   const user = useAuthStore((state) => state.user);
-  const [active, setActive] = useState<Section>('snapshot');
-  const { data: summary, isLoading } = useQuery('candidate-summary', candidate.summary, { refetchInterval: 30000 });
-  const { data: recommendations } = useQuery('candidate-recommendations', candidate.recommendations, { enabled: !!summary?.has_profile, refetchInterval: 30000 });
-  const { data: apps } = useQuery('candidate-applications', candidate.applications, { refetchInterval: 30000 });
-  const { data: profileData } = useQuery('candidate-profile', candidate.profile, { enabled: !!summary?.has_profile, refetchInterval: 60000 });
-  const { data: subData } = useQuery('practice-subscription', practice.subscription);
-  const { data: sessionsData } = useQuery('practice-sessions', practice.sessions);
-  const { data: creditsData } = useQuery('credits-overview', credits.overview);
-  if (isLoading) return <PageLoader label="Loading your workspace…" />;
+  const reduced = useReducedMotion();
 
-  const profile = profileData?.profile;
-  const firstName = profile?.full_name?.trim()?.split(/\s+/)[0] || (user?.email || 'there').split('@')[0].split(/[._-]/)[0];
-  const topJobs = recommendations?.data?.slice(0, 3) || [];
-  const recentApps = apps?.data?.slice(0, 4) || [];
+  // Helper function to calculate status indicator value
+  const getStatusValue = (status?: string): number => {
+    if (!status) return 0;
+    switch (status) {
+      case 'APPLIED': return 2;
+      case 'INTERVIEW': return 4;
+      case 'OFFER': return 5;
+      case 'JOINED': return 5;
+      default: return 0;
+    }
+  };
+  const [search] = useSearchParams();
+  const [q, setQ] = useState(search.get('q') ?? '');
+  const [expanded, setExpanded] = useState<[boolean, boolean, boolean]>([false, false, false]);
+
+  const { summary, isLoading } = useQuery('candidate-summary', candidate.summary, { refetchInterval: 30000 });
+  const { recommendations } = useQuery('candidate-recommendations', candidate.recommendations, { enabled: !!summary?.has_profile, refetchInterval: 30000 });
+  const { apps } = useQuery('candidate-applications', candidate.applications, { refetchInterval: 30000 });
+  const { creditsData } = useQuery('credits-overview', credits.overview);
+  const { practiceData } = useQuery('practice-sessions', practice.sessions);
+
+  if (isLoading) return (
+    <div className="flex h-screen min-h-[60vh] items-center justify-center">
+      <PageLoader label="Loading your workspace..." />
+    </div>
+  );
+
+  const firstName = (user?.email || 'there').split('@')[0].split(/[._-]/)[0];
+  const lastName = firstName.split(' ').slice(1).join(' ') || '';
+  const fullName = `${firstName}${lastName ? ` ${lastName.charAt(0)}.` : ''}`;
+  const topJobs = (recommendations?.data || []).slice(0, 3);
+  const recentApps = (apps?.data || []).slice(0, 3);
   const completion = Number(summary?.profile_completion || 0);
   const statuses = summary?.application_statuses || {};
-  const activeCount = Object.entries(statuses).filter(([s]) => !['REJECTED', 'WITHDRAWN', 'JOINED'].includes(s)).reduce((sum, [, c]) => sum + c, 0);
+  const appliedCount = Number(summary?.application_total || 0);
   const offerCount = Number(statuses.OFFER || 0) + Number(statuses.JOINED || 0);
-  const pCompleted = (sessionsData?.sessions || []).filter((s) => s.status === 'completed');
-  const pLastScore = pCompleted[0]?.overall_score ?? null;
-  const pSub = subData?.subscription;
-  const pQuota = pSub && !pSub.unlimited && pSub.monthly_limit != null ? { used: Math.min(pSub.used_this_month, pSub.monthly_limit), limit: pSub.monthly_limit } : null;
-  const profileChecks = [
-    { label: 'Basic details', done: Boolean(profile?.full_name || profile?.headline) },
-    { label: 'Education', done: Boolean(profile?.education_level || (profile as any)?.education?.length) },
-    { label: 'Skills', done: ((profile?.skills as string[]) || []).length > 0 },
-    { label: 'Experience', done: ((profile?.experience as unknown[]) || []).length > 0 },
-  ];
-  const progressMessage = offerCount > 0 ? 'You have an offer milestone to review.'
-    : Number(statuses.INTERVIEW || 0) > 0 ? 'An interview is in progress. Keep preparing.'
-    : Number(statuses.APPLIED || 0) > 0 ? 'You are on track. Keep the momentum going.'
-    : 'Save a role to start tracking your progress.';
+  const interviewCount = Number(statuses.INTERVIEW || 0);
+  const practiceRemaining = practiceData?.sessions?.length != null ? `${Math.max(0, 5 - practiceData.sessions.length)} sessions left` : '5 sessions available';
+  const hasProfile = !!(summary as any)?.has_profile;
+  const hasMatches = topJobs.length > 0;
+  const statusMessage = offerCount > 0
+    ? 'You have an offer in review — treat every reply as your next application.'
+    : interviewCount > 0
+      ? 'An interview is in progress. Keep the momentum going.'
+      : appliedCount > 0
+        ? 'Your applications are in flight. Stay focused on your goals.'
+        : 'Nothing is queued right now. Discover roles to start.'
 
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const filteredJobs = useMemo(() => {
+    if (!q) return topJobs;
+    const lowerQ = q.toLowerCase();
+    return topJobs.filter((j: any) => `${j.title} ${j.company_name}`.toLowerCase().includes(lowerQ));
+  }, [topJobs, q]);
 
   return (
-    <div className="space-y-5 pb-2">
-      <motion.section {...rise(0)} className="relative overflow-hidden rounded-2xl border border-border/70 bg-[linear-gradient(180deg,hsl(36,42%,99%),hsl(33,34%,95%))] p-6 sm:p-7">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.1),transparent_45%),radial-gradient(ellipse_at_bottom_left,rgba(73,49,38,0.04),transparent_45%)]" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-signal/20 bg-signal-soft/60 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-signal">
-                <span className="h-1.5 w-1.5 rounded-full bg-signal animate-pulse-soft" /> Home
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8">
+      {/* Hero */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: EASE }}
+        className="relative overflow-hidden rounded-[2.5rem] border border-[#C4775F]/10 bg-[linear-gradient(135deg,_hsl(36,42%,99.5%),_hsl(33,34%,95%))] p-8 md:p-12"
+      >
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <motion.div
+            animate={{ x: [0, 20, 0], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 20 }}
+            className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-[#C4775F]/5 blur-3xl"
+          />
+          <motion.div
+            animate={{ x: [0, -20, 0], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 25 }}
+            className="absolute bottom-1/4 right-1/4 h-80 w-80 rounded-full bg-[#493126]/5 blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], opacity: [0.3, 0.4, 0.3] }}
+            transition={{ duration: 30 }}
+            className="absolute -right-32 top-1/3 h-72 w-72 rounded-full bg-[#747B59]/5 blur-3xl"
+          />
+        </div>
+
+        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-center">
+          <div className="flex-1">
+            <motion.span
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="inline-flex items-center gap-2 rounded-full border border-[#C4775F]/20 bg-[#C4775F]/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-[#C4775F]"
+            >
+              <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="h-1.5 w-1.5 rounded-full bg-[#C4775F]" />
+              HOME
+            </motion.span>
+            <h1 className="mt-5 font-serif text-[42px] font-semibold leading-[1.1] tracking-[-0.03em] text-[#493126] dark:text-[#F0E4D8] sm:text-[52px] md:text-[58px]">
+              Welcome back, <span className="relative inline-block">
+                {fullName}
+                <motion.div
+                  animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-[#C4775F]"
+                  style={{ background: "linear-gradient(90deg, transparent, #C4775F, transparent)" }}
+                />
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-foreground/55">{today}</span>
-            </div>
-            <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-signal/85">{greeting()}</p>
-            <h1 className="mt-2 text-[32px] font-semibold leading-[1.1] tracking-[-0.035em] text-foreground sm:text-[42px]">
-              Welcome back, <span className="text-[hsl(20,40%,14%)]">{firstName}</span>.
+              .
             </h1>
-            <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-foreground/75">
-              Your career workspace, organized in one place. Track progress, discover roles, and prepare with focus.
+            <p className="mt-5 max-w-xl font-serif text-[16px] leading-relaxed text-[#747B59]">
+              Your career journey is unfolding. Track every opportunity, refine your preparation, and prepare for success.
             </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link
+                to="/recommendations"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group inline-flex h-12 items-center gap-2.5 rounded-2xl bg-[#C4775F] px-5 text-[14px] font-semibold text-white transition-all duration-300 hover:bg-[#B85E50] hover:shadow-[0_10px_30px_-8px_hsl(12/46%/44%/0.3)]"
+              >
+                Explore jobs <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-y-0.5 group-hover:translate-x-0.5" strokeWidth={2} />
+              </Link>
+              <Link
+                to="/profile"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex h-12 items-center gap-2.5 rounded-2xl border-2 border-[#E8D5C3] bg-[#F8F2EA]/50 px-5 text-[14px] font-semibold text-[#493126] dark:border-[#F0E4D8] dark:text-[#F0E4D8] transition-all duration-300 hover:bg-[#E8D5C3]/30 hover:shadow-[0_8px_24px_-10px_hsl(12/46%/44%/0.15)]"
+              >
+                <User className="h-4 w-4 text-[#C4775F]" /> Profile
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/recommendations" className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground transition-all hover:bg-primary-hover">Explore jobs <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/profile" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-surface/80 px-4 text-[13px] font-medium text-foreground transition-all hover:bg-accent"><CircleUserRound className="h-4 w-4 text-signal" /> Profile</Link>
-          </div>
+          <motion.div
+            animate={{ rotate: [0, 180, 0] }}
+            transition={{ duration: 60, ease: "linear" }}
+            className="hidden h-64 w-64 shrink-0 items-center justify-center rounded-full border-4 border-[#C4775F]/5 bg-[#C4775F]/5 backdrop-blur-xl sm:flex"
+            aria-hidden
+          >
+            <Brain className="h-32 w-32 text-[#C4775F]/40" strokeWidth={1} />
+          </motion.div>
         </div>
       </motion.section>
 
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard icon={BriefcaseBusiness} label="Fresh jobs" value={summary?.fresh_jobs_7d ?? 0} hint="New in last 7 days" delay={0.04} />
-        <StatCard icon={Target} label="Applications" value={summary?.application_total ?? 0} hint={`${activeCount} active`} delay={0.07} />
-        <StatCard icon={Coins} label="Credits" value={creditsData?.wallet.balance ?? '—'} hint={creditsData ? `${creditsData.plan.name} plan` : 'Loading plan'} delay={0.1} />
-        <StatCard icon={TrendingUp} label="Profile strength" value={`${completion}%`} hint={completion >= 80 ? 'On track' : 'Needs attention'} delay={0.13} />
-      </section>
+      {/* Stats Row */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="grid grid-cols-6 gap-4 md:grid-cols-6">
+        <StatStack icon={BriefcaseBusiness} label="Fresh jobs" value={summary?.fresh_jobs_7d ?? 0} change="new listings" isTrendUp />
+        <StatStack icon={TrendingUp} label="Applications" value={appliedCount} change="in progress" />
+        <StatStack icon={Flame} label="Profile strength" value={`${completion}%`} color={completion >= 80 ? "#747B59" : "#C4775F"} />
+        <StatStack icon={Coins} label="Credits" value={creditsData?.wallet.balance ?? '—'} color="#747B59" />
+        <StatStack icon={Target} label="Practice" value={practiceData?.sessions?.length ?? '0'} color="#C4775F" />
+        <StatStack icon={Sparkles} label="Saved" value={summary?.saved_jobs ?? 0} color="#747B59" />
+      </motion.div>
 
-      <section className="glass-gloss-soft rounded-2xl p-2">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Home sections">
-          {SECTIONS.map(({ id, label, icon: Icon }) => {
-            const isActive = active === id;
-            return (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActive(id)}
+      {/* Status Pulse */}
+      <StatusPulse type={appliedCount > 0 ? 'success' : 'neutral'} message={statusMessage} />
+
+      {/* Main Content - Jobs & Quick Actions */}
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        {/* Jobs Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="space-y-5"
+        >
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            <div>
+              <p className="font-serif text-[10px] uppercase tracking-[0.18em] text-[#493126]/50">Recommended</p>
+              <h2 className="mt-1 font-serif text-[28px] font-semibold tracking-[-0.02em] text-[#493126] dark:text-[#F0E4D8]">Careers worth your time</h2>
+            </div>
+            <Link to="/jobs" className="group inline-flex items-center gap-2 text-[13px] font-medium text-[#C4775F] transition-all hover:gap-3">
+              View all <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-y-0.5 group-hover:translate-x-0.5" strokeWidth={2} />
+            </Link>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#747B59]/60" strokeWidth={2} />
+            <input
+              type="text"
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search jobs, companies, or titles"
+              className={cn(
+                "w-full rounded-2xl border-2 border-[#E8D5C3]/40 bg-[#F8F2EA]/50 pl-12 pr-4 py-4 text-[14px] font-medium text-[#493126] placeholder:text-[#747B59]/60 outline-none transition-all duration-300 focus:border-[#C4775F]/40 focus:bg-[#F8F2EA]/70 focus:ring-4 focus:ring-[#C4775F]/10",
+                q && "rounded-2xl border-[#C4775F]/40 bg-[#F8F2EA]/70"
+              )}
+            />
+          </div>
+
+          {/* Jobs Grid */}
+          {hasMatches ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {filteredJobs.map((job: any, i) => (
+                <motion.div
+                  key={job.id}
+                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.4 + i * 0.05 }}
+                  whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.3 } }}
+                  className="group cursor-pointer"
+                >
+                  <JobCard job={job} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass-card relative overflow-hidden rounded-[2rem] border border-[#E8D5C3]/20 bg-[#E8D5C3]/5 p-12 text-center"
+            >
+              <div aria-hidden className="flex h-24 w-24 mx-auto items-center justify-center rounded-full border-2 border-[#C4775F]/10 bg-[#C4775F]/5">
+                <Brain className="h-10 w-10 text-[#C4775F]" strokeWidth={1.5} />
+              </div>
+              <h3 className="mt-6 font-serif text-[20px] font-semibold text-[#493126] dark:text-[#F0E4D8]">No strong matches yet</h3>
+              <p className="mx-auto mt-3 max-w-lg text-[14px] leading-relaxed text-[#747B59]">
+                {hasProfile ? "Browse trusted jobs while we find closer matches." : "Complete your profile to get tailored recommendations."}
+              </p>
+              <Link
+                to={hasProfile ? "/jobs" : "/profile"}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 className={cn(
-                  "relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-medium transition-all duration-200",
-                  isActive ? "text-primary-foreground" : "text-foreground/70 hover:bg-accent hover:text-foreground"
+                  "mt-6 inline-flex items-center gap-2 rounded-full border-2 px-6 py-3 font-semibold transition-all duration-300",
+                  hasProfile ? "border-[#C4775F] bg-[#C4775F] text-white hover:bg-[#B85E50]" : "border-[#C4775F] text-[#C4775F] hover:bg-[#C4775F]/5"
                 )}
               >
-                {isActive && <motion.span layoutId="home-tab" className="absolute inset-0 rounded-xl bg-primary shadow-[0_8px_20px_-8px_hsl(var(--primary)/0.5)]" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />}
-                <Icon className="relative z-10 h-4 w-4" />
-                <span className="relative z-10">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                {hasProfile ? "Browse jobs" : "Complete profile"} <ArrowRight className="h-4 w-4" strokeWidth={2} />
+              </Link>
+            </motion.div>
+          )}
+        </motion.section>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={active}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.22, ease: EASE }}
-        >
-          {active === 'snapshot' && (
-            <div className="grid gap-5 xl:grid-cols-3">
-              <div className="glass-gloss-soft rounded-2xl p-5 xl:col-span-1">
-                <div className="flex items-center justify-between">
-                  <div><p className="eyebrow text-signal/85">Profile strength</p><h2 className="mt-1 text-[17px] font-semibold text-foreground">{completion >= 80 ? 'Looking strong' : 'Build your profile'}</h2></div>
-                  <CompletionRing value={completion} />
-                </div>
-                <ul className="mt-5 space-y-3">
-                  {profileChecks.map((c) => (
-                    <li key={c.label} className="flex items-center gap-2.5 text-[13px]">
-                      <span className={cn('grid h-5 w-5 shrink-0 place-items-center rounded-full border', c.done ? 'border-success/30 bg-success-soft text-success' : 'border-border bg-surface text-foreground/40')}>
-                        {c.done ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-border-strong" />}
-                      </span>
-                      <span className={c.done ? 'text-foreground' : 'text-foreground/65'}>{c.label}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link to="/profile" className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-signal hover:underline">Complete profile <ArrowUpRight className="h-3.5 w-3.5" /></Link>
+        {/* Quick Actions */}
+        <motion.aside initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="space-y-5">
+          <p className="font-serif text-[10px] uppercase tracking-[0.18em] text-[#493126]/50">Quick Actions</p>
+
+          <GlowCard showGlow={true} delay={0.5}>
+            <div className="flex items-start gap-4">
+              <div className="relative">
+                <motion.div animate={{ rotate: 0, scale: [1, 1.1, 1] }} transition={{ duration: 8, ease: "easeInOut" }} className="h-14 w-14 flex items-center justify-center rounded-2xl bg-[#C4775F]/10 text-[#C4775F]">
+                  <Mic className="h-6 w-6" strokeWidth={1.75} />
+                </motion.div>
               </div>
-
-              <div className="glass-gloss-soft rounded-2xl p-5 xl:col-span-1">
-                <p className="eyebrow text-signal/85">Application progress</p>
-                <h2 className="mt-1 text-[17px] font-semibold text-foreground">Where you stand</h2>
-                <div className="mt-5 space-y-3">
-                  {[{ k: 'APPLIED', l: 'Applied' }, { k: 'INTERVIEW', l: 'Interview' }, { k: 'OFFER', l: 'Offer' }, { k: 'JOINED', l: 'Joined' }].map((s, i) => {
-                    const count = Number(statuses[s.k] || 0);
-                    return (
-                      <div key={s.k} className="flex items-center gap-3">
-                        <span className="w-20 text-[12px] text-foreground/65">{s.l}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><motion.div initial={{ width: 0 }} animate={{ width: `${count > 0 ? Math.max(12, Math.min(100, count * 20)) : 4}%` }} transition={{ duration: 0.5, delay: i * 0.05 }} className={cn('h-full rounded-full', count > 0 ? 'bg-signal' : 'bg-border')} /></div>
-                        <span className="w-6 text-right font-mono text-[12px] tabular-nums text-foreground/70">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-success/20 bg-success-soft/60 px-3.5 py-3">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-success" /><p className="text-[12.5px] leading-relaxed text-foreground/85">{progressMessage}</p>
-                </div>
+              <div className="flex-1">
+                <h3 className="font-serif text-[18px] font-semibold text-[#493126] dark:text-[#F0E4D8]">Interview Practice</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-[#747B59]">Rehearse, track your performance, and refine your responses.</p>
+                <Link to="/practice" className="mt-4 inline-flex items-center gap-1 text-[12px] font-bold text-[#C4775F] transition-all hover:gap-1.5">
+                  Start now <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+                </Link>
               </div>
+            </div>
+          </GlowCard>
 
-              <div className="glass-gloss-soft rounded-2xl p-5 xl:col-span-1">
-                <p className="eyebrow text-signal/85">Recent activity</p>
-                <h2 className="mt-1 text-[17px] font-semibold text-foreground">What’s happening</h2>
-                <div className="mt-5 space-y-4">
-                  {recentApps.length ? recentApps.slice(0, 4).map((app) => (
-                    <div key={app.id} className="flex items-start gap-3">
-                      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-signal-soft/70 text-signal"><BriefcaseBusiness className="h-4 w-4" /></span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium text-foreground">{app.job_title}</p>
-                        <p className="text-[12px] text-foreground/60">{app.company_name} · {new Date(app.updated_at).toLocaleDateString()}</p>
+          <GlowCard showGlow={false} delay={0.6}>
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-[#747B59]/10 text-[#747B59]">
+                <GraduationCap className="h-6 w-6" strokeWidth={1.75} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-serif text-[18px] font-semibold text-[#493126] dark:text-[#F0E4D8]">Skill Development</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-[#747B59]">Build your knowledge and close skill gaps.</p>
+                <Link to="/learning" className="mt-4 inline-flex items-center gap-1 text-[12px] font-bold text-[#747B59] transition-all hover:gap-1.5">
+                  Explore tracks <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+                </Link>
+              </div>
+            </div>
+          </GlowCard>
+
+          <GlowCard showGlow={true} delay={0.7}>
+            <div className="relative z-0 flex items-start gap-4">
+              <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-[#493126]/10 bg-gradient-to-br from-[#493126]/10 to-[#747B59]/10 text-[#747B59]">
+                <Coins className="h-6 w-6" strokeWidth={1.75} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-serif text-[18px] font-semibold text-[#493126] dark:text-[#F0E4D8]">Credits & Plan</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-[#747B59]">{creditsData?.wallet.balance ?? '—'} credits available</p>
+                <Link to="/credits" className="mt-4 inline-flex items-center gap-1 text-[12px] font-bold text-[#747B59] transition-all hover:gap-1.5">
+                  View plan <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+                </Link>
+              </div>
+            </div>
+            {practiceData?.sessions && practiceData.sessions.length > 0 && (
+              <div className="mt-6 rounded-xl border border-[#C4775F]/10 bg-[#F8F2EA]/30 px-4 py-3">
+                <p className="text-[13px] text-[#493126] font-medium">{practiceRemaining}</p>
+              </div>
+            )}
+          </GlowCard>
+
+          {/* Application Pipeline */}
+          {recentApps.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }} className="space-y-3">
+              <p className="font-serif text-[10px] uppercase tracking-[0.18em] text-[#493126]/50">Your Pipeline</p>
+
+              {recentApps.slice(0, 3).map((app, i) => (
+                <motion.div
+                  key={app.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1 + i * 0.08 }}
+                  whileHover={{ x: 4, transition: { duration: 0.2 } }}
+                  className="group relative overflow-hidden rounded-2xl border border-[#E8D5C3]/20 bg-[#E8D5C3]/5 p-4 transition-all duration-300 hover:border-[#C4775F]/30 hover:shadow-[0_10px_30px_-8px_hsl(12/46%/44%/0.08)]"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div aria-hidden className="grid h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#C4775F]/10 text-[#C4775F]">
+                        <BriefcaseBusiness className="h-4 w-4" strokeWidth={1.75} />
                       </div>
-                      <Status status={app.status} />
+                      <div className="flex-1">
+                        <p className="font-semibold text-[14px] text-[#493126] dark:text-[#F0E4D8]">{app.job_title}</p>
+                        <p className="text-[12px] text-[#747B59]">{new Date(app.updated_at).toLocaleDateString()}</p>
+                      </div>
                     </div>
-                  )) : <p className="text-[13px] leading-relaxed text-foreground/65">Your recent job activity will appear here as you save and apply.</p>}
-                </div>
-                <Link to="/applications" className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-signal hover:underline">Open tracker <ArrowRight className="h-3.5 w-3.5" /></Link>
-              </div>
-            </div>
-          )}
-
-          {active === 'jobs' && (
-            <div className="space-y-4">
-              <div className="flex items-end justify-between gap-3">
-                <div><p className="eyebrow text-signal/85">Recommended for you</p><h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">Jobs that match your profile</h2></div>
-                <Link to="/recommendations" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground/70 hover:text-foreground">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
-              </div>
-              {topJobs.length ? (
-                <div className="grid gap-4 xl:grid-cols-2">
-                  {topJobs.map((job) => <JobCard key={job.id} job={job} />)}
-                </div>
-              ) : (
-                <div className="glass-gloss-soft rounded-2xl p-10 text-center">
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-signal-soft text-signal"><Target className="h-6 w-6" /></div>
-                  <p className="mt-4 text-[15px] font-medium text-foreground">{summary?.has_profile ? 'No close matches yet' : 'Your recommendations are waiting'}</p>
-                  <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-foreground/72">{summary?.has_profile ? 'Browse trusted jobs while we find closer matches.' : 'Complete your profile to get tailored recommendations.'}</p>
-                  <Link to={summary?.has_profile ? '/jobs' : '/profile'} className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-signal hover:underline">{summary?.has_profile ? 'Browse jobs' : 'Complete profile'} <ArrowUpRight className="h-3.5 w-3.5" /></Link>
-                </div>
-              )}
-            </div>
-          )}
-
-          {active === 'applications' && (
-            <div className="space-y-4">
-              <div className="flex items-end justify-between gap-3">
-                <div><p className="eyebrow text-signal/85">Your pipeline</p><h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">Recent applications</h2></div>
-                <Link to="/applications" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground/70 hover:text-foreground">Open tracker <ArrowRight className="h-3.5 w-3.5" /></Link>
-              </div>
-              {recentApps.length ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {recentApps.map((app) => (
-                    <Link key={app.id} to="/applications" className="glass-gloss-soft group flex h-full flex-col rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/25">
-                      <div className="flex items-start justify-between gap-2"><span className="line-clamp-2 text-[14px] font-semibold leading-snug text-foreground">{app.job_title}</span><Status status={app.status} /></div>
-                      <p className="mt-3 flex items-center gap-1.5 truncate text-[12px] text-foreground/65"><MapPin className="h-3.5 w-3.5 shrink-0 text-foreground/45" />{app.company_name}</p>
-                      <div className="mt-auto flex items-center justify-between pt-5"><p className="font-mono text-[10.5px] text-foreground/55">Updated {new Date(app.updated_at).toLocaleDateString()}</p><ArrowUpRight className="h-3.5 w-3.5 text-foreground/35 group-hover:text-signal" /></div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="glass-gloss-soft rounded-2xl p-10 text-center">
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-muted text-foreground/60"><BriefcaseBusiness className="h-6 w-6" /></div>
-                  <p className="mt-4 text-[15px] font-medium text-foreground">No applications yet</p>
-                  <p className="mt-2 text-[13px] text-foreground/72">Save a role and start tracking your progress here.</p>
-                  <Link to="/jobs" className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-signal hover:underline">Discover jobs <ArrowUpRight className="h-3.5 w-3.5" /></Link>
-                </div>
-              )}
-            </div>
-          )}
-
-          {active === 'preparation' && (
-            <div className="space-y-5">
-              <div className="flex items-end justify-between gap-3">
-                <div><p className="eyebrow text-signal/85">Preparation center</p><h2 className="mt-1 text-[22px] font-semibold tracking-[-0.02em] text-foreground">Build for the role, not in general.</h2></div>
-                <Link to="/preparation" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground/70 hover:text-foreground">Open workspace <ArrowRight className="h-3.5 w-3.5" /></Link>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                {PREP_MODULES.map(({ title, body, to, icon: Icon }) => (
-                  <Link key={title} to={to} className="glass-gloss-soft group relative flex h-full flex-col overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/25">
-                    <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signal/55 via-signal/20 to-transparent" />
-                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-signal/15 bg-signal-soft/70 text-signal transition-all duration-300 group-hover:bg-signal group-hover:text-signal-foreground"><Icon className="h-5 w-5" strokeWidth={1.75} /></span>
-                    <h3 className="mt-4 text-[14px] font-semibold text-foreground">{title}</h3>
-                    <p className="mt-1.5 text-[12px] leading-relaxed text-foreground/72">{body}</p>
-                    <div className="mt-auto pt-5 flex items-center justify-between"><span className="font-mono text-[10px] uppercase tracking-[0.05em] text-foreground/55">Open</span><ArrowUpRight className="h-3.5 w-3.5 text-foreground/35 group-hover:text-signal" /></div>
-                  </Link>
-                ))}
-              </div>
-              <div className="glass-gloss-soft rounded-2xl p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-signal-soft text-signal"><Clock className="h-5 w-5" /></span>
-                  <div>
-                    <p className="text-[14px] font-medium text-foreground">{pLastScore != null ? `Last scored session: ${pLastScore}/100` : 'No scored session yet'}</p>
-                    <p className="text-[12px] text-foreground/65">{pQuota ? `${Math.max(0, pQuota.limit - pQuota.used)} free interview session${pQuota.limit - pQuota.used === 1 ? '' : 's'} left this month.` : pSub?.unlimited ? 'Pro plan — unlimited rehearsals.' : 'Practice and track your readiness.'}</p>
+                    <StatusIndicator current={getStatusValue(app.status)} />
+                    {app.status === 'OFFER' || app.status === 'JOINED' && (
+                      <motion.span
+                        animate={{ scale: [1, 1.1, 1], rotate: [0, 10, 0] }}
+                        transition={{ duration: 3 }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#747B59]/10 text-[#747B59]"
+                      >
+                        <Star className="h-4 w-4 fill-[#747B59]" strokeWidth={2} />
+                      </motion.span>
+                    )}
                   </div>
-                </div>
-                <Link to="/practice" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-foreground hover:bg-primary-hover">Start practice</Link>
-              </div>
-            </div>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
-        </motion.div>
-      </AnimatePresence>
-    </div>
+        </motion.aside>
+      </div>
+    </motion.main>
   );
 };
 

@@ -246,7 +246,7 @@ function FeatureCard({
   index: number;
 }) {
   return (
-    <div className="card group relative h-full p-6 transition-colors duration-200 hover:border-border-strong">
+    <div className="glass-gloss-soft group relative h-full rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20 hover:shadow-[0_20px_40px_-20px_hsl(var(--signal)/0.18)]">
       <div className="flex items-start justify-between gap-4">
         <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-muted/40 text-foreground transition-colors group-hover:border-signal/30 group-hover:bg-signal-soft group-hover:text-signal">
           <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
@@ -353,7 +353,7 @@ const Landing: React.FC = () => {
                   <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">Candidate workspace · public preview</span>
                 </div>
                 <h1 id="hero-heading" className="mt-6 max-w-xl text-[42px] font-semibold leading-[1.04] tracking-[-0.04em] text-foreground sm:text-[56px] lg:text-[64px]">
-                  <span className="text-[hsl(20,40%,12%)] dark:text-[#EFDECD]">A job search,</span>
+                  <span className="text-[hsl(20,48%,8%)] dark:text-[#EFDECD]">A job search,</span>
                   <span className="block text-signal">crafted with clarity.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-muted-foreground">
@@ -421,8 +421,9 @@ const Landing: React.FC = () => {
         </section>
 
         {/* How it works */}
-        <section id="workflow" className="border-y border-border bg-muted/20" aria-labelledby="workflow-heading">
-          <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
+        <section id="workflow" className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,hsl(var(--muted)/0.35),hsl(var(--background)/0.8))]" aria-labelledby="workflow-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--signal)/0.08),transparent_45%)]" />
+          <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div className="max-w-2xl">
                 <p className="eyebrow">How it works</p>
@@ -434,11 +435,11 @@ const Landing: React.FC = () => {
             </div>
             <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {STEPS.map((step, index) => (
-                <li key={step.title} className="card relative p-5">
+                <motion.li key={step.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.06, ease: EASE }} className="glass-gloss-soft relative rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-signal/25 bg-signal-soft font-mono text-[11px] tabular-nums text-signal">0{index + 1}</span>
                   <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.014em] text-foreground">{step.title}</h3>
                   <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{step.body}</p>
-                </li>
+                </motion.li>
               ))}
             </ol>
           </div>
@@ -471,13 +472,13 @@ const Landing: React.FC = () => {
                 ))}
               </ul>
             </div>
-            <div className="card overflow-hidden shadow-pop">
-              <div className="flex items-center justify-between border-b border-border bg-muted/20 px-5 py-4">
+            <div className="glass-gloss overflow-hidden rounded-2xl shadow-pop">
+              <div className="flex items-center justify-between border-b border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.35)] px-5 py-4 backdrop-blur-sm">
                 <div>
                   <p className="eyebrow">Artifact · sample structure</p>
                   <p className="mt-1 text-[13px] text-muted-foreground">What a preparation package contains</p>
                 </div>
-                <Badge variant="muted" className="bg-surface">Sample</Badge>
+                <Badge variant="signal" className="bg-signal-soft/80">Sample</Badge>
               </div>
               <div className="divide-y divide-border">
                 {[
@@ -495,7 +496,7 @@ const Landing: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-border bg-muted/10 px-5 py-3">
+              <div className="border-t border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.3)] px-5 py-3 backdrop-blur-sm">
                 <p className="font-mono text-[10px] uppercase tracking-[0.07em] text-muted-foreground">Preparation aid only · not employer endorsed</p>
               </div>
             </div>
@@ -503,8 +504,9 @@ const Landing: React.FC = () => {
         </section>
 
         {/* Plans */}
-        <section id="plans" className="border-y border-border bg-muted/20" aria-labelledby="plans-heading">
-          <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
+        <section id="plans" className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,hsl(var(--muted)/0.3),hsl(var(--background)/0.85))]" aria-labelledby="plans-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(var(--signal)/0.07),transparent_45%)]" />
+          <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
             <div className="max-w-2xl">
               <p className="eyebrow">Plans</p>
               <h2 id="plans-heading" className="mt-3 text-[32px] font-semibold tracking-[-0.032em] text-foreground sm:text-[40px]">Clear pricing. Honest limits.</h2>
@@ -513,8 +515,8 @@ const Landing: React.FC = () => {
               </p>
             </div>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {PLANS.map((plan) => (
-                <div key={plan.code} className={cn('card flex flex-col p-5', plan.code === 'FREE' && 'border-signal/30')}>
+              {PLANS.map((plan, index) => (
+                <motion.div key={plan.code} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className={cn('glass-gloss-soft flex flex-col rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1', plan.code === 'FREE' && 'border-signal/30 shadow-[0_16px_40px_-24px_hsl(var(--signal)/0.25)]')}>
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">{plan.code}</p>
                     {plan.code === 'FREE' && <Badge variant="success">Available</Badge>}
@@ -530,7 +532,7 @@ const Landing: React.FC = () => {
                       <p className="font-mono text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground">Configured by administrator</p>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
             <p className="mt-5 text-[12.5px] leading-relaxed text-muted-foreground">
@@ -540,8 +542,9 @@ const Landing: React.FC = () => {
         </section>
 
         {/* Trust */}
-        <section id="trust" className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20" aria-labelledby="trust-heading">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
+        <section id="trust" className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20" aria-labelledby="trust-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.05),transparent_65%)]" />
+          <div className="relative grid gap-10 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]">
             <div>
               <p className="eyebrow">Trust</p>
               <h2 id="trust-heading" className="mt-3 text-[32px] font-semibold leading-[1.12] tracking-[-0.032em] text-foreground sm:text-[40px]">
@@ -550,20 +553,20 @@ const Landing: React.FC = () => {
               <p className="mt-4 max-w-md text-[15px] leading-relaxed text-muted-foreground">
                 AI JobPilot does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
               </p>
-              <div className="mt-6 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="glass-gloss-soft mt-6 rounded-2xl p-4">
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">Design principle</p>
                 <p className="mt-2 text-[13.5px] leading-relaxed text-foreground/90">Every generated claim should be inspectable, and every important action should remain yours.</p>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {TRUST.map((item) => (
-                <div key={item.title} className="card p-5">
-                  <span aria-hidden className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-muted/30 text-foreground">
+              {TRUST.map((item, index) => (
+                <motion.div key={item.title} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.35, delay: index * 0.05, ease: EASE }} className="glass-gloss-soft rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-signal/20">
+                  <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl border border-signal/15 bg-signal-soft/70 text-signal">
                     <item.icon className="h-4 w-4" strokeWidth={1.75} />
                   </span>
                   <h3 className="mt-4 text-[14px] font-semibold tracking-[-0.01em] text-foreground">{item.title}</h3>
                   <p className="mt-2 text-[12.5px] leading-relaxed text-muted-foreground">{item.body}</p>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>

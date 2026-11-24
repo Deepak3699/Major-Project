@@ -21,6 +21,14 @@ export interface AnswerGrade {
   model?: string;
 }
 
+/** A follow-up the interviewer asks based on what the candidate just said. */
+export interface FollowUpQuestion {
+  question: string;
+  topic: string;
+  ideal_points: string[];
+  source: 'gemini' | 'template';
+}
+
 export type ResourceKind = 'docs' | 'roadmap' | 'book' | 'video';
 
 export interface LearningResource {

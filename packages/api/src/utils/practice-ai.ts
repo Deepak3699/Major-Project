@@ -1,4 +1,4 @@
-import type { Profile, QuestionSpec, GeneratedQuestion, AnswerGrade, LearningModule, LearningResource } from '../types/practice';
+import type { Profile, QuestionSpec, GeneratedQuestion, AnswerGrade, LearningModule, LearningResource, FollowUpQuestion } from '../types/practice';
 
 /**
  * AI practice engine: interview question generation, answer grading and
@@ -488,6 +488,116 @@ export async function summarizeSession(session: { difficulty: string; role_focus
     const summary = typeof parsed?.summary === 'string' ? parsed.summary.slice(0, 1500) : '';
     if (!verdict || !summary) return fallback();
     return { verdict, summary };
+  } catch {
+    return fallback();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Adaptive follow-ups (the interviewer digs into what was just said)  */
+/* ------------------------------------------------------------------ */
+
+const FOLLOWUP_SYSTEM_PROMPT = [
+  'You are a live interviewer mid-conversation. The candidate just gave an answer to your previous question.',
+  'Ask exactly ONE natural spoken follow-up that goes deeper into something concrete THE CANDIDATE THEMSELVES just mentioned (a project, tool, number, team, or claim).',
+  'If the answer was vague or shallow, ask the follow-up that would force the most useful concrete detail.',
+  'Rules: one sentence, max 40 words, spoken conversational style, no numbering, no quotes.',
+  'Never invent facts the candidate did not state — anchor on their own words only.',
+  'Return JSON: {"question":string,"topic":string (2-4 words),"ideal_points":string[3] (short phrases a good follow-up answer covers)}.',
+].join('\n');
+
+const FOLLOWUP_PROBES: Array<{ test: RegExp; question: (anchor: string) => string; topic: string; points: string[] }> = [
+  {
+    test: /\breact|node|python|sql|typescript|java|docker|kubernetes|aws|gcp|azure|next\.?js|angular|vue|django|flask|spring|figma|power bi|tableau|excel|tensorflow|pytorch|pandas\b/i,
+    question: (anchor) => `You mentioned ${anchor} — what was the hardest decision you made while working with it, and what did you learn going the other way?`,
+    topic: 'Tool deep-dive',
+    points: ['names a specific decision', 'explains the trade-off', 'links it to an outcome'],
+  },
+  {
+    test: /(?:^|[^\w])\d|\bpercent\b|%|\busers\b|\bgrowth\b|\brevenue\b|\bhours?\b|\bdays?\b|\bmonths?\b|\bteam of \d+/i,
+    question: () => 'That number carries the whole claim — how did you measure it, and what would make you doubt the result?',
+    topic: 'Metrics probe',
+    points: ['measurement method', 'caveats or confounders', 'what they changed because of it'],
+  },
+  {
+    test: /\bteam\b|\bwe\b|\bcollaborat|stakeholder|manager|reviewed|pair(ed)?\b/i,
+    question: () => 'Speaking of the team: what did you personally own in that effort, and where did you disagree with the group?',
+    topic: 'Your exact role',
+    points: ['clear personal contribution', 'a real disagreement', 'how it resolved'],
+  },
+  {
+    test: /\bfailed|failed|mistake|went wrong|broke|down|bug|delayed|behind\b/i,
+    question: () => 'What would you do differently if you replayed that situation today?',
+    topic: 'Hindsight check',
+    points: ['honest reflection', 'specific alternate action', 'evidence of change'],
+  },
+  {
+    test: /\bproject|built|designed|shipped|launched|migrated|created\b/i,
+    question: () => 'Zoom into that project: what did it look like before you touched it, and what changed first after you shipped?',
+    topic: 'Before and after',
+    points: ['concrete before state', 'their own contribution', 'visible after state'],
+  },
+];
+
+/** Template follow-up: anchors only on safe paraphrases of the candidate's own answer. */
+export function templateFollowUp(question: string, answer: string, previousTopic: string): FollowUpQuestion {
+  const anchorMatch = answer.match(/\b(react|node\.?js|python|sql|typescript|java|docker|kubernetes|aws|gcp|azure|next\.?js|angular|vue|django|flask|spring|figma|power bi|tableau|excel|tensorflow|pytorch|pandas)\b/i);
+  const anchor = anchorMatch ? String(anchorMatch[0]).toLowerCase() : 'that';
+  for (const probe of FOLLOWUP_PROBES) {
+    if (probe.test.test(String(answer || ''))) {
+      return { question: probe.question(anchor), topic: probe.topic, ideal_points: probe.points, source: 'template' };
+    }
+  }
+  // Generic-but-honest dig: undercut the polished version of their own answer.
+  return {
+    question: 'Now the uncomfortable one: which part of what you just told me would you rewrite, and what exactly would change?',
+    topic: 'Pressure probe',
+    ideal_points: ['names a weak spot', 'owns it without excuses', 'states the fix'],
+    source: 'template',
+  };
+}
+
+/** Generate one conversational follow-up from the candidate's last answer; template fallback when no key / bad output. */
+export async function generateFollowUp(input: {
+  role_focus: string;
+  difficulty: string;
+  question: string;
+  topic: string;
+  answer: string;
+  history: Array<{ question: string; answer: string }>;
+}): Promise<FollowUpQuestion> {
+  const fallback = () => templateFollowUp(input.question, input.answer, input.topic);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || !String(input.answer || '').trim()) return fallback();
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(25_000),
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: [
+          FOLLOWUP_SYSTEM_PROMPT,
+          `Target role: ${input.role_focus}; difficulty: ${input.difficulty}.`,
+          `Previous question you asked: ${String(input.question).slice(0, 400)}`,
+          ...input.history.slice(0, 3).map((h) => `Earlier you asked: ${String(h.question).slice(0, 250)} · they answered: ${String(h.answer).slice(0, 400)}`),
+          `Their latest answer (verbatim): ${String(input.answer).slice(0, 3000)}`,
+        ].filter(Boolean).join('\n\n') }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 400 },
+      }),
+    });
+    if (!response.ok) return fallback();
+    const payload: any = await response.json();
+    const generatedText = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+    const parsed = JSON.parse(generatedText);
+    const question = typeof parsed?.question === 'string' ? parsed.question.trim() : '';
+    if (!question || question.length < 12 || question.length > 320) return fallback();
+    return {
+      question,
+      topic: typeof parsed?.topic === 'string' ? parsed.topic.slice(0, 60) : 'Follow-up',
+      ideal_points: Array.isArray(parsed?.ideal_points) ? parsed.ideal_points.filter((p: any) => typeof p === 'string').slice(0, 4) : [],
+      source: GEMINI_MODEL as any,
+    };
   } catch {
     return fallback();
   }

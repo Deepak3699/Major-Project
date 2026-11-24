@@ -9,6 +9,7 @@ import {
   gradeAnswer,
   summarizeSession,
   generateLearningTrack,
+  generateFollowUp,
   type Difficulty,
 } from '../utils/practice-ai';
 import type { SubscriptionState, SessionRecord } from '../types/practice';
@@ -313,7 +314,62 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       [question.id, parsed.data.answer, JSON.stringify(grade), grade.score],
     );
 
-    return reply.send({ question: serializeQuestion((updated[0] as any)), grade });
+    // Adaptive follow-up: the interviewer keeps the thread alive — right after
+    // the intro answer (the classic "tell me about yourself" → "you mentioned
+    // X…" chain), and again after the last queued question. The follow-up is
+    // generated from the candidate's actual words. Capped so a session cannot
+    // balloon, and the intro follow-up is inserted as the NEXT question (later
+    // items shift one slot) rather than at the tail.
+    const FOLLOWUP_CAP = 3;
+    let followUp: ReturnType<typeof serializeQuestion> | null = null;
+    try {
+      const countRows = await sql.unsafe(
+        `SELECT COUNT(*)::int AS total, COALESCE(MAX(idx), -1) AS max_idx FROM interview_questions WHERE session_id = $1`,
+        [session.id],
+      );
+      const total = Number((countRows[0] as any)?.total || 0);
+      const maxIdx = Number((countRows[0] as any)?.max_idx ?? -1);
+      const extras = total - Number(session.question_count || 0);
+      const isIntro = String(question.category) === 'intro';
+      const isLastQueued = Number(question.idx) >= maxIdx;
+      if (total > 0 && extras < FOLLOWUP_CAP && (isIntro || isLastQueued)) {
+        const historyRows = await sql.unsafe(
+          `SELECT question, COALESCE(answer, '') AS answer FROM interview_questions
+            WHERE session_id = $1 AND answer IS NOT NULL ORDER BY idx DESC LIMIT 3`,
+          [session.id],
+        );
+        const followUpQuestion = await generateFollowUp({
+          role_focus: session.role_focus,
+          difficulty: String(session.difficulty || 'standard'),
+          question: question.question,
+          topic: question.topic,
+          answer: parsed.data.answer,
+          history: (historyRows as any[]).map((h) => ({ question: String(h.question || ''), answer: String(h.answer || '') })),
+        });
+        const insertIdx = isIntro && !isLastQueued ? Number(question.idx) + 1 : maxIdx + 1;
+        if (insertIdx <= maxIdx) {
+          // Make room: everything after the current question moves one slot.
+          await sql.unsafe(
+            `UPDATE interview_questions SET idx = idx + 1 WHERE session_id = $1 AND idx >= $2`,
+            [session.id, insertIdx],
+          );
+        }
+        const inserted = await sql.unsafe(
+          `INSERT INTO interview_questions (session_id, user_id, idx, category, topic, question, ideal_points)
+            VALUES ($1, $2, $3, 'follow_up', $4, $5, $6::jsonb)
+            RETURNING id, idx, category, topic, question, answer, feedback, score, answered_at`,
+          [session.id, userId, insertIdx, followUpQuestion.topic, followUpQuestion.question, JSON.stringify(followUpQuestion.ideal_points || [])],
+        );
+        // Keep the session's expected length in step so progress and finalize stay coherent.
+        await sql.unsafe(
+          `UPDATE interview_sessions SET question_count = $2 WHERE id = $1`,
+          [session.id, total + 1],
+        );
+        followUp = serializeQuestion((inserted[0] as any));
+      }
+    } catch { /* best-effort: the interview continues with the standard queue */ }
+
+    return reply.send({ question: serializeQuestion((updated[0] as any)), grade, follow_up: followUp });
   });
 
   fastify.post('/sessions/:id/finish', async (request, reply) => {

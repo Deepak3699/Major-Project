@@ -32,6 +32,7 @@ const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const QUESTION_ID = '22222222-2222-4222-8222-222222222222';
 const TRACK_ID = '33333333-3333-4333-8333-333333333333';
 const UPREQ_ID = '44444444-4444-4444-8444-444444444444';
+const FOLLOW_UP_ID = '66666666-6666-4666-8666-666666666666';
 
 delete process.env.GEMINI_API_KEY;
 
@@ -160,6 +161,87 @@ describe('AI practice routes', () => {
     expect(body.grade.score).toBeGreaterThanOrEqual(0);
     expect(body.grade.score).toBeLessThanOrEqual(100);
     expect(body.question.answered_at).toBeTruthy();
+  });
+
+  test('answering the last queued question appends an adaptive follow-up question', async () => {
+    const FOLLOWUP_ID = '55555555-5555-4555-8555-555555555555';
+    mockSqlUnsafe.mockImplementation(async (query: string, params?: any[]): Promise<any> => {
+      if (query.includes('FROM practice_subscriptions')) return [];
+      if (query.includes('COUNT(*)::int AS used')) return [{ used: 0 }];
+      if (query.includes('FROM practice_upgrade_requests')) return [];
+      if (query.includes('FROM interview_sessions WHERE id = $1')) {
+        return [{ id: SESSION_ID, user_id: 'cand-1', status: 'in_progress', difficulty: 'standard', role_focus: 'Frontend Developer', question_count: 6 }];
+      }
+      if (query.includes('FROM interview_questions WHERE id = $1')) {
+        return [{ id: QUESTION_ID, idx: 5, category: 'project', topic: 'Trade-offs', question: 'Q?', ideal_points: ['x'], feedback: null, score: null, answered_at: null }];
+      }
+      if (query.includes('UPDATE interview_questions')) {
+        return [{ id: QUESTION_ID, idx: 5, category: 'project', topic: 'Trade-offs', question: 'Q?', answer: 'ans', feedback: { score: 60, strengths: [], improvements: [] }, score: 60, answered_at: new Date().toISOString() }];
+      }
+      if (query.includes('COUNT(*)::int AS total')) return [{ total: 6, max_idx: 5 }];
+      if (query.includes('ORDER BY idx DESC LIMIT 3')) return [{ question: 'Earlier q', answer: 'Earlier a' }];
+      if (query.includes('INSERT INTO interview_questions')) {
+        const idealPoints = Array.isArray(params?.[5]) ? (params as any)[5] : [];
+        return [{ id: FOLLOWUP_ID, idx: 6, category: 'follow_up', topic: 'Metrics probe', question: 'That number carries the whole claim — how did you measure it, and what would make you doubt the result?', answer: '', feedback: null, score: null, answered_at: null, ideal_points: idealPoints }];
+      }
+      if (query.includes('UPDATE interview_sessions')) {
+        return [{ id: SESSION_ID, question_count: 7 }];
+      }
+      return defaultImpl(query);
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/candidate/practice/sessions/${SESSION_ID}/answer`,
+      payload: { question_id: QUESTION_ID, answer: 'I led a team of 4 and shipped with 30% fewer defects within 2 months.' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.follow_up).toBeTruthy();
+    expect(body.follow_up.category).toBe('follow_up');
+    expect(typeof body.follow_up.question).toBe('string');
+    expect(body.follow_up.question.length).toBeGreaterThan(12);
+    // The session length grows so progress and finalize semantics stay coherent.
+    const lengthUpdate = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('UPDATE interview_sessions SET question_count'));
+    expect(lengthUpdate).toBeTruthy();
+  });
+
+  test('an intro answer queues the follow-up as the very next question', async () => {
+    mockSqlUnsafe.mockImplementation(async (query: string, params?: any[]): Promise<any> => {
+      if (query.includes('FROM practice_subscriptions')) return [];
+      if (query.includes('COUNT(*)::int AS used')) return [{ used: 0 }];
+      if (query.includes('FROM practice_upgrade_requests')) return [];
+      if (query.includes('FROM interview_sessions WHERE id = $1')) {
+        return [{ id: SESSION_ID, user_id: 'cand-1', status: 'in_progress', difficulty: 'standard', role_focus: 'Frontend Developer', question_count: 6 }];
+      }
+      if (query.includes('FROM interview_questions WHERE id = $1')) {
+        return [{ id: QUESTION_ID, idx: 0, category: 'intro', topic: 'Background', question: 'Tell me about yourself.', ideal_points: ['x'], feedback: null, score: null, answered_at: null }];
+      }
+      if (query.includes('SET idx = idx + 1')) return [];
+      if (query.includes('UPDATE interview_questions') && query.includes('SET answer')) {
+        return [{ id: QUESTION_ID, idx: 0, category: 'intro', topic: 'Background', question: 'Tell me about yourself.', answer: 'ans', feedback: { score: 65, strengths: [], improvements: [] }, score: 65, answered_at: new Date().toISOString() }];
+      }
+      if (query.includes('COUNT(*)::int AS total')) return [{ total: 6, max_idx: 5 }];
+      if (query.includes('ORDER BY idx DESC LIMIT 3')) return [{ question: 'Tell me about yourself.', answer: 'I work with react and sql on analytics dashboards.' }];
+      if (query.includes('INSERT INTO interview_questions')) {
+        return [{ id: FOLLOW_UP_ID, idx: params?.[2] ?? 1, category: 'follow_up', topic: 'Tool deep-dive', question: 'You mentioned react — what was the hardest decision you made while working with it?', answer: '', feedback: null, score: null, answered_at: null }];
+      }
+      if (query.includes('UPDATE interview_sessions')) return [{ id: SESSION_ID, question_count: 7 }];
+      return defaultImpl(query);
+    });
+    const res = await app.inject({
+      method: 'POST',
+      url: `/candidate/practice/sessions/${SESSION_ID}/answer`,
+      payload: { question_id: QUESTION_ID, answer: 'I work with react and sql on analytics dashboards.' },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.follow_up.category).toBe('follow_up');
+    // Sits immediately after the intro, with the rest of the queue shifted back.
+    const shift = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('UPDATE interview_questions SET idx = idx + 1'));
+    expect(shift).toBeTruthy();
+    expect(shift[1]).toEqual([SESSION_ID, 1]);
+    const insertCall = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('INSERT INTO interview_questions'));
+    expect(insertCall?.[1]?.[2]).toBe(1);
   });
 
   test('POST /sessions/:id/finish averages scores and returns per-category means', async () => {

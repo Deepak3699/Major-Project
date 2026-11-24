@@ -9,7 +9,7 @@ import { cn } from "@/components/ui/cn";
 import { formatDateTime } from "@/lib/format";
 
 const TITLES: Array<{ match: RegExp; title: string; section: string }> = [
-  { match: /^\/dashboard/, title: "Overview", section: "Home" },
+  { match: /^\/dashboard/, title: "Home", section: "Home" },
   { match: /^\/jobs\/[^/]+/, title: "Job details", section: "Jobs" },
   { match: /^\/jobs/, title: "Job review", section: "Jobs" },
   { match: /^\/recommendations/, title: "Recommended jobs", section: "For you" },

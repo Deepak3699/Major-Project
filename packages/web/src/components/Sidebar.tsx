@@ -26,7 +26,7 @@ const LEGACY_SECTIONS: { label: string; items: { to: string; label: string; icon
 ];
 const CANDIDATE_SECTIONS = [
   { label: "Career space", items: [
-    { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
     { to: "/jobs", label: "Discover jobs", icon: BriefcaseBusiness },
     { to: "/recommendations", label: "For you", icon: Target, tour: "nav-for-you" },
     { to: "/saved", label: "Saved jobs", icon: Bookmark },
@@ -45,7 +45,7 @@ const CANDIDATE_SECTIONS = [
 ];
 const ADMIN_SECTIONS = [
   { label: "Platform", items: [
-    { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { to: "/dashboard", label: "Home", icon: LayoutDashboard },
     { to: "/jobs", label: "Job review", icon: BriefcaseBusiness, tour: "nav-jobs" },
     { to: "/leads", label: "Lead pipeline", icon: Users },
     { to: "/companies", label: "Companies", icon: Building2 },

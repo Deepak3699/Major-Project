@@ -65,7 +65,7 @@ const Layout: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar drawerOpen={drawerOpen} onDrawerClose={() => setDrawerOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col md:pl-[96px]">
         <Header onMenuClick={() => setDrawerOpen(true)} />
         {!online && (
           <div role="alert" className="flex items-center justify-center gap-2 border-b border-warning/25 bg-warning-soft px-4 py-2 text-[12.5px] font-medium text-warning">

@@ -113,7 +113,7 @@ function App() {
       <Route path="placements" element={isCandidate ? <Placements /> : <Navigate to="/dashboard" replace />} />
       <Route path="preparation" element={isCandidate ? <Preparation /> : <Navigate to="/dashboard" replace />} />
       <Route path="profile" element={isCandidate ? <Profile /> : <Navigate to="/dashboard" replace />} />
-      <Route path="settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" replace />} />
+      <Route path="settings" element={isAdmin ? <Settings /> : isCandidate ? <Navigate to="/profile" replace /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/feedback" element={isAdmin ? <AdminFeedback /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/practice" element={isAdmin ? <AdminPractice /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/credits" element={isAdmin ? <AdminCredits /> : <Navigate to="/dashboard" replace />} />

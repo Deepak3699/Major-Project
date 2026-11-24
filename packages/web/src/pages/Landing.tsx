@@ -328,7 +328,7 @@ const PRINCIPLES = [
 
 const Landing: React.FC = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[linear-gradient(180deg,hsl(36,40%,99%)_0%,hsl(34,38%,95%)_35%,hsl(36,40%,98%)_100%)] text-foreground">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-[13px] focus:text-foreground"
@@ -421,8 +421,8 @@ const Landing: React.FC = () => {
         </section>
 
         {/* How it works */}
-        <section id="workflow" className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,hsl(var(--muted)/0.35),hsl(var(--background)/0.8))]" aria-labelledby="workflow-heading">
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--signal)/0.08),transparent_45%)]" />
+        <section id="workflow" className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,hsl(36,40%,99%),hsl(34,38%,95%))]" aria-labelledby="workflow-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--signal)/0.08),transparent_45%),radial-gradient(ellipse_at_bottom_right,hsl(22,32%,16%,0.04),transparent_50%)]" />
           <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div className="max-w-2xl">
@@ -504,8 +504,8 @@ const Landing: React.FC = () => {
         </section>
 
         {/* Plans */}
-        <section id="plans" className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,hsl(var(--muted)/0.3),hsl(var(--background)/0.85))]" aria-labelledby="plans-heading">
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(var(--signal)/0.07),transparent_45%)]" />
+        <section id="plans" className="relative overflow-hidden border-y border-border/70 bg-[linear-gradient(180deg,hsl(36,40%,99%),hsl(34,38%,95%))]" aria-labelledby="plans-heading">
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(var(--signal)/0.08),transparent_45%),radial-gradient(ellipse_at_top_left,hsl(22,32%,16%,0.03),transparent_45%)]" />
           <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-20">
             <div className="max-w-2xl">
               <p className="eyebrow">Plans</p>

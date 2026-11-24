@@ -75,10 +75,10 @@ Exact commands and results:
 | `cd packages/api && npm run lint` (`tsc --noEmit`) | Clean |
 | `cd packages/api && npm test -- --runInBand` | **19 suites, 142 tests passed** |
 | `cd packages/web && npx tsc --noEmit` | Clean |
-| `cd packages/web && npm test -- --runInBand` | **10 suites, 47 tests passed** |
+| `cd packages/web && npm test -- --runInBand` | **11 suites, 48 tests passed** |
 | `cd packages/web && npm run build` | Production build succeeded |
 
-New suites: `test/credits.test.ts` (11), `test/engagement.test.ts` (8), `test/preparation.test.ts` (8), `src/pages/Credits.test.tsx` (4), `src/pages/Placements.test.tsx` (6), `src/pages/Preparation.test.tsx` (4), `src/pages/Landing.test.tsx` (5). Existing Login/Duplicates copy and practice smoke tests still pass. No known pre-existing failures remain.
+New suites: `test/credits.test.ts` (11), `test/engagement.test.ts` (8), `test/preparation.test.ts` (8), `src/pages/Credits.test.tsx` (4), `src/pages/Placements.test.tsx` (6), `src/pages/Preparation.test.tsx` (4), `src/pages/Landing.test.tsx` (5), `src/App.test.tsx` (1, public preview reachable during an active session). Existing Login/Duplicates copy and practice smoke tests still pass. No known pre-existing failures remain.
 
 Live HTTP smoke checks passed: registration → `role=user`, `plan=FREE`, `initial_credits=2`, one `signup_grant` ledger row; credits/plans/ledger endpoints; purchase → 503; admin adjustment + audit; candidate/admin 403 guards; placement report and onboarding save/reload; preparation generation, idempotent replay, cited sources and JSONB object/array types; test users removed afterwards.
 

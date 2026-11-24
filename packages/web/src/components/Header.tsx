@@ -228,6 +228,13 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
               </div>
               <button
                 type="button"
+                onClick={() => { setUserOpen(false); navigate('/welcome'); }}
+                className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                View public preview
+              </button>
+              <button
+                type="button"
                 onClick={() => { setUserOpen(false); window.dispatchEvent(new Event("hiregen:replay-tour")); }}
                 className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
               >

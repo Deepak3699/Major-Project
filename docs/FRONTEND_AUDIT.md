@@ -55,7 +55,7 @@ Gaps:
 
 ## 7. Tests
 
-- Tests in place: `Login.test.tsx`, `Duplicates.test.tsx`, `PracticeSmoke.test.tsx`, `Credits.test.tsx`, `Placements.test.tsx`, `Preparation.test.tsx`, `Landing.test.tsx`, plus API client auth-recovery and SSE hook tests.
+- Tests in place: `Login.test.tsx`, `Duplicates.test.tsx`, `PracticeSmoke.test.tsx`, `Credits.test.tsx`, `Placements.test.tsx`, `Preparation.test.tsx`, `Landing.test.tsx`, `App.test.tsx`, plus API client auth-recovery and SSE hook tests.
 - Login/Duplicates pinned copy still passes; new pages follow the same provider/router setup.
 - Jest/jsdom lacks IntersectionObserver and speech APIs; landing motion uses entrance-only animation and voice code is guarded and default off in tests.
 
@@ -71,6 +71,6 @@ Gaps:
 
 ## 9. Public preview design notes
 
-`packages/web/src/pages/Landing.tsx` is a premium editorial landing surface built only from semantic tokens. It contains a hero with an explicitly labelled sample workspace mockup, four feature cards, a four-step workflow, a preparation artifact example, the four known plan prices (paid entitlements described as administrator-configured), a trust section and a closing call to action. No gradient, glassmorphism, emoji, fabricated company names, fake payment success or invented statistics are used. The mockup carries a visible "Sample" badge and a "not live listings or results" footnote.
+`packages/web/src/pages/Landing.tsx` is a premium editorial landing surface built only from semantic tokens. It is shown at `/` and `/welcome` when signed out, and at `/welcome` during an active session (also reachable from the avatar menu) so the preview can be inspected without signing out. It contains a hero with an explicitly labelled sample workspace mockup, four feature cards, a four-step workflow, a preparation artifact example, the four known plan prices (paid entitlements described as administrator-configured), a trust section and a closing call to action. No gradient, glassmorphism, emoji, fabricated company names, fake payment success or invented statistics are used. The mockup carries a visible "Sample" badge and a "not live listings or results" footnote.
 
 `AuthShell.tsx` was restyled to the same flat ink/paper language, with a "Back to preview" link added to both sign-in and registration. All test-visible form copy and handlers are unchanged.

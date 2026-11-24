@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
 import Layout from '@/components/Layout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -45,7 +45,12 @@ function RouteFallback() {
 
 function App() {
   const { isAuthenticated, user, init } = useAuthStore();
+  const location = useLocation();
   React.useEffect(() => { init(); }, []);
+
+  // The public preview is reachable even from an active session so it can be
+  // inspected without signing out. All other routes keep their auth tables.
+  if (location.pathname === '/welcome') return <Landing />;
 
   if (!isAuthenticated) return <Routes>
     <Route path="/" element={<Landing />} />

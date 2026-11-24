@@ -244,7 +244,7 @@ const Preparation: React.FC = () => {
   const [module, setModule] = useState<PreparationModule>('interview_prep');
   const [selectedId, setSelectedId] = useState('');
 
-  const jobs = useQuery('preparation-jobs', () => candidate.jobs({ limit: 100 }));
+  const jobs = useQuery('preparation-jobs', () => candidate.jobs({ days: 90, limit: 50, sort: 'newest' }));
   const artifacts = useQuery(
     ['preparation-artifacts', jobId, module],
     () => preparation.artifacts({ job_id: jobId || undefined, module, limit: 50 }),

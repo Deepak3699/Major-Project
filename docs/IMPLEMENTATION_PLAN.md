@@ -77,7 +77,7 @@ Verification: API 124/124, web 32/32, typechecks clean, production build green; 
 - [x] Server-side Gemini with strict validation and complete deterministic fallback; untrusted inputs sanitised.
 - [x] Artifacts persisted, listed, fetched and idempotent; UI `/preparation` with loading/empty/error/retry states.
 - [ ] Credit consumption/refund stays disabled: `PREPARATION_CREDIT_COST=0` until the owner defines allocation/refund rules. Configurable hook is in place.
-- Verification: API 142/142, web 47/47, typechecks and production build pass; live generation + idempotency smoke test green.
+- Verification: API 142/142, web 48/48, typechecks and production build pass; live generation + idempotency smoke test green.
 
 ## Phase 6 — Payments / admin (blocked: approval gate)
 
@@ -91,11 +91,11 @@ Verification: API 124/124, web 32/32, typechecks clean, production build green; 
 - [x] Server-side onboarding persistence: `onboarding_progress` + candidate API; tour saves completed/skipped state and replays via local storage offline fallback.
 - [x] Preparation workspace, credits screens and new admin screens follow the design spec: light/dark, responsive, loading/empty/error/retry states.
 - [ ] Offline/retry banner (nice-to-have, global).
-- Verification: web 47/47, API 142/142, typechecks and production build pass; live smoke tests green.
+- Verification: web 48/48, API 142/142, typechecks and production build pass; live smoke tests green.
 
 ## Phase 8 — Verification (complete)
 
-- Full API suite: 19 suites / 142 tests; web suite: 10 suites / 47 tests; typechecks clean; production build green.
+- Full API suite: 19 suites / 142 tests; web suite: 11 suites / 48 tests; typechecks clean; production build green.
 - Live smoke: registration/credits/plans/ledger/purchase 503, admin adjustment + audit, role guards, placement + onboarding, preparation generation + idempotency.
 - Restart persistence: 17 migrations, 4 plans and user records retained; API healthy, web HTTP 200.
 

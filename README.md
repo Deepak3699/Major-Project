@@ -2,7 +2,7 @@
 
 Candidate-first job intelligence platform built on this repository's React, Fastify, PostgreSQL and Python worker stack. Discover recent roles from permitted sources, review evidence-based listing confidence, compare explainable profile matches, prepare truthful application materials, and track application outcomes.
 
-The original recruiter lead-intelligence workflow remains available to administrators as a legacy operations area. New candidate registrations use the candidate workspace. Visitors who are not signed in see a public preview at **http://localhost:5174/** before choosing to sign in or register.
+The original recruiter lead-intelligence workflow remains available to administrators as a legacy operations area. New candidate registrations use the candidate workspace. Visitors who are not signed in see a public preview at **http://localhost:5174/** before choosing to sign in or register. Signed-in users can open **http://localhost:5174/welcome** (or the avatar menu's “View public preview”) to see the same preview without signing out.
 
 You can run this project **Without Docker** (pure local setup) or **With Docker** (one-command containerized stack).
 

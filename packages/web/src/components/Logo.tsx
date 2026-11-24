@@ -45,7 +45,7 @@ export function Logo({
             textSizes[size]
           )}
         >
-          <span className="text-signal">AI</span> JobPilot
+          <span className="text-signal">Hire</span>Gen
         </span>
       )}
     </div>

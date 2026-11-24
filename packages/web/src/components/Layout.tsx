@@ -52,13 +52,13 @@ const Layout: React.FC = () => {
     const openSubscription = () => setSubscriptionOpen(true);
     window.addEventListener("offline", goOffline);
     window.addEventListener("online", goOnline);
-    window.addEventListener("aijobpilot:open-feedback", openFeedback);
-    window.addEventListener("aijobpilot:open-subscription", openSubscription);
+    window.addEventListener("HireGen:open-feedback", openFeedback);
+    window.addEventListener("HireGen:open-subscription", openSubscription);
     return () => {
       window.removeEventListener("offline", goOffline);
       window.removeEventListener("online", goOnline);
-      window.removeEventListener("aijobpilot:open-feedback", openFeedback);
-      window.removeEventListener("aijobpilot:open-subscription", openSubscription);
+      window.removeEventListener("HireGen:open-feedback", openFeedback);
+      window.removeEventListener("HireGen:open-subscription", openSubscription);
     };
   }, []);
 

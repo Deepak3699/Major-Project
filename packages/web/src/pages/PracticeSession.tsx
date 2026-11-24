@@ -147,7 +147,7 @@ const AnswerPanel = ({ sessionId, question, index, total, isLast, onAnswered, on
 }) => {
   const [text, setText] = useState('');
   const [voiceOn, setVoiceOn] = useState(() => {
-    try { return localStorage.getItem('jobpilot:voice-interview') !== '0'; } catch { return true; }
+    try { return localStorage.getItem('hiregen:voice-interview') !== '0'; } catch { return true; }
   });
   const [micArmed, setMicArmed] = useState(false);
   const micArmedRef = useRef(false);
@@ -182,7 +182,7 @@ const AnswerPanel = ({ sessionId, question, index, total, isLast, onAnswered, on
   const toggleVoice = () => {
     const next = !voiceOn;
     setVoiceOn(next);
-    try { localStorage.setItem('jobpilot:voice-interview', next ? '1' : '0'); } catch { /* storage can be disabled */ }
+    try { localStorage.setItem('hiregen:voice-interview', next ? '1' : '0'); } catch { /* storage can be disabled */ }
     if (!next) {
       speech.cancel();
       voice.stop();

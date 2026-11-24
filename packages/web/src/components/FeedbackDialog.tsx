@@ -29,7 +29,7 @@ export function FeedbackDialog({ open, onClose }: { open: boolean; onClose: () =
   };
 
   return (
-    <Modal open={open} onClose={close} title="Share your feedback" description="Help us make AI JobPilot more premium and useful." size="md">
+    <Modal open={open} onClose={close} title="Share your feedback" description="Help us make HireGen more premium and useful." size="md">
       {done ? (
         <div className="py-6 text-center">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-success-soft text-success"><Star className="h-5 w-5" /></div>

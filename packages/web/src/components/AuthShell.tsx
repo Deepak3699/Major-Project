@@ -26,7 +26,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
 
         <div className="relative flex items-center gap-2.5">
           <span aria-hidden className="h-3 w-3 rounded-[3px] bg-[hsl(14,46%,58%)]" />
-          <span className="text-[19px] font-semibold tracking-[-0.032em]">AI JobPilot</span>
+          <span className="text-[19px] font-semibold tracking-[-0.032em]">HireGen</span>
         </div>
 
         <div className="relative max-w-md">
@@ -57,7 +57,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
           </ul>
         </div>
 
-        <p className="relative font-mono text-[11px] text-[hsl(28,12%,52%)]">© {new Date().getFullYear()} AI JobPilot</p>
+        <p className="relative font-mono text-[11px] text-[hsl(28,12%,52%)]">© {new Date().getFullYear()} HireGen</p>
       </div>
 
       {/* Form panel */}

@@ -1,4 +1,4 @@
-# AI JobPilot UI Design Spec — "Terracotta Atelier"
+# HireGen UI Design Spec — "Terracotta Atelier"
 
 This is the binding design language for the full UI. The foundation
 (`src/index.css`, `tailwind.config.js`) and all `components/ui/*` primitives +

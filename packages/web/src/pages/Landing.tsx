@@ -23,13 +23,13 @@ const NAV = [
 
 function ThemeToggle() {
   const [dark, setDark] = useState(() => {
-    try { return localStorage.getItem('jobpilot-theme') === 'dark'; } catch { return false; }
+    try { return localStorage.getItem('hiregen-theme') === 'dark'; } catch { return false; }
   });
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-    try { localStorage.setItem('jobpilot-theme', dark ? 'dark' : 'light'); } catch { /* storage can be disabled */ }
+    try { localStorage.setItem('hiregen-theme', dark ? 'dark' : 'light'); } catch { /* storage can be disabled */ }
   }, [dark]);
 
   return (
@@ -48,7 +48,7 @@ function PublicHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
       <div className="mx-auto flex h-[4.25rem] max-w-7xl items-center gap-4 px-5 sm:px-8">
-        <Link to="/" aria-label="AI JobPilot home" className="shrink-0">
+        <Link to="/" aria-label="HireGen home" className="shrink-0">
           <Logo size="md" />
         </Link>
         <nav aria-label="Page sections" className="ml-8 hidden items-center gap-6 lg:flex">
@@ -107,7 +107,7 @@ function ProductPreview() {
     <div className="relative">
       <div aria-hidden className="absolute -inset-4 rounded-[2rem] bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.14),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(var(--primary)/0.08),transparent_50%)] blur-sm" />
       <div aria-hidden className="absolute -inset-3 rounded-[1.75rem] border border-[hsl(var(--border)/0.55)] bg-[hsl(var(--surface)/0.35)] backdrop-blur-sm" />
-      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--surface)/0.58)] shadow-[0_24px_60px_-20px_hsl(var(--foreground)/0.18)] backdrop-blur-xl" aria-label="Illustrative AI JobPilot workspace preview">
+      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border)/0.7)] bg-[hsl(var(--surface)/0.58)] shadow-[0_24px_60px_-20px_hsl(var(--foreground)/0.18)] backdrop-blur-xl" aria-label="Illustrative HireGen workspace preview">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--surface)/0.45),hsl(var(--surface)/0.15))]" />
         <div className="relative flex items-center justify-between gap-3 border-b border-[hsl(var(--border)/0.6)] bg-[hsl(var(--surface)/0.45)] px-4 py-3 backdrop-blur-md">
           <div aria-hidden className="flex items-center gap-1.5">
@@ -115,7 +115,7 @@ function ProductPreview() {
             <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--foreground)/0.15)]" />
             <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--foreground)/0.15)]" />
           </div>
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">AI JobPilot · candidate workspace</span>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">HireGen · candidate workspace</span>
           <Badge variant="signal" className="bg-signal-soft/80 backdrop-blur-sm">Sample</Badge>
         </div>
         <div className="relative grid sm:grid-cols-[9rem_minmax(0,1fr)]">
@@ -303,7 +303,7 @@ const STEPS = [
   { title: 'Build your profile', body: 'Enter details yourself or upload a resume. Extracted fields stay suggestions until you review and confirm them.' },
   { title: 'Choose a role', body: 'Discover fresh listings or open a recommendation. Read the evidence and decide whether the role is worth your time.' },
   { title: 'Prepare and practise', body: 'Use your confirmed profile and the job description to generate preparation, then rehearse with the interview bot.' },
-  { title: 'Apply and track', body: 'You open the employer page and send the application. AI JobPilot tracks the status and lets you report an outcome voluntarily.' },
+  { title: 'Apply and track', body: 'You open the employer page and send the application. HireGen tracks the status and lets you report an outcome voluntarily.' },
 ];
 
 const PLANS = [
@@ -357,7 +357,7 @@ const Landing: React.FC = () => {
                   <span className="block text-signal">crafted with clarity.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-foreground/78">
-                  AI JobPilot brings roles, evidence, preparation and application tracking into one refined workspace — so every move you make is informed, deliberate and yours.
+                  HireGen brings roles, evidence, preparation and application tracking into one refined workspace — so every move you make is informed, deliberate and yours.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-3">
                   <Button asChild size="lg" className="h-11 px-6">
@@ -551,7 +551,7 @@ const Landing: React.FC = () => {
                 A tool, not a decision maker.
               </h2>
               <p className="mt-4 max-w-md text-[15px] leading-relaxed text-foreground/78">
-                AI JobPilot does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
+                HireGen does not contact employers, submit forms or make hiring decisions. The output is preparation you review and use yourself.
               </p>
               <div className="glass-gloss-soft mt-6 rounded-2xl p-4">
                 <p className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-foreground/60">Design principle</p>
@@ -613,7 +613,7 @@ const Landing: React.FC = () => {
             ))}
           </nav>
           <div className="text-[12px] leading-relaxed text-foreground/72">
-            <p>© {new Date().getFullYear()} AI JobPilot</p>
+            <p>© {new Date().getFullYear()} HireGen</p>
             <p className="mt-1">Not an employer. No applications sent automatically.</p>
           </div>
         </div>

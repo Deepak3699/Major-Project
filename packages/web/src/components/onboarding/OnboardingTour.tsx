@@ -9,8 +9,8 @@ import { cn } from '@/components/ui/cn';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-const DONE_KEY = 'jobpilot:tutorial-done';
-export const REPLAY_TOUR_EVENT = 'aijobpilot:replay-tour';
+const DONE_KEY = 'hiregen:tutorial-done';
+export const REPLAY_TOUR_EVENT = 'HireGen:replay-tour';
 
 export function isTutorialDone(): boolean {
   try { return localStorage.getItem(DONE_KEY) === '1'; } catch { return true; }
@@ -59,7 +59,7 @@ const CANDIDATE_STEPS: TourStep[] = [
   {
     eyebrow: 'Welcome · 01',
     title: 'Your job search, instrumented.',
-    body: 'AI JobPilot finds roles matched to your profile, keeps every application on track, and lets you rehearse interviews with an AI that grades you like a real interviewer would — a short tour, then you are off.',
+    body: 'HireGen finds roles matched to your profile, keeps every application on track, and lets you rehearse interviews with an AI that grades you like a real interviewer would — a short tour, then you are off.',
     icon: Compass,
     centered: true,
   },

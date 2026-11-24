@@ -26,7 +26,7 @@ type DatasetSummary = {
   dataset_url?: string;
 };
 export type RecommendationModel = {
-  format: 'jobpilot-dnn-v1' | 'hiregen-dnn-v2';
+  format: 'HireGen-dnn-v1' | 'hiregen-dnn-v2';
   created_at: string;
   training_source: string;
   training_task: string;
@@ -165,7 +165,7 @@ export function loadRecommendationModel(): RecommendationModel {
   const modelPath = MODEL_PATHS.find((candidate) => fs.existsSync(candidate));
   if (!modelPath) throw new Error('Recommendation model artifact not found');
   const parsed = JSON.parse(fs.readFileSync(modelPath, 'utf8')) as RecommendationModel;
-  if (!['jobpilot-dnn-v1', 'hiregen-dnn-v2'].includes(parsed.format)
+  if (!['HireGen-dnn-v1', 'hiregen-dnn-v2'].includes(parsed.format)
     || !Array.isArray(parsed.feature_names) || parsed.feature_names.length !== RECOMMENDATION_FEATURES.length
     || !Array.isArray(parsed.layers) || parsed.layers.length !== 3) {
     throw new Error('Recommendation model format is invalid');

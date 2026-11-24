@@ -1,4 +1,4 @@
-# JobPilot AI - blueprint alignment and run notes
+# HireGen - blueprint alignment and run notes
 
 This repository began as a recruiter-facing lead-generation CRM. The candidate-facing platform now uses the same PostgreSQL, Fastify, React and Python worker stack while adding a separate job seeker workflow. The attached project blueprint describes the intended product; implementation details here record what is currently wired into the code.
 
@@ -18,7 +18,7 @@ This repository began as a recruiter-facing lead-generation CRM. The candidate-f
 
 ## Source-access policy
 
-The worker's default allowlist is defined in `packages/scrapers/scrapers/scrape_consumer.py` as `PERMITTED_DEFAULT_SOURCES`. Admin source toggles and per-run source lists narrow this set; they do not authorize additional sources. An operator must review the source terms and access method, then add an approved connector name to `SCRAPE_PERMITTED_SOURCES` in the environment. New code defaults to plain HTTPX with an identifiable `JobPilotAI/1.0` user-agent. Browser automation, proxy rotation, TLS impersonation and CAPTCHA solving require the explicit `SCRAPER_ALLOW_ADVANCED_FETCH=1` option and must only be used in a workflow where the source permits that method.
+The worker's default allowlist is defined in `packages/scrapers/scrapers/scrape_consumer.py` as `PERMITTED_DEFAULT_SOURCES`. Admin source toggles and per-run source lists narrow this set; they do not authorize additional sources. An operator must review the source terms and access method, then add an approved connector name to `SCRAPE_PERMITTED_SOURCES` in the environment. New code defaults to plain HTTPX with an identifiable `HireGenAI/1.0` user-agent. Browser automation, proxy rotation, TLS impersonation and CAPTCHA solving require the explicit `SCRAPER_ALLOW_ADVANCED_FETCH=1` option and must only be used in a workflow where the source permits that method.
 
 ## Local setup additions
 

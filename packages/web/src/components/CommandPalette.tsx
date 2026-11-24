@@ -40,8 +40,8 @@ export function CommandPalette() {
     };
     const onOpen = () => setOpen(true);
     window.addEventListener('keydown', onKey);
-    window.addEventListener('aijobpilot:open-palette', onOpen);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('aijobpilot:open-palette', onOpen); };
+    window.addEventListener('HireGen:open-palette', onOpen);
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('HireGen:open-palette', onOpen); };
   }, []);
 
   useEffect(() => { if (open) { setQ(''); setActive(0); setTimeout(() => inputRef.current?.focus(), 20); } }, [open]);

@@ -29,7 +29,7 @@ Docker Compose runs `postgres`, `pg-migrator`, `redis`, `api`, `web`, optional `
 - `packages/web/src/components/ui/*` — local design-system primitives (button, input, select, textarea, modal, badge, card, toast, spinner, empty-state, table, page-header, tabs…). Tailwind semantic tokens in `tailwind.config` + CSS variables.
 - Data fetching: react-query. Query keys are string-based (`practice-subscription`, `practice-sessions`, `dashboard-credits`, …).
 - Auth pages break out of the shell through `AuthShell`; protected routes are guarded in `App.tsx`.
-- Onboarding tour uses `data-tour` anchors, localStorage flag `jobpilot:tutorial-done`, and window event `hiregen:replay-tour`.
+- Onboarding tour uses `data-tour` anchors, localStorage flag `HireGen:tutorial-done`, and window event `hiregen:replay-tour`.
 
 ## 3. Backend boundaries
 

@@ -1,4 +1,4 @@
-# JobPilot AI — Job Intelligence & Application Platform
+# HireGen — Job Intelligence & Application Platform
 
 Candidate-first job intelligence platform built on this repository's React, Fastify, PostgreSQL and Python worker stack. Discover recent roles from permitted sources, review evidence-based listing confidence, compare explainable profile matches, prepare truthful application materials, and track application outcomes.
 
@@ -175,7 +175,7 @@ Or create a new candidate account at `/register`. Every new candidate gets the F
 
 | Service | Port / URL | Description |
 |---|---|---|
-| **JobPilot (Docker)** | http://localhost:5174 | Candidate and admin workspaces |
+| **HireGen (Docker)** | http://localhost:5174 | Candidate and admin workspaces |
 | **API (Docker)** | http://localhost:3001 | Fastify REST API + WebSockets |
 | **API Health (Docker)** | http://localhost:3001/health | Health & uptime endpoint |
 | **Workers (Docker)** | http://localhost:8011 | Python FastAPI Scrapers & Queue Consumers |

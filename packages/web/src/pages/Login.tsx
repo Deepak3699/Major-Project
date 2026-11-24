@@ -42,7 +42,7 @@ const Login: React.FC = () => {
 
   return (
     <AuthShell
-      title="Welcome to AI JobPilot"
+      title="Welcome to HireGen"
       subtitle="Sign in to your workspace"
     >
       <form onSubmit={handleSubmit} className="space-y-4">

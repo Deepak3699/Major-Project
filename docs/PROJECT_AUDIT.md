@@ -7,7 +7,7 @@
 
 ## 1. What this repository is
 
-HireGen (formerly JobPilot AI / `sales-agent`) is a candidate-first job-intelligence and career-preparation platform built on top of an existing recruiter lead-intelligence CRM. The candidate workspace discovers jobs, explains match scores, tracks applications, prepares role-specific documents, runs an AI mock interview with voice interaction, and generates learning tracks. The original recruiter CRM remains available to administrators as a legacy operations area.
+HireGen (formerly HireGen / `sales-agent`) is a candidate-first job-intelligence and career-preparation platform built on top of an existing recruiter lead-intelligence CRM. The candidate workspace discovers jobs, explains match scores, tracks applications, prepares role-specific documents, runs an AI mock interview with voice interaction, and generates learning tracks. The original recruiter CRM remains available to administrators as a legacy operations area.
 
 ## 2. Actual stack
 

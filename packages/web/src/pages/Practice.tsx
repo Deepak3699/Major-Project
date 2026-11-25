@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from 'react-query';
-import { ChevronRight, GraduationCap, Mic, Plus, ScrollText, ShieldCheck, Users } from 'lucide-react';
+import {
+  Briefcase,
+  Check,
+  ChevronRight,
+  GraduationCap,
+  Mic,
+  Plus,
+  ScrollText,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Volume2,
+} from 'lucide-react';
 import { candidate, practice } from '@/lib/api';
-import { PracticeSessionSummary, PracticeSubscription } from '@/lib/types';
-/* hero replaces PageHeader */
+import { CandidateJob, PracticeAvatar, PracticeDifficulty, PracticeSessionSummary, PracticeSubscription } from '@/lib/types';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +25,9 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageLoader } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
+import { AvatarPortrait } from '@/components/interview/AvatarPortrait';
+import { FALLBACK_AVATARS } from '@/components/interview/roster';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
 
@@ -24,6 +36,19 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const DIFFICULTY_LABEL: Record<string, string> = { calm: 'Calm', standard: 'Standard', brutal: 'Stress' };
 const DIFFICULTY_TONE: Record<string, 'info' | 'muted' | 'warning'> = { calm: 'info', standard: 'muted', brutal: 'warning' };
 
+const DIFFICULTY_OPTIONS: Array<{ value: PracticeDifficulty; label: string; hint: string }> = [
+  { value: 'calm', label: 'Calm', hint: 'Warm-up pacing' },
+  { value: 'standard', label: 'Standard', hint: 'Typical interview' },
+  { value: 'brutal', label: 'Stress', hint: 'Follow-up pressure' },
+];
+
+interface JobOption {
+  id: string;
+  title: string;
+  company: string;
+  skills?: string[];
+}
+
 function scoreTone(score: number | null): 'success' | 'warning' | 'danger' | 'muted' {
   if (score == null) return 'muted';
   if (score >= 80) return 'success';
@@ -31,111 +56,104 @@ function scoreTone(score: number | null): 'success' | 'warning' | 'danger' | 'mu
   return 'danger';
 }
 
-const StartDialog = (
-  props: {
-    open: boolean;
-    onClose: () => void;
-    subscription: PracticeSubscription | undefined;
-    defaultRole: string;
-    onUpgradeNeeded: () => void;
-  },
-) => {
-  const { open, onClose, subscription, defaultRole, onUpgradeNeeded } = props;
-  const navigate = useNavigate();
-  const [role, setRole] = useState(defaultRole);
-  const [difficulty, setDifficulty] = useState<'calm' | 'standard' | 'brutal'>('standard');
-  const [count, setCount] = useState(6);
-  const [starting, setStarting] = useState(false);
-  const { toast } = useToast();
-
-  React.useEffect(() => { if (open) setRole(defaultRole); }, [open, defaultRole]);
-
-  const quotaExhausted = !!subscription && !subscription.unlimited
-    && subscription.monthly_limit != null && subscription.used_this_month >= subscription.monthly_limit;
-
-  const start = async () => {
-    if (quotaExhausted) { onUpgradeNeeded(); return; }
-    setStarting(true);
-    try {
-      const res = await practice.createSession({ role_focus: role.trim() || undefined, difficulty, question_count: count });
-      onClose();
-      navigate(`/practice/session/${res.session.id}`);
-    } catch (err) {
-      onClose();
-      onUpgradeNeeded();
-      toast({ title: 'Session not started', description: (err as Error).message, variant: 'error' });
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Set up the interview"
-      description="Pick the role, the pressure, and how long it should run. Questions adapt to your saved profile."
-      footer={(
-        <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={start} loading={starting}>Begin {count} questions</Button>
-        </>
-      )}
-    >
-      <div className="space-y-4">
-        {quotaExhausted && (
-          <div className="rounded-lg border border-warning/25 bg-warning-soft px-3.5 py-3 text-[13px] leading-relaxed text-warning">
-            Free plan quota for this month is spent. Starting now opens the Pro upgrade request instead.
-          </div>
-        )}
-        <div className="space-y-1.5">
-          <label htmlFor="practice-role" className="text-[12.5px] font-medium text-foreground">Target role</label>
-          <Input id="practice-role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Frontend Developer" maxLength={120} />
-          <p className="text-[12px] text-muted-foreground">Defaults to the first preferred role saved on your profile.</p>
+const AvatarCard = ({
+  avatar,
+  selected,
+  recommended,
+  reason,
+  onSelect,
+}: {
+  avatar: PracticeAvatar;
+  selected: boolean;
+  recommended: boolean;
+  reason?: string;
+  onSelect: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    aria-pressed={selected}
+    className={cn(
+      'group relative overflow-hidden rounded-xl border p-3 text-left transition-all duration-200',
+      selected
+        ? 'border-signal/70 bg-signal-soft/40 shadow-[0_0_0_1px_hsl(var(--signal)/0.25)]'
+        : 'border-border bg-surface hover:border-border-strong hover:bg-accent/40',
+    )}
+  >
+    <div className="flex gap-3">
+      <AvatarPortrait
+        avatarId={avatar.id}
+        name={avatar.name}
+        title={avatar.title}
+        state="idle"
+        animated={false}
+        showNameplate={false}
+        className="h-[92px] w-[76px] shrink-0"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-1.5">
+          <p className="truncate text-[13.5px] font-semibold text-foreground">{avatar.name}</p>
+          {recommended && (
+            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-signal/40 bg-signal-soft px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.05em] text-signal">
+              <Sparkles className="h-2.5 w-2.5" /> Best fit
+            </span>
+          )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="practice-difficulty" className="text-[12.5px] font-medium text-foreground">Difficulty</label>
-            <Select id="practice-difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value as typeof difficulty)}>
-              <option value="calm">Calm — warm-up pacing</option>
-              <option value="standard">Standard — typical interview</option>
-              <option value="brutal">Stress — follow-up pressure</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="practice-count" className="text-[12.5px] font-medium text-foreground">Questions</label>
-            <Select id="practice-count" value={String(count)} onChange={(e) => setCount(Number(e.target.value))}>
-              <option value="4">4 — quick round</option>
-              <option value="6">6 — standard round</option>
-              <option value="8">8 — full round</option>
-            </Select>
-          </div>
-        </div>
-        {subscription && !subscription.unlimited && subscription.monthly_limit != null && !quotaExhausted && (
-          <p className="text-[12px] text-muted-foreground">
-            {Math.max(0, subscription.monthly_limit - subscription.used_this_month)} of {subscription.monthly_limit} free sessions left this month.
-          </p>
-        )}
+        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{avatar.title}</p>
+        <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-relaxed text-muted-foreground">{avatar.tagline}</p>
       </div>
-    </Modal>
-  );
-};
+    </div>
 
-const UpgradeDialog = (
-  props: {
-    open: boolean;
-    onClose: () => void;
-    subscription: PracticeSubscription | undefined;
-  },
-) => {
-  const { open, onClose, subscription } = props;
+    <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-foreground/80">{avatar.ability}</p>
+
+    <div className="mt-2 flex flex-wrap gap-1">
+      {avatar.specialties.slice(0, 3).map((specialty) => (
+        <span
+          key={specialty}
+          className="rounded border border-border bg-muted/70 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.04em] text-muted-foreground"
+        >
+          {specialty}
+        </span>
+      ))}
+    </div>
+
+    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border/80 pt-2">
+      <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.05em] text-muted-foreground">
+        <Volume2 className="h-2.5 w-2.5" /> {avatar.voice.gender} · {avatar.voice.lang}
+      </span>
+      {selected ? (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-signal">
+          <Check className="h-3.5 w-3.5" /> Selected
+        </span>
+      ) : (
+        <span className="text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">Choose</span>
+      )}
+    </div>
+
+    {recommended && reason && (
+      <p className="mt-2 rounded-md border border-signal/20 bg-signal-soft/70 px-2 py-1.5 text-[11px] leading-relaxed text-foreground/80">
+        {reason}
+      </p>
+    )}
+  </button>
+);
+
+const UpgradeDialog = ({
+  open,
+  onClose,
+  subscription,
+}: {
+  open: boolean;
+  onClose: () => void;
+  subscription: PracticeSubscription | undefined;
+}) => {
   const queryClient = useQueryClient();
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) { setNote(''); setSent(!!subscription?.requested_upgrade); }
   }, [open, subscription?.requested_upgrade]);
 
@@ -219,8 +237,12 @@ const SessionRow = ({ session, i }: { session: PracticeSessionSummary; i: number
           {session.overall_score ?? '–'}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13.5px] font-medium text-foreground">{session.role_focus}</p>
+          <p className="truncate text-[13.5px] font-medium text-foreground">
+            {session.role_focus}
+            {session.job?.company ? <span className="font-normal text-muted-foreground"> · {session.job.company}</span> : null}
+          </p>
           <p className="truncate font-mono text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+            {session.avatar?.name ? `${session.avatar.name} · ` : ''}
             {session.status === 'completed' ? formatDateTime(session.completed_at) : formatDateTime(session.started_at)}
             {' · '}{session.question_count} questions{session.answered_count != null ? ` · ${session.answered_count} answered` : ''}
           </p>
@@ -236,11 +258,34 @@ const SessionRow = ({ session, i }: { session: PracticeSessionSummary; i: number
 };
 
 const Practice: React.FC = () => {
-  const [startOpen, setStartOpen] = useState(false);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const studioRef = useRef<HTMLDivElement>(null);
+  const [jobId, setJobId] = useState(searchParams.get('job') || '');
+  const [role, setRole] = useState('');
+  const [avatarId, setAvatarId] = useState('');
+  const [avatarTouched, setAvatarTouched] = useState(false);
+  const [difficulty, setDifficulty] = useState<PracticeDifficulty>('standard');
+  const [count, setCount] = useState(6);
+  const [starting, setStarting] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: subData, isLoading: subLoading } = useQuery('practice-subscription', practice.subscription);
   const { data: sessionsData, isLoading: sessionsLoading } = useQuery('practice-sessions', practice.sessions);
   const { data: profileData } = useQuery('candidate-profile', candidate.profile, { staleTime: 60_000 });
+  const { data: jobsData } = useQuery(
+    'practice-jobs',
+    () => candidate.jobs({ days: 90, limit: 50, sort: 'trust' }),
+    { staleTime: 5 * 60_000 },
+  );
+  const { data: appsData } = useQuery('candidate-applications', candidate.applications, { staleTime: 60_000 });
+  const { data: avatarData } = useQuery(
+    ['practice-avatars', jobId],
+    () => practice.avatars(jobId || undefined),
+    { staleTime: 60_000, keepPreviousData: true },
+  );
 
   const subscription = subData?.subscription;
   const sessions = sessionsData?.sessions || [];
@@ -250,21 +295,123 @@ const Practice: React.FC = () => {
   const bestScore = completed.reduce<number | null>((best, s) => (best == null || (s.overall_score ?? 0) > best ? s.overall_score : best), null);
   const defaultRole = profileData?.profile?.preferred_roles?.[0] || '';
 
+  useEffect(() => {
+    if (!role) setRole(defaultRole);
+  }, [defaultRole]);
+
+  const savedJobOptions = useMemo<JobOption[]>(() => {
+    const apps = appsData?.data || [];
+    return apps
+      .filter((app) => app.status === 'SAVED')
+      .map((app) => ({ id: app.job_id, title: app.job_title, company: app.company_name, skills: app.skills }));
+  }, [appsData]);
+
+  const jobOptions = useMemo<JobOption[]>(() => {
+    const seen = new Set<string>();
+    const out: JobOption[] = [];
+    const add = (option: JobOption) => {
+      if (!option.id || seen.has(option.id)) return;
+      seen.add(option.id);
+      out.push(option);
+    };
+    savedJobOptions.forEach(add);
+    ((jobsData?.data || []) as CandidateJob[]).forEach((job) => add({ id: job.id, title: job.title, company: job.company_name, skills: job.skills }));
+    if (jobId && avatarData?.job && !seen.has(jobId)) {
+      add({ id: avatarData.job.id, title: avatarData.job.title, company: avatarData.job.company, skills: avatarData.job.skills });
+    }
+    return out;
+  }, [savedJobOptions, jobsData, jobId, avatarData]);
+
+  const selectedJob = jobOptions.find((job) => job.id === jobId) || null;
+  const selectedJobSkills = selectedJob?.skills?.length ? selectedJob.skills : (avatarData?.job?.skills || []);
+  const savedIds = new Set(savedJobOptions.map((job) => job.id));
+  const otherJobOptions = jobOptions.filter((job) => !savedIds.has(job.id));
+  const recommendedId = avatarData?.recommended?.avatar_id;
+  const avatars = avatarData?.avatars?.length ? avatarData.avatars : FALLBACK_AVATARS;
+  const activeAvatar = avatars.find((avatar) => avatar.id === avatarId) || avatars[0];
+
+  useEffect(() => {
+    if (recommendedId && !avatarTouched) setAvatarId(recommendedId);
+  }, [recommendedId, avatarTouched]);
+
+  useEffect(() => {
+    if (!avatarId && avatars[0]) setAvatarId(avatars[0].id);
+  }, [avatarId, avatars]);
+
+  const quotaExhausted = !!subscription && !subscription.unlimited
+    && subscription.monthly_limit != null && subscription.used_this_month >= subscription.monthly_limit;
+
+  const changeJob = (next: string) => {
+    setJobId(next);
+    setAvatarTouched(false);
+    if (!next) setRole(defaultRole);
+  };
+
+  const start = async () => {
+    if (quotaExhausted) { setUpgradeOpen(true); return; }
+    setStarting(true);
+    try {
+      const res = await practice.createSession({
+        role_focus: selectedJob?.title || role.trim() || undefined,
+        difficulty,
+        question_count: count,
+        avatar_id: avatarId || recommendedId,
+        job_id: jobId || undefined,
+      });
+      await queryClient.invalidateQueries('practice-sessions');
+      navigate(`/practice/session/${res.session.id}`);
+    } catch (err) {
+      if ((err as any)?.response?.status === 402) setUpgradeOpen(true);
+      toast({ title: 'Session not started', description: (err as Error).message, variant: 'error' });
+    } finally {
+      setStarting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.08),transparent_50%)]" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow text-signal">Practice space</p>
-            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[36px]">Interview practice.</h1>
-            <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted-foreground">Mock interviews graded question by question, with a learning plan that tracks the gap between your profile and the role.</p>
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: EASE }}
+        className="relative overflow-hidden rounded-2xl border border-border bg-grad-surface p-6 sm:p-7"
+      >
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--signal)/0.10),transparent_55%)]" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="eyebrow flex items-center gap-1.5 text-signal"><Sparkles className="h-3.5 w-3.5" /> AI interview studio</p>
+            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.03em] text-foreground sm:text-[38px]">
+              Practise with an interviewer who fits the job.
+            </h1>
+            <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
+              Six interviewers, six styles. Pick a saved or fresh job and the studio recommends the right one —
+              then the interview runs as a live conversation, spoken in Indian English.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button onClick={() => studioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                <Mic className="h-4 w-4" /> Set up an interview
+              </Button>
+              <Button variant="outline" asChild><Link to="/learning"><GraduationCap className="h-4 w-4" />Learning tracks</Link></Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <Button variant="outline" asChild><Link to="/learning"><GraduationCap className="h-4 w-4" />Learning tracks</Link></Button>
-            <Button onClick={() => (subscription && !subscription.unlimited && subscription.monthly_limit != null && subscription.used_this_month >= subscription.monthly_limit ? setUpgradeOpen(true) : setStartOpen(true))}>
-              <Plus className="h-4 w-4" />New session
-            </Button>
+
+          <div className="hidden shrink-0 items-end sm:flex">
+            {avatars.slice(0, 5).map((avatar, index) => (
+              <AvatarPortrait
+                key={avatar.id}
+                avatarId={avatar.id}
+                name={avatar.name}
+                title={avatar.title}
+                state="idle"
+                animated={false}
+                showNameplate={false}
+                className={cn(
+                  'h-[112px] w-[86px] border-2 border-background shadow-lg',
+                  index > 0 && '-ml-5',
+                  index % 2 === 0 ? 'rotate-[-3deg]' : 'rotate-[2deg]',
+                )}
+              />
+            ))}
           </div>
         </div>
       </motion.section>
@@ -291,7 +438,10 @@ const Practice: React.FC = () => {
           >
             <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-signal" aria-hidden />
             <div className="min-w-0 flex-1">
-              <p className="text-[13.5px] font-semibold text-foreground">{activeSession.role_focus} interview is open</p>
+              <p className="text-[13.5px] font-semibold text-foreground">
+                {activeSession.role_focus} interview is open
+                {activeSession.avatar?.name ? <span className="font-normal text-muted-foreground"> with {activeSession.avatar.name}</span> : null}
+              </p>
               <p className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
                 {activeSession.answered_count ?? 0}/{activeSession.question_count} answered · started {formatDateTime(activeSession.started_at)}
               </p>
@@ -302,6 +452,165 @@ const Practice: React.FC = () => {
         </motion.div>
       )}
 
+      <section ref={studioRef} id="studio" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)]">
+        <div className="card h-fit space-y-5 p-5">
+          <div>
+            <p className="eyebrow flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" /> The job</p>
+            <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.02em] text-foreground">What are you preparing for?</h2>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+              Saved jobs come first. The interviewer is recommended from the job title, skills and description.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="practice-job" className="text-[12.5px] font-medium text-foreground">Job</label>
+            <Select id="practice-job" value={jobId} onChange={(e) => changeJob(e.target.value)}>
+              <option value="">No specific job — use my target role</option>
+              {savedJobOptions.length > 0 && (
+                <optgroup label="Saved jobs">
+                  {savedJobOptions.map((job) => (
+                    <option key={job.id} value={job.id}>{job.title}{job.company ? ` — ${job.company}` : ''}</option>
+                  ))}
+                </optgroup>
+              )}
+              {otherJobOptions.length > 0 && (
+                <optgroup label={jobId && !savedIds.has(jobId) ? 'Selected job' : 'Fresh jobs'}>
+                  {otherJobOptions.map((job) => (
+                    <option key={job.id} value={job.id}>{job.title}{job.company ? ` — ${job.company}` : ''}</option>
+                  ))}
+                </optgroup>
+              )}
+            </Select>
+          </div>
+
+          {selectedJob ? (
+            <div className="rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-[12.5px] font-medium text-foreground">{selectedJob.title}</p>
+              <p className="text-[11.5px] text-muted-foreground">{selectedJob.company || 'Company not listed'}</p>
+              {selectedJobSkills.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {selectedJobSkills.slice(0, 6).map((skill) => (
+                    <span key={skill} className="rounded border border-border bg-surface px-1.5 py-0.5 text-[10.5px] text-muted-foreground">{skill}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <label htmlFor="practice-role" className="text-[12.5px] font-medium text-foreground">Target role</label>
+              <Input id="practice-role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Frontend Developer" maxLength={120} />
+              <p className="text-[11.5px] text-muted-foreground">Defaults to the first preferred role saved on your profile.</p>
+            </div>
+          )}
+
+          {jobId && avatarData?.recommended && (
+            <div className="rounded-lg border border-signal/30 bg-signal-soft px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-signal" /> {avatarData.recommended.name} recommended
+              </p>
+              <p className="mt-1 text-[11.5px] leading-relaxed text-foreground/75">{avatarData.recommended.reason}</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <p className="text-[12.5px] font-medium text-foreground">Difficulty</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {DIFFICULTY_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setDifficulty(option.value)}
+                  aria-pressed={difficulty === option.value}
+                  className={cn(
+                    'rounded-lg border px-2 py-2 text-left transition-colors',
+                    difficulty === option.value
+                      ? 'border-signal/60 bg-signal-soft text-foreground'
+                      : 'border-border bg-surface text-muted-foreground hover:bg-accent',
+                  )}
+                >
+                  <span className="block text-[12px] font-medium">{option.label}</span>
+                  <span className="mt-0.5 block text-[10px] leading-tight opacity-70">{option.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[12.5px] font-medium text-foreground">Length</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[4, 6, 8].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setCount(value)}
+                  aria-pressed={count === value}
+                  className={cn(
+                    'rounded-lg border px-2 py-2 text-center transition-colors',
+                    count === value
+                      ? 'border-signal/60 bg-signal-soft text-foreground'
+                      : 'border-border bg-surface text-muted-foreground hover:bg-accent',
+                  )}
+                >
+                  <span className="block text-[12px] font-medium">{value} questions</span>
+                  <span className="mt-0.5 block text-[10px] opacity-70">{value === 4 ? 'Quick round' : value === 6 ? 'Standard' : 'Full round'}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-border pt-4">
+            {quotaExhausted && (
+              <p className="rounded-lg border border-warning/25 bg-warning-soft px-3 py-2 text-[12px] leading-relaxed text-warning">
+                Free quota is spent for this month. Starting now opens the Pro upgrade request.
+              </p>
+            )}
+            {subscription && !subscription.unlimited && subscription.monthly_limit != null && !quotaExhausted && (
+              <p className="text-[11.5px] text-muted-foreground">
+                {Math.max(0, subscription.monthly_limit - subscription.used_this_month)} of {subscription.monthly_limit} free sessions left this month.
+              </p>
+            )}
+            <Button className="w-full" onClick={start} loading={starting}>
+              <Mic className="h-4 w-4" />
+              {activeAvatar ? `Start with ${activeAvatar.name.split(' ')[0]}` : 'Start interview'}
+            </Button>
+            <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+              Spoken in Indian English. Each interviewer has a different voice, pace and pitch.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="eyebrow">Choose your interviewer</p>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground">Six styles. One job-ready round.</h2>
+            </div>
+            {avatarData?.recommended && (
+              <Badge variant="signal"><Sparkles className="h-3 w-3" /> Recommended: {avatarData.recommended.name}</Badge>
+            )}
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            {avatars.map((avatar) => (
+              <AvatarCard
+                key={avatar.id}
+                avatar={avatar}
+                selected={avatar.id === avatarId}
+                recommended={avatar.id === recommendedId}
+                reason={avatar.id === recommendedId ? avatarData?.recommended?.reason : undefined}
+                onSelect={() => { setAvatarId(avatar.id); setAvatarTouched(true); }}
+              />
+            ))}
+          </div>
+
+          {!avatarData && (
+            <p className="text-[11.5px] text-muted-foreground">
+              Showing the default roster while the recommendation service loads.
+            </p>
+          )}
+        </div>
+      </section>
+
       {sessionsLoading ? (
         <div className="card space-y-3 p-5">
           {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-14 w-full" />)}
@@ -311,8 +620,8 @@ const Practice: React.FC = () => {
           <EmptyState
             icon={Mic}
             title="No interview practice yet"
-            description="The first session sets the baseline: a small set of questions from your profile, graded as a real interviewer would."
-            action={<Button className="mt-2" onClick={() => setStartOpen(true)}><Plus className="h-4 w-4" />Start the first session</Button>}
+            description="Pick a job and an interviewer above. The first round sets the baseline and the avatar reacts to every answer."
+            action={<Button className="mt-2" onClick={() => studioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><Plus className="h-4 w-4" />Set up the first round</Button>}
           />
         </div>
       ) : (
@@ -322,7 +631,6 @@ const Practice: React.FC = () => {
         </div>
       )}
 
-      <StartDialog open={startOpen} onClose={() => setStartOpen(false)} subscription={subscription} defaultRole={defaultRole} onUpgradeNeeded={() => setUpgradeOpen(true)} />
       <UpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} subscription={subscription} />
     </div>
   );

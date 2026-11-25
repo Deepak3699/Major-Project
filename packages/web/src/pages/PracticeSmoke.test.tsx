@@ -13,6 +13,7 @@ import type {
 import Practice from './Practice';
 import PracticeSession from './PracticeSession';
 import Learning from './Learning';
+import { FALLBACK_AVATARS } from '@/components/interview/roster';
 
 jest.mock('@/lib/api', () => {
   const actual = jest.requireActual<typeof import('@/lib/api')>('@/lib/api');
@@ -24,10 +25,13 @@ jest.mock('@/lib/api', () => {
       sessions: jest.fn(),
       session: jest.fn(),
       learning: jest.fn(),
+      avatars: jest.fn(),
     },
     candidate: {
       ...actual.candidate,
       profile: jest.fn(),
+      jobs: jest.fn(),
+      applications: jest.fn(),
     },
   };
 });
@@ -158,6 +162,19 @@ beforeEach(() => {
   (practice.sessions as jest.Mock).mockClear().mockResolvedValue({ sessions: [] });
   (practice.session as jest.Mock).mockClear().mockResolvedValue({ session: MOCK_SESSION_IN_PROGRESS, questions: [] });
   (practice.learning as jest.Mock).mockClear().mockResolvedValue({ track: null, role_focus: 'core' });
+  (practice.avatars as jest.Mock).mockClear().mockResolvedValue({
+    avatars: FALLBACK_AVATARS,
+    recommended: {
+      avatar_id: 'rohan',
+      name: 'Rohan Kapoor',
+      reason: 'Rohan Kapoor is the closest fit for Frontend Engineer — matched on react.',
+      score: 12,
+    },
+    job: null,
+    role_focus: 'Frontend Engineer',
+  });
+  (candidate.jobs as jest.Mock).mockClear().mockResolvedValue({ data: [], pagination: { page: 1, limit: 50, total: 0, pages: 0 } });
+  (candidate.applications as jest.Mock).mockClear().mockResolvedValue({ data: [] });
   (candidate.profile as jest.Mock).mockClear().mockResolvedValue({
     profile: { id: 'p1', preferred_roles: ['Frontend Engineer'] },
     completion: 40,
@@ -168,7 +185,7 @@ describe('Practice page smoke', () => {
   it('renders empty state for a brand-new user', async () => {
     renderTrio(<Practice />);
     await waitFor(() => expect(practice.sessions).toHaveBeenCalled());
-    expect(await screen.findByRole('button', { name: /start|begin|practice/i })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^start with /i })).toBeTruthy();
   });
 
   it('renders session history rows', async () => {
@@ -186,6 +203,14 @@ describe('Practice page smoke', () => {
     renderTrio(<Practice />);
     await waitFor(() => expect(practice.subscription).toHaveBeenCalled());
     await screen.findByText('Scored').catch(() => undefined);
+  });
+
+  it('renders the interviewer roster and the job-aware recommendation', async () => {
+    renderTrio(<Practice />);
+    expect(await screen.findByText('Rohan Kapoor')).toBeTruthy();
+    expect(await screen.findByText(/closest fit for Frontend Engineer/i)).toBeTruthy();
+    expect(screen.getByText('Vikram Rao')).toBeTruthy();
+    expect(screen.getByText('Neha Iyer')).toBeTruthy();
   });
 
   it('renders pro plan with unlimited flag', async () => {

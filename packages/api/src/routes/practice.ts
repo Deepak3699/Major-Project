@@ -5,22 +5,28 @@ import { getRedis } from '../utils/redis';
 import { authenticate } from '../middleware/auth';
 import { logAuditEvent } from '../utils/audit';
 import {
-  generateInterviewQuestions,
   gradeAnswer,
   summarizeSession,
   generateLearningTrack,
-  generateFollowUp,
   generateOpeningLine,
   generateInterviewerReply,
   type Difficulty,
 } from '../utils/practice-ai';
+import {
+  detectAnswerLanguage,
+  generateHinglishReply,
+  generateNextQuestion,
+  generatePresentationFeedback,
+  generateSessionReport,
+  type ReportItem,
+} from '../utils/practice-coach';
 import {
   AVATARS,
   getAvatar,
   recommendAvatar,
   type JobContext,
 } from '../utils/interview-avatars';
-import type { SubscriptionState, SessionRecord } from '../types/practice';
+import type { SubscriptionState, SessionRecord, PresentationMetrics } from '../types/practice';
 
 /**
  * AI practice — subscription-gated mock interviews and adaptive learning.
@@ -58,6 +64,21 @@ const answerSchema = z.object({
   question_id: idSchema,
   answer: z.string().trim().min(10).max(6000),
 });
+
+const presentationSchema = z.object({
+  camera_on: z.boolean(),
+  duration_seconds: z.coerce.number().min(0).max(4 * 60 * 60),
+  samples: z.coerce.number().int().min(0).max(2000),
+  face_visible_ratio: z.coerce.number().min(0).max(1),
+  avg_brightness: z.coerce.number().min(0).max(255),
+  motion_score: z.coerce.number().min(0).max(1),
+  steady_ratio: z.coerce.number().min(0).max(1),
+  framed_ratio: z.coerce.number().min(0).max(1),
+  // Downscaled JPEG snapshots. Processed for feedback and never persisted.
+  snapshots: z.array(z.string().max(700_000)).max(3).optional(),
+});
+
+const finishSchema = z.object({ presentation: presentationSchema.optional() });
 
 const learningSchema = z.object({ role_focus: z.string().trim().min(2).max(120).optional() });
 const toggleSchema = z.object({ module_index: z.coerce.number().int().min(0).max(30) });
@@ -305,14 +326,22 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     );
     const recentTopics = recentRows.map((r: any) => r.topic);
 
-    const { questions, model } = await generateInterviewQuestions(profile, {
+    // Only the opening question is created up front. Every later question is
+    // generated from the candidate's own answer, so the round is a
+    // conversation rather than a pre-loaded questionnaire.
+    const targetCount = parsed.data.question_count;
+    const firstQuestion = await generateNextQuestion({
+      profile,
       role,
       difficulty: parsed.data.difficulty as Difficulty,
-      count: parsed.data.question_count,
-      recentTopics,
       job,
       avatar,
+      asked: [],
+      targetCount,
+      language: 'english',
+      recentTopics,
     });
+    const model = firstQuestion.source === 'gemini' ? 'gemini-2.5-flash' : 'template';
 
     // The avatar greets the candidate before the first question. Kept on the
     // session row so reopening an interview resumes the same opening line.
@@ -332,7 +361,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
         userId,
         role,
         parsed.data.difficulty,
-        questions.length,
+        targetCount,
         model,
         avatar.id,
         job?.id || null,
@@ -343,22 +372,26 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     );
     const session = created[0] as any;
 
-    for (const q of questions) {
-      await sql.unsafe(
-        `INSERT INTO interview_questions (session_id, user_id, idx, category, topic, question, ideal_points)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
-        [session.id, userId, q.idx, q.category, q.topic, q.question, JSON.stringify(q.ideal_points || [])],
-      );
-    }
+    const insertedFirst = await sql.unsafe(
+      `INSERT INTO interview_questions (session_id, user_id, idx, category, topic, question, ideal_points)
+       VALUES ($1, $2, 0, $3, $4, $5, $6::jsonb)
+       RETURNING id, idx, category, topic, question, answer, interviewer_reply, feedback, score, answered_at, ideal_points`,
+      [session.id, userId, firstQuestion.category, firstQuestion.topic, firstQuestion.question, JSON.stringify(firstQuestion.ideal_points || [])],
+    );
     await simpleAudit(userId, 'practice.session_started', session.id, {
       model,
       role,
       difficulty: parsed.data.difficulty,
       avatar_id: avatar.id,
       job_id: job?.id || null,
+      adaptive: true,
     });
 
-    return reply.status(201).send({ session: serializeSession(session), subscription: gate.state });
+    return reply.status(201).send({
+      session: serializeSession(session),
+      first_question: insertedFirst.length ? serializeQuestion(insertedFirst[0]) : null,
+      subscription: gate.state,
+    });
   });
 
   fastify.get('/sessions/:id', async (request, reply) => {
@@ -373,7 +406,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     const session = rows[0] as any;
     if (!session) return reply.status(404).send({ error: 'Session not found' });
     const questions = await sql.unsafe(
-      `SELECT id, idx, category, topic, question, answer, interviewer_reply, feedback, score, answered_at
+      `SELECT id, idx, category, topic, question, answer, answer_language, interviewer_reply, feedback, score, answered_at
          FROM interview_questions WHERE session_id = $1 ORDER BY idx`,
       [session.id],
     );
@@ -408,6 +441,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     // Small, owned-context hint only: years of experience and headline. Answers
     // themselves are never copied into the hint, mirroring the drafting privacy stance.
     const profile = await loadProfile(sql, userId);
+    const language = detectAnswerLanguage(parsed.data.answer);
 
     const grade = await gradeAnswer(
       {
@@ -426,73 +460,69 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
 
     const updated = await sql.unsafe(
       `UPDATE interview_questions
-          SET answer = $2, feedback = $3::jsonb, score = $4, answered_at = now()
+          SET answer = $2, answer_language = $5, feedback = $3::jsonb, score = $4, answered_at = now()
         WHERE id = $1
-        RETURNING id, idx, category, topic, question, answer, feedback, score, answered_at`,
-      [question.id, parsed.data.answer, JSON.stringify(grade), grade.score],
+        RETURNING id, idx, category, topic, question, answer, answer_language, feedback, score, answered_at`,
+      [question.id, parsed.data.answer, JSON.stringify(grade), grade.score, language],
     );
 
-    // Adaptive follow-up: the interviewer keeps the thread alive — right after
-    // the intro answer (the classic "tell me about yourself" → "you mentioned
-    // X…" chain), and again after the last queued question. The follow-up is
-    // generated from the candidate's actual words. Capped so a session cannot
-    // balloon, and the intro follow-up is inserted as the NEXT question (later
-    // items shift one slot) rather than at the tail.
-    const FOLLOWUP_CAP = 3;
-    let followUp: ReturnType<typeof serializeQuestion> | null = null;
+    // The next question is written from the conversation itself: the intro
+    // answer drives the first dig, and every later question sees the whole
+    // transcript. The session length is a target, not a pre-built queue.
+    let nextQuestion: ReturnType<typeof serializeQuestion> | null = null;
     try {
-      const countRows = await sql.unsafe(
-        `SELECT COUNT(*)::int AS total, COALESCE(MAX(idx), -1) AS max_idx FROM interview_questions WHERE session_id = $1`,
+      const progressRows = await sql.unsafe(
+        `SELECT COUNT(*) FILTER (WHERE answered_at IS NOT NULL)::int AS answered,
+                COALESCE(MAX(idx), -1)::int AS max_idx
+           FROM interview_questions WHERE session_id = $1`,
         [session.id],
       );
-      const total = Number((countRows[0] as any)?.total || 0);
-      const maxIdx = Number((countRows[0] as any)?.max_idx ?? -1);
-      const extras = total - Number(session.question_count || 0);
-      const isIntro = String(question.category) === 'intro';
-      const isLastQueued = Number(question.idx) >= maxIdx;
-      if (total > 0 && extras < FOLLOWUP_CAP && (isIntro || isLastQueued)) {
+      const answeredCount = Number((progressRows[0] as any)?.answered || 0);
+      const maxIdx = Number((progressRows[0] as any)?.max_idx ?? -1);
+      const target = Number(session.question_count || 0);
+
+      if (target > 0 && answeredCount < target) {
         const historyRows = await sql.unsafe(
-          `SELECT question, COALESCE(answer, '') AS answer FROM interview_questions
-            WHERE session_id = $1 AND answer IS NOT NULL ORDER BY idx DESC LIMIT 3`,
+          `SELECT category, topic, question, answer, score FROM interview_questions
+            WHERE session_id = $1 AND answered_at IS NOT NULL ORDER BY idx`,
           [session.id],
         );
-        const followUpQuestion = await generateFollowUp({
-          role_focus: session.role_focus,
-          difficulty: String(session.difficulty || 'standard'),
-          question: question.question,
-          topic: question.topic,
-          answer: parsed.data.answer,
-          history: (historyRows as any[]).map((h) => ({ question: String(h.question || ''), answer: String(h.answer || '') })),
+        const asked = (historyRows as any[]).map((row) => ({
+          category: String(row.category || 'general'),
+          topic: String(row.topic || ''),
+          question: String(row.question || ''),
+          answer: String(row.answer || ''),
+          score: row.score == null ? null : Number(row.score),
+        }));
+        const generated = await generateNextQuestion({
+          profile,
+          role: String(session.role_focus || ''),
+          difficulty: String(session.difficulty || 'standard') as Difficulty,
+          job: session.job_id
+            ? { id: session.job_id, title: session.job_title || session.role_focus, company: session.job_company || '' }
+            : null,
+          avatar: getAvatar(session.avatar_id || 'aria'),
+          asked,
+          targetCount: target,
+          language,
         });
-        const insertIdx = isIntro && !isLastQueued ? Number(question.idx) + 1 : maxIdx + 1;
-        if (insertIdx <= maxIdx) {
-          // Make room: everything after the current question moves one slot.
-          await sql.unsafe(
-            `UPDATE interview_questions SET idx = idx + 1 WHERE session_id = $1 AND idx >= $2`,
-            [session.id, insertIdx],
-          );
-        }
         const inserted = await sql.unsafe(
           `INSERT INTO interview_questions (session_id, user_id, idx, category, topic, question, ideal_points)
-            VALUES ($1, $2, $3, 'follow_up', $4, $5, $6::jsonb)
-            RETURNING id, idx, category, topic, question, answer, feedback, score, answered_at`,
-          [session.id, userId, insertIdx, followUpQuestion.topic, followUpQuestion.question, JSON.stringify(followUpQuestion.ideal_points || [])],
+            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+            RETURNING id, idx, category, topic, question, answer, answer_language, interviewer_reply, feedback, score, answered_at, ideal_points`,
+          [session.id, userId, maxIdx + 1, generated.category, generated.topic, generated.question, JSON.stringify(generated.ideal_points || [])],
         );
-        // Keep the session's expected length in step so progress and finalize stay coherent.
-        await sql.unsafe(
-          `UPDATE interview_sessions SET question_count = $2 WHERE id = $1`,
-          [session.id, total + 1],
-        );
-        followUp = serializeQuestion((inserted[0] as any));
+        nextQuestion = inserted.length ? serializeQuestion(inserted[0]) : null;
       }
-    } catch { /* best-effort: the interview continues with the standard queue */ }
+    } catch { /* the candidate can still finish if generation hiccups */ }
 
-    // The avatar reacts in character before the next question opens. This is
-    // what makes the round feel live rather than a form; it is best-effort so
-    // a provider hiccup never blocks the candidate's progress.
+    // The avatar reacts in character before the next question opens. A
+    // Hinglish/Hindi answer gets a Hinglish reaction so the mirroring is
+    // audible within one turn. Best-effort: a provider hiccup never blocks
+    // the candidate's progress.
     let interviewerReply = '';
     try {
-      interviewerReply = await generateInterviewerReply({
+      const replyInput = {
         avatar: getAvatar(session.avatar_id || 'aria'),
         role: String(session.role_focus || ''),
         job: session.job_id
@@ -504,8 +534,10 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
         score: grade.score,
         strengths: grade.strengths,
         improvements: grade.improvements,
-        followUp: followUp?.question || '',
-      });
+      };
+      interviewerReply = language === 'english'
+        ? await generateInterviewerReply({ ...replyInput, followUp: nextQuestion?.question || '' })
+        : await generateHinglishReply({ ...replyInput, language, hasFollowUp: Boolean(nextQuestion) });
       if (interviewerReply) {
         await sql.unsafe(
           `UPDATE interview_questions SET interviewer_reply = $2 WHERE id = $1`,
@@ -514,14 +546,28 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       }
     } catch { /* spoken reaction is best-effort; grading already succeeded */ }
 
-    const answeredQuestion = serializeQuestion({ ...(updated[0] as any), interviewer_reply: interviewerReply });
-    return reply.send({ question: answeredQuestion, grade, follow_up: followUp, reply: interviewerReply });
+    const answeredQuestion = serializeQuestion({
+      ...(updated[0] as any),
+      answer_language: language,
+      interviewer_reply: interviewerReply,
+    });
+    return reply.send({
+      question: answeredQuestion,
+      grade,
+      reply: interviewerReply,
+      language,
+      next_question: nextQuestion,
+      follow_up: nextQuestion,
+      complete: !nextQuestion,
+    });
   });
 
-  fastify.post('/sessions/:id/finish', async (request, reply) => {
+  fastify.post('/sessions/:id/finish', { bodyLimit: 4 * 1024 * 1024 }, async (request, reply) => {
     if (!isCandidate(request, reply)) return;
     const parsedId = idSchema.safeParse((request.params as any)?.id);
     if (!parsedId.success) return reply.status(400).send({ error: 'Invalid session id' });
+    const parsedBody = finishSchema.safeParse(request.body || {});
+    if (!parsedBody.success) return reply.status(400).send({ error: 'Invalid presentation payload', details: parsedBody.error.issues });
     const userId = currentUser(request).id;
     const sql = getDB();
 
@@ -531,11 +577,19 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     );
     const session = sessionRows[0] as any;
     if (!session) return reply.status(404).send({ error: 'Session not found' });
-    if (session.status === 'completed') return reply.send({ session: serializeSession(session), already_completed: true });
+    if (session.status === 'completed') {
+      return reply.send({
+        session: serializeSession(session),
+        already_completed: true,
+        report: serializeSession(session).report,
+        presentation: serializeSession(session).presentation,
+      });
+    }
     if (session.status === 'abandoned') return reply.status(409).send({ error: 'This interview was discarded.' });
 
     const items = await sql.unsafe(
-      `SELECT category, question, answer, COALESCE(feedback, 'null'::jsonb) AS feedback, score
+      `SELECT category, topic, question, answer, COALESCE(feedback, 'null'::jsonb) AS feedback, score,
+              COALESCE(ideal_points, '[]'::jsonb) AS ideal_points
          FROM interview_questions WHERE session_id = $1 ORDER BY idx`,
       [session.id],
     );
@@ -553,19 +607,72 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       byCategory[c] = Math.round(catScores[c].reduce((a, b) => a + b, 0) / catScores[c].length);
     }
 
-    const { verdict, summary } = await summarizeSession(session, answered.map((i) => ({
-      category: String(i.category || 'general'), score: Number(i.score), question: i.question, answer: i.answer, feedback: safeParse(i.feedback),
-    })));
+    const reportItems: ReportItem[] = answered.map((item) => ({
+      category: String(item.category || 'general'),
+      topic: String(item.topic || ''),
+      question: String(item.question || ''),
+      answer: String(item.answer || ''),
+      score: Number(item.score),
+      ideal_points: Array.isArray(item.ideal_points) ? item.ideal_points : safeParse(item.ideal_points) || [],
+      feedback: safeParse(item.feedback),
+    }));
+
+    const avatar = getAvatar(session.avatar_id || 'aria');
+    const [summaryResult, presentationFeedback] = await Promise.all([
+      summarizeSession(session, answered.map((i) => ({
+        category: String(i.category || 'general'), score: Number(i.score), question: i.question, answer: i.answer, feedback: safeParse(i.feedback),
+      }))),
+      parsedBody.data.presentation
+        ? generatePresentationFeedback({
+            metrics: parsedBody.data.presentation as PresentationMetrics,
+            role: String(session.role_focus || ''),
+            avatar,
+          })
+        : Promise.resolve(null),
+    ]);
+
+    // The report's communication dimension uses the camera review when one
+    // exists, so it is generated after the presentation pass.
+    const finalReport = await generateSessionReport({
+      session: {
+        role_focus: String(session.role_focus || ''),
+        difficulty: String(session.difficulty || 'standard'),
+        job_title: String(session.job_title || ''),
+        job_company: String(session.job_company || ''),
+      },
+      avatar,
+      items: reportItems,
+      byCategory,
+      presentation: presentationFeedback,
+    });
+
+    const { verdict, summary } = summaryResult;
 
     const updated = await sql.unsafe(
       `UPDATE interview_sessions
-          SET status = 'completed', overall_score = $2, verdict = $3, summary = $4, completed_at = now()
+          SET status = 'completed', overall_score = $2, verdict = $3, summary = $4,
+              report = $5::jsonb, presentation = $6::jsonb, completed_at = now()
         WHERE id = $1
         RETURNING *`,
-      [session.id, overall, verdict, summary],
+      [session.id, overall, verdict, summary, JSON.stringify(finalReport), JSON.stringify(presentationFeedback)],
     );
-    await simpleAudit(userId, 'practice.session_completed', session.id, { overall, answered: answered.length });
-    return reply.send({ session: serializeSession((updated[0] as any)), by_category: byCategory });
+    await simpleAudit(userId, 'practice.session_completed', session.id, {
+      overall,
+      answered: answered.length,
+      presentation: presentationFeedback?.available || false,
+      report: finalReport.model,
+    });
+    const serialized = serializeSession({
+      ...(updated[0] as any),
+      report: finalReport,
+      presentation: presentationFeedback,
+    });
+    return reply.send({
+      session: serialized,
+      by_category: byCategory,
+      report: finalReport,
+      presentation: presentationFeedback,
+    });
   });
 
   fastify.delete('/sessions/:id', async (request, reply) => {
@@ -726,6 +833,7 @@ function serializeQuestion(q: any) {
     topic: q.topic,
     question: q.question,
     answer: q.answer || '',
+    answer_language: q.answer_language || 'english',
     interviewer_reply: q.interviewer_reply || '',
     feedback: q.feedback && typeof q.feedback === 'object' && !Array.isArray(q.feedback) && q.feedback !== null
       ? (typeof (q.feedback as any).score === 'number' ? q.feedback : safeParse(q.feedback))
@@ -733,6 +841,13 @@ function serializeQuestion(q: any) {
     score: q.score ?? null,
     answered_at: q.answered_at ?? null,
   };
+}
+
+function objectOrNull(value: unknown): any {
+  if (!value) return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  const parsed = safeParse(value);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
 }
 
 export function serializeSession(s: any): SessionRecord {
@@ -756,6 +871,8 @@ export function serializeSession(s: any): SessionRecord {
     overall_score: s.overall_score ?? null,
     verdict: s.verdict || '',
     summary: s.summary || '',
+    report: objectOrNull(s.report),
+    presentation: objectOrNull(s.presentation),
     started_at: s.started_at,
     completed_at: s.completed_at ?? null,
   };

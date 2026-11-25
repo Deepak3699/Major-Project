@@ -31,6 +31,64 @@ export interface FollowUpQuestion {
   source: 'gemini' | 'template';
 }
 
+/** The language register the candidate used, so the interviewer can mirror it. */
+export type AnswerLanguage = 'english' | 'hinglish' | 'hindi';
+
+/**
+ * Aggregate webcam signals measured in the browser. Snapshots are processed
+ * for feedback and never persisted; only this summary and the written review
+ * are stored on the session.
+ */
+export interface PresentationMetrics {
+  camera_on: boolean;
+  duration_seconds: number;
+  samples: number;
+  face_visible_ratio: number;
+  avg_brightness: number;
+  motion_score: number;
+  steady_ratio: number;
+  framed_ratio: number;
+  snapshots?: string[];
+}
+
+export interface PresentationFeedback {
+  available: boolean;
+  score: number | null;
+  summary: string;
+  dress: string;
+  grooming: string;
+  expression: string;
+  posture: string;
+  eye_contact: string;
+  lighting: string;
+  tips: string[];
+  model: string;
+}
+
+export interface ReportDimension {
+  key: string;
+  label: string;
+  score: number;
+  note: string;
+}
+
+export interface ReportMistake {
+  question: string;
+  answer_excerpt: string;
+  score: number;
+  mistake: string;
+  fix: string;
+  model_answer: string;
+}
+
+export interface SessionReport {
+  dimensions: ReportDimension[];
+  strengths: string[];
+  mistakes: ReportMistake[];
+  next_steps: string[];
+  model: string;
+}
+
 export type ResourceKind = 'docs' | 'roadmap' | 'book' | 'video';
 
 export interface LearningResource {
@@ -60,6 +118,7 @@ export interface SessionAnswerItem {
   topic: string;
   question: string;
   answer: string;
+  answer_language: AnswerLanguage;
   interviewer_reply: string;
   feedback: AnswerGrade | null;
   score: number | null;
@@ -85,6 +144,8 @@ export interface SessionRecord {
   overall_score: number | null;
   verdict: string;
   summary: string;
+  report: SessionReport | null;
+  presentation: PresentationFeedback | null;
   started_at: string;
   completed_at: string | null;
 }

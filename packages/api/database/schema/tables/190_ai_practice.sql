@@ -43,6 +43,10 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
   overall_score SMALLINT,
   verdict TEXT NOT NULL DEFAULT '',
   summary TEXT NOT NULL DEFAULT '',
+  -- Structured end-of-round report and webcam presentation review. Snapshots
+  -- are processed for feedback and never stored; only the written review is.
+  report JSONB NOT NULL DEFAULT 'null'::jsonb,
+  presentation JSONB NOT NULL DEFAULT 'null'::jsonb,
   started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at TIMESTAMPTZ
 );
@@ -57,6 +61,7 @@ CREATE TABLE IF NOT EXISTS interview_questions (
   question TEXT NOT NULL,
   ideal_points JSONB NOT NULL DEFAULT '[]'::jsonb,
   answer TEXT NOT NULL DEFAULT '',
+  answer_language TEXT NOT NULL DEFAULT 'english',
   interviewer_reply TEXT NOT NULL DEFAULT '',
   feedback JSONB NOT NULL DEFAULT 'null'::jsonb,
   score SMALLINT,
@@ -91,6 +96,8 @@ CREATE INDEX IF NOT EXISTS idx_interview_sessions_avatar
   ON interview_sessions (user_id, avatar_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_job
   ON interview_sessions (job_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interview_sessions_status_completed
+  ON interview_sessions (status, completed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_interview_questions_session
   ON interview_questions (session_id, idx);
 CREATE INDEX IF NOT EXISTS idx_practice_upgrade_requests_pending

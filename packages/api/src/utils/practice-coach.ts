@@ -353,28 +353,39 @@ export function templateNextQuestion(input: AdaptiveQuestionInput): GeneratedQue
   const last = asked[asked.length - 1];
   const dig = templateFollowUp(last.question, last.answer || '', last.topic || '');
 
-  // Hinglish candidates get an immediate Hinglish follow-up, so the mirroring
-  // is audible within one turn instead of only in the closing summary.
-  if (input.language !== 'english' && (idx === 1 || idx % 2 === 0)) {
+  // Hinglish candidates get ONE immediate Hinglish dig so mirroring is audible
+  // within a turn. Subsequent odd turns get a *different* Hinglish probe;
+  // even turns always pull a fresh role question (see below).
+  const followUpTurn = idx % 2 === 1;
+  if (input.language !== 'english' && followUpTurn) {
     const anchor = hinglishAnchor(last.answer || '');
-    const question = anchor
-      ? `Aapne ${anchor} mention kiya — usme sabse tough decision kya tha, aur aaj wapas jaake kya differently karte?`
-      : 'Aapne jo bataya, usme sabse tough decision kya tha — aur aaj wapas jaake kya differently karte?';
-    if (!askedQuestions.has(normalize(question))) {
+    const hinge = anchor ? `Aapne ${anchor} ka zikr kiya.` : 'Aapne jo bataya.';
+    const probes = [
+      `${hinge} Usme sabse tough decision kya tha, aur aaj wapas jaake kya differently karte?`,
+      `${hinge} Uska asli impact kya tha, aur aapne success kaise measure kiya?`,
+      `${hinge} Wahan jo challenge aaya, aapne usse kaise handle kiya — ek concrete example se samjhaie?`,
+      `${hinge} Agar dobara karne ka mauka mile to aap pehle kya badaloge, aur kyun?`,
+    ];
+    const digCount = asked.filter((item) => item.category === 'follow_up').length;
+    const probe = probes.map((_, offset) => probes[(digCount + offset) % probes.length])
+      .find((candidate) => !askedQuestions.has(normalize(candidate)));
+    if (probe) {
       return {
         idx,
         category: 'follow_up',
         topic: 'Aapke answer se',
-        question,
+        question: probe,
         ideal_points: ['specific decision', 'trade-off', 'what they would change'],
         source: 'template',
       };
     }
   }
 
-  // Every other turn digs into the candidate's own words; the turns in between
-  // pull a fresh role question so the round still covers the whole role.
-  if ((idx === 1 || idx % 2 === 0) && !askedQuestions.has(normalize(dig.question))) {
+  // Only one intro-anchored dig in a row. The turn after the introduction and
+  // every second turn after that pulls a fresh role-specific question so the
+  // round moves into technical/behavioral/case territory instead of circling
+  // the candidate's self-introduction.
+  if (followUpTurn && !askedQuestions.has(normalize(dig.question))) {
     return {
       idx,
       category: 'follow_up',
@@ -417,7 +428,8 @@ export function templateNextQuestion(input: AdaptiveQuestionInput): GeneratedQue
 const NEXT_QUESTION_PROMPT = [
   'You are a live interviewer conducting a mock interview. Ask exactly ONE next question.',
   'It must react to something concrete in the candidate\'s latest answer whenever there is one: a claim, number, tool, team, failure or trade-off they mentioned.',
-  'Do not repeat any earlier question or topic. Do not ask more than two follow-ups in a row — alternate with a fresh role-specific question.',
+  'Do not repeat any earlier question or topic. Ask at most ONE follow-up in a row; the next turn must be a fresh role-specific question.',
+  'The opening question is an introduction. After the introduction answer, move on to role-specific technical, project or behavioural questions — do not keep asking for more background or introductions.',
   'Keep the question answerable in 2-4 minutes from their own experience. One or two spoken sentences, max 45 words, no numbering.',
   'If there is no transcript yet, ask a warm, job-specific introduction question.',
   'Return JSON: {"question":string,"category":"intro"|"technical"|"project"|"behavioral"|"case"|"follow_up","topic":string (2-4 words),"ideal_points":string[3]}.',
@@ -464,6 +476,12 @@ export async function generateNextQuestion(input: AdaptiveQuestionInput): Promis
   const category = ['intro', 'technical', 'project', 'behavioral', 'case', 'follow_up'].includes(parsed?.category)
     ? parsed.category
     : (asked.length === 0 ? 'intro' : 'follow_up');
+  // Even if the provider drifts back to the introduction or stacks another
+  // dig, the template brain takes over so the interview keeps progressing.
+  const lastTwo = asked.slice(-2).map((item) => item.category);
+  const stackedFollowUps = lastTwo.length === 2 && lastTwo.every((item) => item === 'follow_up');
+  if (asked.length >= 2 && category === 'intro') return fallback();
+  if (stackedFollowUps && category === 'follow_up') return fallback();
   return {
     idx: asked.length,
     category,

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticePresentationMetrics, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, AdminInterviewDetail, AdminInterviewSession, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -471,12 +471,12 @@ export const practice = {
     avatar_id?: string;
     job_id?: string;
   }) =>
-    (await api.post('/candidate/practice/sessions', values)).data as { session: PracticeSessionSummary; subscription: PracticeSubscription },
+    (await api.post('/candidate/practice/sessions', values)).data as { session: PracticeSessionSummary; first_question?: PracticeQuestion | null; subscription: PracticeSubscription },
   session: async (id: string) => (await api.get(`/candidate/practice/sessions/${id}`)).data as { session: PracticeSessionSummary; questions: PracticeQuestion[] },
   answer: async (sessionId: string, values: { question_id: string; answer: string }) =>
     (await api.post(`/candidate/practice/sessions/${sessionId}/answer`, values)).data as PracticeAnswerResult,
-  finish: async (sessionId: string) =>
-    (await api.post(`/candidate/practice/sessions/${sessionId}/finish`)).data as PracticeFinishResult,
+  finish: async (sessionId: string, presentation?: PracticePresentationMetrics) =>
+    (await api.post(`/candidate/practice/sessions/${sessionId}/finish`, presentation ? { presentation } : {})).data as PracticeFinishResult,
   abandon: async (sessionId: string) => (await api.delete(`/candidate/practice/sessions/${sessionId}`)).data as { ok: boolean },
   upgradeRequest: async (note?: string) =>
     (await api.post('/candidate/practice/upgrade-request', { note })).data as { request_id: string; status: string; message: string },
@@ -495,6 +495,10 @@ export const practiceAdmin = {
   reject: async (id: string, note?: string) => (await api.post(`/practice/upgrades/${id}/reject`, { note })).data as { ok: boolean },
   grant: async (values: { email: string; plan: 'free' | 'pro'; expires_in_days?: number }) =>
     (await api.post('/practice/grant', values)).data as { ok: boolean; user_id: string; plan: string; expires_at: string | null },
+  sessions: async (params: { status?: 'all' | 'in_progress' | 'completed' | 'abandoned'; search?: string; limit?: number; offset?: number } = {}) =>
+    (await api.get('/practice/sessions', { params })).data as { sessions: AdminInterviewSession[]; total: number; limit: number; offset: number },
+  session: async (id: string) =>
+    (await api.get(`/practice/sessions/${id}`)).data as AdminInterviewDetail,
 };
 
 export const credits = {

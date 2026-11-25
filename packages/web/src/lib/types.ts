@@ -391,6 +391,7 @@ export interface PreparationArtifact {
 /* ----------------------- AI practice (interviews + learning) ----------------------- */
 
 export type PracticeDifficulty = 'calm' | 'standard' | 'brutal';
+export type PracticeAnswerLanguage = 'english' | 'hinglish' | 'hindi';
 
 export interface PracticeVoiceProfile {
   gender: 'female' | 'male';
@@ -444,6 +445,57 @@ export interface PracticeSubscription {
   requested_upgrade: boolean;
 }
 
+export interface PracticePresentationMetrics {
+  camera_on: boolean;
+  duration_seconds: number;
+  samples: number;
+  face_visible_ratio: number;
+  avg_brightness: number;
+  motion_score: number;
+  steady_ratio: number;
+  framed_ratio: number;
+  /** Downscaled JPEG data URLs. Sent for feedback and never stored. */
+  snapshots?: string[];
+}
+
+export interface PracticePresentationFeedback {
+  available: boolean;
+  score: number | null;
+  summary: string;
+  dress: string;
+  grooming: string;
+  expression: string;
+  posture: string;
+  eye_contact: string;
+  lighting: string;
+  tips: string[];
+  model: string;
+}
+
+export interface PracticeReportDimension {
+  key: string;
+  label: string;
+  score: number;
+  note: string;
+}
+
+export interface PracticeReportMistake {
+  question: string;
+  answer_excerpt: string;
+  score: number;
+  mistake: string;
+  fix: string;
+  model_answer: string;
+}
+
+export interface PracticeSessionReport {
+  dimensions: PracticeReportDimension[];
+  strengths: string[];
+  mistakes: PracticeReportMistake[];
+  next_steps: string[];
+  model: string;
+}
+
 export interface PracticeSessionSummary {
   id: string;
   role_focus: string;
@@ -457,6 +509,8 @@ export interface PracticeSessionSummary {
   overall_score: number | null;
   verdict: string;
   summary: string;
+  report?: PracticeSessionReport | null;
+  presentation?: PracticePresentationFeedback | null;
   started_at: string;
   completed_at: string | null;
   answered_count?: number;
@@ -469,6 +523,7 @@ export interface PracticeQuestion {
   topic: string;
   question: string;
   answer: string;
+  answer_language?: PracticeAnswerLanguage;
   interviewer_reply?: string;
   feedback: { score: number; strengths: string[]; improvements: string[] } | null;
   score: number | null;
@@ -478,14 +533,49 @@ export interface PracticeQuestion {
 export interface PracticeAnswerResult {
   question: PracticeQuestion;
   grade: { score: number; strengths: string[]; improvements: string[] };
+  language?: PracticeAnswerLanguage;
+  next_question?: PracticeQuestion | null;
   follow_up?: PracticeQuestion | null;
+  complete?: boolean;
   reply?: string;
 }
 
 export interface PracticeFinishResult {
   session: PracticeSessionSummary;
   by_category?: Record<string, number>;
+  report?: PracticeSessionReport | null;
+  presentation?: PracticePresentationFeedback | null;
   already_completed?: boolean;
+}
+
+export interface AdminInterviewSession {
+  id: string;
+  user_id: string;
+  user_email: string;
+  role_focus: string;
+  difficulty: string;
+  avatar_id: string;
+  job_title: string;
+  job_company: string;
+  status: 'in_progress' | 'completed' | 'abandoned';
+  model: string;
+  overall_score: number | null;
+  verdict: string;
+  question_count: number;
+  question_total: number;
+  answered_count: number;
+  has_report: boolean;
+  camera_review: boolean;
+  report: PracticeSessionReport | null;
+  presentation: PracticePresentationFeedback | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface AdminInterviewDetail {
+  session: AdminInterviewSession & { summary?: string; opening_line?: string; report: PracticeSessionReport | null; presentation: PracticePresentationFeedback | null };
+  candidate: { id: string; email: string };
+  questions: Array<PracticeQuestion & { ideal_points?: string[] }>;
 }
 
 export interface LearningResourceView {

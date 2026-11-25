@@ -1,12 +1,14 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ToastProvider } from '@/components/ui/toast';
 import { candidate, practice } from '@/lib/api';
 import type {
   LearningTrackView,
+  PracticePresentationFeedback,
   PracticeQuestion,
+  PracticeSessionReport,
   PracticeSessionSummary,
   PracticeSubscription,
 } from '@/lib/types';
@@ -76,6 +78,43 @@ const MOCK_SESSION_IN_PROGRESS: PracticeSessionSummary = {
   answered_count: 1,
 };
 
+const MOCK_REPORT: PracticeSessionReport = {
+  dimensions: [
+    { key: 'clarity', label: 'Clarity', score: 82, note: 'Answers were easy to follow.' },
+    { key: 'depth', label: 'Depth', score: 68, note: 'Add one more layer of detail.' },
+    { key: 'structure', label: 'Structure', score: 74, note: 'Situation and action landed.' },
+    { key: 'confidence', label: 'Confidence', score: 71, note: 'Some hedging around numbers.' },
+    { key: 'communication', label: 'Communication', score: 76, note: 'Pacing worked on camera.' },
+  ],
+  strengths: ['Used a concrete sprint example'],
+  mistakes: [
+    {
+      question: 'Tell me about a disagreement.',
+      answer_excerpt: 'Once, in a sprint review…',
+      score: 7,
+      mistake: 'The answer never said how the disagreement ended.',
+      fix: 'Close every behavioural answer with the outcome.',
+      model_answer: 'Situation, your action, the resolution and the measurable result.',
+    },
+  ],
+  next_steps: ['Rewrite the weakest answer out loud.', 'Drill depth with one number per answer.', 'Run another round with the camera on.'],
+  model: 'template',
+};
+
+const MOCK_PRESENTATION: PracticePresentationFeedback = {
+  available: true,
+  score: 78,
+  summary: 'Camera presence was steady and well lit.',
+  dress: 'A solid shirt read well on camera.',
+  grooming: 'Hair stayed clear of the eyes.',
+  expression: 'Composed, with a small smile at the close.',
+  posture: 'Shoulders stayed still.',
+  eye_contact: 'You held the frame well.',
+  lighting: 'Lighting was even.',
+  tips: ['Keep the light in front of you.', 'Look into the lens on the opening line.', 'Keep hands below the collarbone.'],
+  model: 'template',
+};
+
 const MOCK_QUESTIONS: PracticeQuestion[] = [
   {
     id: 'q1',
@@ -95,6 +134,7 @@ const MOCK_QUESTIONS: PracticeQuestion[] = [
     topic: 'Conflict',
     question: 'Tell me about a disagreement.',
     answer: 'Once, in a sprint review…',
+    answer_language: 'hinglish',
     feedback: { score: 7, strengths: ['Gave context'], improvements: ['Add outcome'] },
     score: 7,
     answered_at: '2026-01-06T10:05:00.000Z',
@@ -220,13 +260,36 @@ describe('Practice page smoke', () => {
     renderTrio(<Practice />);
     await waitFor(() => expect(practice.subscription).toHaveBeenCalled());
   });
+
+  it('swipes the deck and updates the start action', async () => {
+    renderTrio(<Practice />);
+    expect(await screen.findByRole('button', { name: /^start with rohan/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /next interviewer/i }));
+    expect(await screen.findByRole('button', { name: /^start with aria/i })).toBeTruthy();
+  });
 });
 
 describe('PracticeSession page smoke', () => {
-  it('renders an in-progress session with questions', async () => {
+  it('renders an in-progress session with questions and the camera prompt', async () => {
     (practice.session as jest.Mock).mockResolvedValue({ session: MOCK_SESSION_IN_PROGRESS, questions: MOCK_QUESTIONS });
     renderTrio(<PracticeSession />, '/practice/session/s2');
     expect(await screen.findByText(/walk me through your background/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /enable camera/i })).toBeTruthy();
+    expect(screen.getByText('Hinglish')).toBeTruthy();
+  });
+
+  it('renders the end-of-round report, mistakes and camera review', async () => {
+    (practice.session as jest.Mock).mockResolvedValue({
+      session: { ...MOCK_SESSION_COMPLETED, report: MOCK_REPORT, presentation: MOCK_PRESENTATION },
+      questions: MOCK_QUESTIONS,
+    });
+    renderTrio(<PracticeSession />, '/practice/session/s1');
+    expect(await screen.findByText('Five dimensions of the round')).toBeTruthy();
+    expect(screen.getByText('What cost you marks')).toBeTruthy();
+    expect(screen.getByText('The answer never said how the disagreement ended.')).toBeTruthy();
+    expect(screen.getByText('Camera review')).toBeTruthy();
+    expect(screen.getByText('A solid shirt read well on camera.')).toBeTruthy();
+    expect(screen.getByText('Your next three moves')).toBeTruthy();
   });
 
   it('renders a completed session summary', async () => {

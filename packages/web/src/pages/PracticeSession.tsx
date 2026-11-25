@@ -3,19 +3,37 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Briefcase,
   Check,
+  Eye,
+  Lightbulb,
   MessageSquare,
   Mic,
   Minus,
+  Scissors,
+  Shirt,
+  Smile,
   Square,
+  Sun,
+  Target,
   Trash2,
+  User,
+  Video,
   Volume2,
 } from 'lucide-react';
 import { practice } from '@/lib/api';
-import { PracticeAnswerResult, PracticeAvatar, PracticeQuestion, PracticeSessionSummary } from '@/lib/types';
+import {
+  PracticeAnswerResult,
+  PracticeAvatar,
+  PracticePresentationFeedback,
+  PracticeQuestion,
+  PracticeReportMistake,
+  PracticeSessionReport,
+  PracticeSessionSummary,
+} from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
@@ -23,8 +41,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { PageLoader } from '@/components/ui/spinner';
 import { useToast } from '@/components/ui/toast';
 import { AvatarPortrait, type InterviewerState } from '@/components/interview/AvatarPortrait';
+import { CameraPanel } from '@/components/interview/CameraPanel';
 import { fallbackAvatar } from '@/components/interview/roster';
 import { useInterviewerSpeech, useVoiceAnswers } from '@/components/interview/speech';
+import { useCameraPresence } from '@/components/interview/useCameraPresence';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
 
@@ -52,10 +72,13 @@ function feedbackClass(score: number | null | undefined): string {
 /* ------------------------------- shared pieces ------------------------------- */
 
 const SessionBadgeRow = ({ q, score }: { q: PracticeQuestion; score?: boolean }) => (
-  <div className="flex items-center gap-2">
+  <div className="flex flex-wrap items-center gap-2">
     <Badge variant="muted">{CATEGORY_LABEL[q.category] || q.category}</Badge>
     {q.topic && <Badge variant="outline">{q.topic}</Badge>}
     {q.category === 'follow_up' && <Badge variant="signal">From your last answer</Badge>}
+    {(q.answer_language === 'hinglish' || q.answer_language === 'hindi') && (
+      <Badge variant="outline">{q.answer_language === 'hindi' ? 'Hindi' : 'Hinglish'}</Badge>
+    )}
     {score !== false && (
       <span className={cn('ml-auto grid h-8 min-h-8 min-w-8 place-items-center rounded-lg border px-1 font-mono text-[12px] font-semibold tabular-nums', feedbackClass(q.score))}>
         {q.score ?? '–'}
@@ -102,6 +125,7 @@ const AvatarBubble = ({
       state="idle"
       animated={false}
       showNameplate={false}
+      fit="cover"
       className="h-10 w-8 shrink-0"
     />
     <div className="min-w-0 flex-1">
@@ -135,12 +159,207 @@ const ConversationCard = ({ q, avatar }: { q: PracticeQuestion; avatar: Practice
 
 /* ------------------------------- results view ------------------------------- */
 
+function barTone(score: number): string {
+  if (score >= 80) return 'bg-success';
+  if (score >= 60) return 'bg-signal';
+  if (score >= 45) return 'bg-warning';
+  return 'bg-destructive';
+}
+
+const Scorecard = ({ report }: { report: PracticeSessionReport }) => (
+  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
+    <div className="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <p className="eyebrow">Scorecard</p>
+        <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">Five dimensions of the round</h2>
+      </div>
+      <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-muted-foreground">
+        {report.model === 'gemini-2.5-flash' ? 'AI review' : 'Rule-based review'}
+      </span>
+    </div>
+
+    <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
+      {report.dimensions.map((dimension, i) => (
+        <motion.div
+          key={dimension.key}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: EASE, delay: Math.min(i * 0.04, 0.2) }}
+          className="rounded-lg border border-border bg-surface p-3"
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-muted-foreground">{dimension.label}</p>
+            <span className="font-mono text-[16px] font-semibold tabular-nums text-foreground">{dimension.score}</span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className={cn('h-full rounded-full transition-[width] duration-700', barTone(dimension.score))} style={{ width: `${Math.max(2, Math.min(100, dimension.score))}%` }} />
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{dimension.note}</p>
+        </motion.div>
+      ))}
+    </div>
+
+    {report.strengths?.length ? (
+      <div className="mt-4 border-t border-border pt-4">
+        <p className="eyebrow">What worked</p>
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+          {report.strengths.map((strength, i) => (
+            <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-foreground/90">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />{strength}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null}
+  </motion.div>
+);
+
+const PresentationCard = ({ presentation }: { presentation: PracticePresentationFeedback }) => {
+  if (!presentation.available) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
+        <div className="flex items-center gap-2">
+          <Video className="h-4 w-4 text-muted-foreground" />
+          <p className="eyebrow">Camera review</p>
+        </div>
+        <p className="mt-2 max-w-phi-body text-[13px] leading-relaxed text-muted-foreground">{presentation.summary}</p>
+        {presentation.tips.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {presentation.tips.map((tip, i) => (
+              <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-foreground/80">
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />{tip}
+              </li>
+            ))}
+          </ul>
+        )}
+      </motion.div>
+    );
+  }
+
+  const items = [
+    { label: 'Dress', value: presentation.dress, icon: Shirt },
+    { label: 'Grooming', value: presentation.grooming, icon: Scissors },
+    { label: 'Expression', value: presentation.expression, icon: Smile },
+    { label: 'Posture', value: presentation.posture, icon: User },
+    { label: 'Eye contact', value: presentation.eye_contact, icon: Eye },
+    { label: 'Lighting', value: presentation.lighting, icon: Sun },
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="eyebrow flex items-center gap-1.5"><Video className="h-3.5 w-3.5" /> Camera review</p>
+          <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">How you came across on camera</h2>
+        </div>
+        {presentation.score != null && (
+          <div className="flex items-baseline gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+            <span className="font-mono text-[24px] font-semibold leading-none tabular-nums text-foreground">{presentation.score}</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">/ 100 presence</span>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-3 max-w-phi-body text-[13px] leading-relaxed text-foreground/85">{presentation.summary}</p>
+
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="rounded-lg border border-border bg-muted/35 p-3">
+            <p className="flex items-center gap-1.5 font-mono text-[9.5px] uppercase tracking-[0.08em] text-muted-foreground">
+              <Icon className="h-3 w-3" /> {label}
+            </p>
+            <p className="mt-1.5 text-[12px] leading-relaxed text-foreground/85">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {presentation.tips.length > 0 && (
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="eyebrow">For the next round</p>
+          <ul className="mt-2 space-y-1.5">
+            {presentation.tips.map((tip, i) => (
+              <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-foreground/85">
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />{tip}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+const MistakesCard = ({ mistakes }: { mistakes: PracticeReportMistake[] }) => (
+  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
+    <div className="flex items-center gap-2">
+      <AlertTriangle className="h-4 w-4 text-destructive" />
+      <p className="eyebrow">What cost you marks</p>
+    </div>
+    <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">Specific mistakes, with the fix</h2>
+
+    <div className="mt-4 space-y-3">
+      {mistakes.map((mistake, i) => (
+        <article key={i} className="rounded-xl border border-border bg-surface p-4">
+          <div className="flex items-start gap-3">
+            <span className={cn('grid h-9 min-h-9 min-w-9 shrink-0 place-items-center rounded-lg border px-1 font-mono text-[12px] font-semibold tabular-nums', feedbackClass(mistake.score))}>
+              {mistake.score}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-medium leading-relaxed text-foreground">{mistake.question}</p>
+              {mistake.answer_excerpt && (
+                <p className="mt-1 line-clamp-3 text-[12px] italic leading-relaxed text-muted-foreground">“{mistake.answer_excerpt}”</p>
+              )}
+              <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-lg border border-destructive/20 bg-destructive-soft/60 px-3 py-2">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-destructive">Mistake</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-foreground/85">{mistake.mistake}</p>
+                </div>
+                <div className="rounded-lg border border-success/20 bg-success-soft/60 px-3 py-2">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.08em] text-success">Fix</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-foreground/85">{mistake.fix}</p>
+                </div>
+              </div>
+              {mistake.model_answer && (
+                <details className="mt-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                  <summary className="cursor-pointer font-mono text-[9.5px] uppercase tracking-[0.08em] text-muted-foreground">
+                    Stronger answer outline
+                  </summary>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-foreground/85">{mistake.model_answer}</p>
+                </details>
+              )}
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </motion.div>
+);
+
+const NextStepsCard = ({ steps }: { steps: string[] }) => (
+  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
+    <div className="flex items-center gap-2">
+      <Target className="h-4 w-4 text-signal" />
+      <p className="eyebrow">Your next three moves</p>
+    </div>
+    <ol className="mt-3 space-y-2.5">
+      {steps.map((step, i) => (
+        <li key={i} className="flex gap-3 text-[13px] leading-relaxed text-foreground/85">
+          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full border border-signal/40 bg-signal-soft font-mono text-[10px] font-semibold text-signal">{i + 1}</span>
+          {step}
+        </li>
+      ))}
+    </ol>
+  </motion.div>
+);
+
 const ResultsView = ({ session, byCategory, questions }: {
   session: PracticeSessionSummary;
   byCategory: Record<string, number>;
   questions: PracticeQuestion[];
 }) => {
   const avatar = session.avatar || fallbackAvatar();
+  const report = session.report;
+  const presentation = session.presentation;
   return (
     <div className="space-y-4">
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: EASE }} className="card p-5">
@@ -153,6 +372,7 @@ const ResultsView = ({ session, byCategory, questions }: {
               state="idle"
               animated={false}
               showNameplate={false}
+              fit="cover"
               className="h-24 w-20 shrink-0"
             />
             <div className="min-w-0">
@@ -162,6 +382,9 @@ const ResultsView = ({ session, byCategory, questions }: {
                   {session.overall_score ?? '–'}<span className="text-[15px] font-normal text-muted-foreground"> / 100</span>
                 </span>
                 {session.verdict && <Badge variant={session.overall_score != null && session.overall_score >= 80 ? 'success' : 'muted'}>{session.verdict}</Badge>}
+                {presentation?.available && presentation.score != null && (
+                  <Badge variant="outline"><Video className="h-3 w-3" /> Presence {presentation.score}</Badge>
+                )}
               </div>
               <p className="mt-1.5 text-[12.5px] text-muted-foreground">
                 Interviewed by {avatar.name} · {avatar.title}
@@ -189,6 +412,11 @@ const ResultsView = ({ session, byCategory, questions }: {
           </div>
         )}
       </motion.div>
+
+      {report?.dimensions?.length ? <Scorecard report={report} /> : null}
+      {presentation ? <PresentationCard presentation={presentation} /> : null}
+      {report?.mistakes?.length ? <MistakesCard mistakes={report.mistakes} /> : null}
+      {report?.next_steps?.length ? <NextStepsCard steps={report.next_steps} /> : null}
 
       <div className="space-y-3">
         <p className="eyebrow">Conversation review</p>
@@ -218,7 +446,9 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
   const [voiceOn, setVoiceOn] = useState(() => {
     try { return localStorage.getItem('hiregen:voice-interview') !== '0'; } catch { return true; }
   });
-  const [micArmed, setMicArmed] = useState(false);
+  const [micArmed, setMicArmed] = useState(() => {
+    try { return localStorage.getItem('hiregen:mic-armed') === '1'; } catch { return false; }
+  });
   const micArmedRef = useRef(false);
   micArmedRef.current = micArmed;
   const spokenRef = useRef('');
@@ -276,6 +506,7 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
 
   const startAnswering = () => {
     setMicArmed(true);
+    try { localStorage.setItem('hiregen:mic-armed', '1'); } catch { /* storage can be disabled */ }
     speech.cancel();
     voice.start();
   };
@@ -340,6 +571,7 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
             title={avatar.title}
             state={avatarState}
             pulse={speech.pulse}
+            fit="cover"
             className="h-64 w-full lg:h-[270px]"
           />
           <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
@@ -360,8 +592,8 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
             {graded
               ? 'Graded from your own answer — the breakdown below explains the score.'
               : voiceOn && speech.supported
-                ? `${avatar.name.split(' ')[0]} asks aloud. Answer by voice (words land below, editable) or just type — four to six specific sentences.`
-                : 'Answer in four to six specific sentences — the grader reads only what you write here.'}
+                ? `${avatar.name.split(' ')[0]} asks aloud. Answer by voice (words land below, editable) or just type — four to six specific sentences. English or Hinglish, whichever is natural.`
+                : 'Answer in four to six specific sentences — English or Hinglish is fine, and the interviewer mirrors your language.'}
           </p>
           {!graded && !micArmed && voiceOn && voice.supported && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
@@ -431,7 +663,7 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
               )}
               <div className="mt-4 flex justify-end">
                 <Button onClick={onNext}>
-                  {isLast ? 'Review the full session' : 'Next question'}<ArrowRight className="h-4 w-4" />
+                  {result?.complete || isLast ? 'Review the full session' : 'Next question'}<ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -458,12 +690,14 @@ const FinalizeCard = ({ session, answeredCount, finishing, onFinish }: {
         state="idle"
         animated={false}
         showNameplate={false}
+        fit="cover"
         className="mx-auto h-24 w-20"
       />
       <p className="eyebrow mt-3">Round complete</p>
       <p className="mx-auto mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-muted-foreground">
         {answeredCount} of {session.question_count} answers are in for the {DIFFICULTY_LABEL[session.difficulty] || session.difficulty} {session.role_focus} interview
-        {session.job?.company ? ` at ${session.job.company}` : ''}. {avatar.name.split(' ')[0]} will score the round as a whole.
+        {session.job?.company ? ` at ${session.job.company}` : ''}. {avatar.name.split(' ')[0]} will score the round as a whole
+        and, if the camera was on, add a presentation review.
       </p>
       <Button className="mt-4" onClick={onFinish} loading={finishing}>Score the interview</Button>
     </motion.div>
@@ -478,14 +712,20 @@ const PracticeSession: React.FC = () => {
   const [cursor, setCursor] = useState(0);
   const { toast } = useToast();
 
+  const camera = useCameraPresence();
   const { data, isLoading, isError } = useQuery(
     ['practice-session', id],
     () => practice.session(id),
     { enabled: !!id },
   );
 
-  const finishMutation = useMutation(() => practice.finish(id), {
-    onSuccess: () => queryClient.invalidateQueries(['practice-session', id]),
+  const finishMutation = useMutation(() => practice.finish(id, camera.buildMetrics()), {
+    onSuccess: () => {
+      camera.disable();
+      camera.reset();
+      queryClient.invalidateQueries(['practice-session', id]);
+      queryClient.invalidateQueries('practice-sessions');
+    },
     onError: (err: Error) => toast({ title: 'Session not scored', description: err.message, variant: 'error' }),
   });
 
@@ -529,6 +769,9 @@ const PracticeSession: React.FC = () => {
   const answered = questions.filter((q) => q.answered_at);
   const pending = questions.filter((q) => !q.answered_at);
   const current = pending[Math.min(cursor, pending.length - 1)];
+  // `question_count` is the round's target; only the opening question exists
+  // up front, so counting generated questions would show "1 of 1" all round.
+  const targetCount = Math.max(session.question_count || 0, questions.length, 1);
 
   const advance = () => {
     queryClient.invalidateQueries(['practice-session', id]);
@@ -553,6 +796,7 @@ const PracticeSession: React.FC = () => {
             state="idle"
             animated={false}
             showNameplate={false}
+            fit="cover"
             className="h-24 w-20 shrink-0"
           />
           <div className="min-w-0 flex-1">
@@ -586,10 +830,13 @@ const PracticeSession: React.FC = () => {
         <>
           <div className="flex items-center gap-3">
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-signal transition-[width] duration-500" style={{ width: `${(answered.length / Math.max(1, questions.length)) * 100}%` }} aria-hidden />
+              <div className="h-full rounded-full bg-signal transition-[width] duration-500" style={{ width: `${(answered.length / targetCount) * 100}%` }} aria-hidden />
             </div>
-            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{answered.length}/{questions.length}</span>
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{answered.length}/{targetCount}</span>
           </div>
+
+          <CameraPanel camera={camera} />
+
           {pending.length === 0 && questions.length > 0 ? (
             <FinalizeCard
               session={session}
@@ -603,8 +850,8 @@ const PracticeSession: React.FC = () => {
               session={session}
               question={current}
               index={questions.indexOf(current)}
-              total={questions.length}
-              isLast={pending.length === 1}
+              total={targetCount}
+              isLast={answered.length + 1 >= targetCount}
               onNext={advance}
             />
           ) : (

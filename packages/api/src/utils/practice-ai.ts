@@ -737,36 +737,90 @@ export async function generateOpeningLine(input: {
   }
 }
 
-const REPLY_LEADS: Record<string, { strong: string; okay: string; weak: string }> = {
+const REPLY_LEADS: Record<string, { strong: string[]; okay: string[]; weak: string[] }> = {
   aria: {
-    strong: 'Thank you — that was clear and specific, and I could follow your role in it.',
-    okay: 'Thanks — that gives me the picture, though I would have liked one more concrete example.',
-    weak: 'Thank you for being direct. That answer stayed a little high level, so let me give you another angle to show more depth.',
+    strong: [
+      'Thank you — that was clear and specific, and I could follow your role in it.',
+      'That landed well. You gave me the situation, your action and the outcome without me having to pull for it.',
+    ],
+    okay: [
+      'Thanks — that gives me the picture, though I would have liked one more concrete example.',
+      'I followed it, but one concrete example would make that much more convincing.',
+    ],
+    weak: [
+      'Thank you for being direct. That answer stayed a little high level, so let me give you another angle to show more depth.',
+      'I am still missing the specific example, so let us try that again from the top.',
+    ],
   },
   vikram: {
-    strong: 'Good. The reasoning holds together, and you named the trade-off instead of hiding it.',
-    okay: 'Okay. You covered the surface; I would want more depth on the trade-off and the failure mode.',
-    weak: 'Let us slow down. That answer stayed at the surface, and I need the reasoning underneath it.',
+    strong: [
+      'Good. The reasoning holds together, and you named the trade-off instead of hiding it.',
+      'That is the level of reasoning I expect - you kept the constraints visible.',
+    ],
+    okay: [
+      'Okay. You covered the surface; I would want more depth on the trade-off and the failure mode.',
+      'I can see the shape, but I would push you on the failure mode before I am satisfied.',
+    ],
+    weak: [
+      'Let us slow down. That answer stayed at the surface, and I need the reasoning underneath it.',
+      'I need the actual mechanism, not the summary. Walk me through what happened.',
+    ],
   },
   priya: {
-    strong: 'Nice — I can see the user problem and the decision behind it.',
-    okay: 'That is a reasonable direction, though I am not fully convinced by the evidence yet.',
-    weak: 'I am not convinced yet. Help me see the user impact and the trade-off you chose.',
+    strong: [
+      'Nice — I can see the user problem and the decision behind it.',
+      'You kept the user in the frame and still made a clear call. That is the balance I look for.',
+    ],
+    okay: [
+      'That is a reasonable direction, though I am not fully convinced by the evidence yet.',
+      'I can see the intent, but I would want the user evidence before I sign off.',
+    ],
+    weak: [
+      'I am not convinced yet. Help me see the user impact and the trade-off you chose.',
+      'Start from the user problem, then tell me what you changed and why.',
+    ],
   },
   arjun: {
-    strong: 'That one holds up. You backed the claim with evidence, which is what I was testing.',
-    okay: 'Fine. But I would push harder on what you personally owned versus what the team did.',
-    weak: 'That is not going to survive a real bar-raiser round. I need specifics, not intentions.',
+    strong: [
+      'That one holds up. You backed the claim with evidence, which is what I was testing.',
+      'You said what you owned and what you did not. That is exactly the honesty I test for.',
+    ],
+    okay: [
+      'Fine. But I would push harder on what you personally owned versus what the team did.',
+      'I am with you on the outcome, but I still do not know what you personally moved.',
+    ],
+    weak: [
+      'That is not going to survive a real bar-raiser round. I need specifics, not intentions.',
+      'Give me one decision you personally made, and the evidence you used.',
+    ],
   },
   neha: {
-    strong: 'Good — you anchored that with evidence, which is exactly what I listen for.',
-    okay: 'Directionally useful, but I am missing the measurement method behind that result.',
-    weak: 'I am missing the evidence. Next time, walk me through how you measured it.',
+    strong: [
+      'Good — you anchored that with evidence, which is exactly what I listen for.',
+      'You showed the measurement, not just the result. That is the difference.',
+    ],
+    okay: [
+      'Directionally useful, but I am missing the measurement method behind that result.',
+      'The result is interesting, but I need the method before I trust it.',
+    ],
+    weak: [
+      'I am missing the evidence. Next time, walk me through how you measured it.',
+      'Tell me how you measured it, and what would have made you doubt the number.',
+    ],
   },
   rohan: {
-    strong: 'Love that you shipped it and can explain what changed. That is the signal I want.',
-    okay: 'Solid start, but I would want to know what you would cut and why.',
-    weak: 'That is a bit theoretical for me. I want to hear what you actually built and what broke.',
+    strong: [
+      'Love that you shipped it and can explain what changed. That is the signal I want.',
+      'You can explain the trade-off and the outcome. That is the signal.',
+    ],
+    okay: [
+      'Solid start, but I would want to know what you would cut and why.',
+      'I buy the direction, but I want the cut list and the reason behind it.',
+    ],
+    weak: [
+      'That is a bit theoretical for me. I want to hear what you actually built and what broke.',
+      'Show me the thing you shipped, the constraint you had, and what broke.',
+    ],
   },
 };
 
@@ -785,24 +839,25 @@ export function templateInterviewerReply(input: {
   answer?: string;
 }): string {
   const leads = REPLY_LEADS[input.avatar.id] || REPLY_LEADS.aria;
-  const lead = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
+  const seed = input.answer || String(input.score);
+  const lead = templatePick(input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak, seed);
   const bridge = input.hasFollowUp
     ? templatePick([
         ' There is something in that answer I want to unpack.',
         ' Hold that thought - I want to go one level deeper.',
         ' One part of that answer needs a closer look.',
-      ], input.answer || String(input.score))
+      ], seed)
     : input.score < 60
       ? templatePick([
           ' Let us keep going, and I will come back to depth.',
           ' We will move on, but I am noting the depth gap.',
           ' Next question, then we will circle back to the detail.',
-        ], input.answer || String(input.score))
+        ], seed)
       : templatePick([
           ' Let us keep moving.',
           ' Good - let us build on that.',
           ' Okay, next angle.',
-        ], input.answer || String(input.score));
+        ], seed);
   return `${lead}${bridge}`;
 }
 

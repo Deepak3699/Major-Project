@@ -122,36 +122,90 @@ async function geminiJson(
 /* Hinglish reactions                                                  */
 /* ------------------------------------------------------------------ */
 
-const HINGLISH_LEADS: Record<string, { strong: string; okay: string; weak: string }> = {
+const HINGLISH_LEADS: Record<string, { strong: string[]; okay: string[]; weak: string[] }> = {
   aria: {
-    strong: 'Bahut accha, answer clear tha aur aapka apna contribution samajh aa gaya.',
-    okay: 'Theek hai, direction sahi hai — mujhe bas ek concrete example aur chahiye tha.',
-    weak: 'Haan, aapne seedha jawab diya, lekin depth thodi kam thi.',
+    strong: [
+      'Bahut accha, answer clear tha aur aapka apna contribution samajh aa gaya.',
+      'Aapne situation, apna action aur result teeno clear rakhe - yahi main sunna chahti thi.',
+    ],
+    okay: [
+      'Theek hai, direction sahi hai — mujhe bas ek concrete example aur chahiye tha.',
+      'Ek concrete example add karte to answer aur strong hota.',
+    ],
+    weak: [
+      'Haan, aapne seedha jawab diya, lekin depth thodi kam thi.',
+      'Mujhe specific example chahiye, general baat nahi. Chaliye phir se try karte hain.',
+    ],
   },
   vikram: {
-    strong: 'Haan, ab baat bani. Aapne trade-off clearly bola, yahi main sunna chahta tha.',
-    okay: 'Theek hai, surface cover ho gaya. Mujhe failure mode aur reasoning thoda aur chahiye.',
-    weak: 'Ruko, thoda dheere. Yeh answer surface pe reh gaya — mujhe neeche ki reasoning chahiye.',
+    strong: [
+      'Haan, ab baat bani. Aapne trade-off clearly bola, yahi main sunna chahta tha.',
+      'Reasoning is level par thi aur constraints clear the - yahi depth main dhoondh raha hoon.',
+    ],
+    okay: [
+      'Theek hai, surface cover ho gaya. Mujhe failure mode aur reasoning thoda aur chahiye.',
+      'Shape samajh aa gaya, par failure mode par main push karunga.',
+    ],
+    weak: [
+      'Ruko, thoda dheere. Yeh answer surface pe reh gaya — mujhe neeche ki reasoning chahiye.',
+      'Mujhe actual mechanism chahiye, summary nahi. Batao exactly kya hua.',
+    ],
   },
   priya: {
-    strong: 'Achha, user problem aur decision dono dikh rahe hain. Isi clarity ko aage bhi rakhiye.',
-    okay: 'Direction theek hai, par evidence abhi poori tarah convince nahi kar raha.',
-    weak: 'Main abhi convince nahi hui. User impact aur aapne kaunsa trade-off chuna, wo clear karo.',
+    strong: [
+      'Achha, user problem aur decision dono dikh rahe hain. Isi clarity ko aage bhi rakhiye.',
+      'User problem aur decision dono clear the - isi balance ki zaroorat hai.',
+    ],
+    okay: [
+      'Direction theek hai, par evidence abhi poori tarah convince nahi kar raha.',
+      'Intent dikh raha hai, par user evidence ke bina main sign off nahi karungi.',
+    ],
+    weak: [
+      'Main abhi convince nahi hui. User impact aur aapne kaunsa trade-off chuna, wo clear karo.',
+      'User problem se shuru karo, phir batao aapne kya badla aur kyun.',
+    ],
   },
   arjun: {
-    strong: 'Yeh claim ab evidence ke saath hai — isi liye maine push kiya tha. Achha.',
-    okay: 'Theek hai. Par main yeh puchhunga ki usme aapka personally kya role tha.',
-    weak: 'Yeh bar-raiser round mein survive nahi karega. Mujhe specifics chahiye, intentions nahi.',
+    strong: [
+      'Yeh claim ab evidence ke saath hai — isi liye maine push kiya tha. Achha.',
+      'Aapne apna ownership aur team ka role alag rakha - yahi honesty main test karta hoon.',
+    ],
+    okay: [
+      'Theek hai. Par main yeh puchhunga ki usme aapka personally kya role tha.',
+      'Outcome theek hai, par aapne personally kya move kiya, wo abhi clear nahi hai.',
+    ],
+    weak: [
+      'Yeh bar-raiser round mein survive nahi karega. Mujhe specifics chahiye, intentions nahi.',
+      'Ek decision batao jo aapne personally liya, aur uska evidence kya tha.',
+    ],
   },
   neha: {
-    strong: 'Good, aapne numbers se anchor kiya — yahi main sunna chahti hoon.',
-    okay: 'Useful hai, par measurement method abhi missing hai.',
-    weak: 'Evidence missing hai. Agli baar batao ki aapne result kaise measure kiya.',
+    strong: [
+      'Good, aapne numbers se anchor kiya — yahi main sunna chahti hoon.',
+      'Aapne result ke saath measurement bhi dikhaya - yahi difference hai.',
+    ],
+    okay: [
+      'Useful hai, par measurement method abhi missing hai.',
+      'Result interesting hai, par method ke bina main trust nahi karungi.',
+    ],
+    weak: [
+      'Evidence missing hai. Agli baar batao ki aapne result kaise measure kiya.',
+      'Batao aapne kaise measure kiya, aur kis cheez se doubt hota.',
+    ],
   },
   rohan: {
-    strong: 'Arre wah, shipped product ki baat clear hai. Yahi signal main dhoondh raha hoon.',
-    okay: 'Solid start, par mujhe jaanna hai aap kya cut karte aur kyun.',
-    weak: 'Thoda theoretical lag raha hai. Batao aapne actually kya banaya aur kya toota.',
+    strong: [
+      'Arre wah, shipped product ki baat clear hai. Yahi signal main dhoondh raha hoon.',
+      'Trade-off aur outcome dono explain kar sakte hain - yahi signal hai.',
+    ],
+    okay: [
+      'Solid start, par mujhe jaanna hai aap kya cut karte aur kyun.',
+      'Direction samajh aa gaya, par cut list aur reason chahiye.',
+    ],
+    weak: [
+      'Thoda theoretical lag raha hai. Batao aapne actually kya banaya aur kya toota.',
+      'Jo ship kiya, constraint kya tha, aur kya toota - yeh batao.',
+    ],
   },
 };
 
@@ -180,8 +234,8 @@ export function templateHinglishReply(input: {
   answer?: string;
 }): string {
   const leads = HINGLISH_LEADS[input.avatar.id] || HINGLISH_LEADS.aria;
-  const lead = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
   const seed = input.answer || String(input.score);
+  const lead = templatePick(input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak, seed);
   const bridge = input.hasFollowUp
     ? templatePick(HINGLISH_BRIDGES.dig, seed)
     : input.score < 60

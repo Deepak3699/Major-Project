@@ -534,6 +534,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
         score: grade.score,
         strengths: grade.strengths,
         improvements: grade.improvements,
+        turn: Number(question.idx) || 0,
       };
       interviewerReply = language === 'english'
         ? await generateInterviewerReply({ ...replyInput, followUp: nextQuestion?.question || '' })

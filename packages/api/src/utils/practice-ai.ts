@@ -824,41 +824,35 @@ const REPLY_LEADS: Record<string, { strong: string[]; okay: string[]; weak: stri
   },
 };
 
-export function templatePick<T>(items: T[], seed: string): T {
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-  }
-  return items[hash % items.length];
-}
-
 export function templateInterviewerReply(input: {
   avatar: AvatarPersona;
   score: number;
   hasFollowUp?: boolean;
   answer?: string;
+  turn?: number;
 }): string {
   const leads = REPLY_LEADS[input.avatar.id] || REPLY_LEADS.aria;
-  const seed = input.answer || String(input.score);
-  const lead = templatePick(input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak, seed);
-  const bridge = input.hasFollowUp
-    ? templatePick([
+  const variants = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
+  const turn = Math.abs(Number(input.turn) || 0);
+  const lead = variants[turn % variants.length];
+  const bridges = input.hasFollowUp
+    ? [
         ' There is something in that answer I want to unpack.',
         ' Hold that thought - I want to go one level deeper.',
         ' One part of that answer needs a closer look.',
-      ], seed)
+      ]
     : input.score < 60
-      ? templatePick([
+      ? [
           ' Let us keep going, and I will come back to depth.',
           ' We will move on, but I am noting the depth gap.',
           ' Next question, then we will circle back to the detail.',
-        ], seed)
-      : templatePick([
+        ]
+      : [
           ' Let us keep moving.',
           ' Good - let us build on that.',
           ' Okay, next angle.',
-        ], seed);
-  return `${lead}${bridge}`;
+        ];
+  return `${lead}${bridges[turn % bridges.length]}`;
 }
 
 const REPLY_SYSTEM_PROMPT = [
@@ -882,12 +876,14 @@ export async function generateInterviewerReply(input: {
   strengths?: string[];
   improvements?: string[];
   followUp?: string;
+  turn?: number;
 }): Promise<string> {
   const fallback = () => templateInterviewerReply({
     avatar: input.avatar,
     score: input.score,
     hasFollowUp: Boolean(input.followUp),
     answer: input.answer,
+    turn: input.turn,
   });
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || !String(input.answer || '').trim()) return fallback();

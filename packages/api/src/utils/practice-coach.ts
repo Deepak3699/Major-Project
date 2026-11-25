@@ -10,7 +10,6 @@ import type {
 } from '../types/practice';
 import {
   templateFollowUp,
-  templatePick,
   templateQuestions,
   type Difficulty,
 } from './practice-ai';
@@ -232,16 +231,18 @@ export function templateHinglishReply(input: {
   score: number;
   hasFollowUp?: boolean;
   answer?: string;
+  turn?: number;
 }): string {
   const leads = HINGLISH_LEADS[input.avatar.id] || HINGLISH_LEADS.aria;
-  const seed = input.answer || String(input.score);
-  const lead = templatePick(input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak, seed);
-  const bridge = input.hasFollowUp
-    ? templatePick(HINGLISH_BRIDGES.dig, seed)
+  const variants = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
+  const turn = Math.abs(Number(input.turn) || 0);
+  const lead = variants[turn % variants.length];
+  const bridges = input.hasFollowUp
+    ? HINGLISH_BRIDGES.dig
     : input.score < 60
-      ? templatePick(HINGLISH_BRIDGES.depth, seed)
-      : templatePick(HINGLISH_BRIDGES.continue, seed);
-  return `${lead}${bridge}`;
+      ? HINGLISH_BRIDGES.depth
+      : HINGLISH_BRIDGES.continue;
+  return `${lead}${bridges[turn % bridges.length]}`;
 }
 
 export async function generateHinglishReply(input: {
@@ -256,12 +257,14 @@ export async function generateHinglishReply(input: {
   improvements?: string[];
   language: AnswerLanguage;
   hasFollowUp?: boolean;
+  turn?: number;
 }): Promise<string> {
   const fallback = () => templateHinglishReply({
     avatar: input.avatar,
     score: input.score,
     hasFollowUp: input.hasFollowUp,
     answer: input.answer,
+    turn: input.turn,
   });
 
   const parsed = await geminiJson([

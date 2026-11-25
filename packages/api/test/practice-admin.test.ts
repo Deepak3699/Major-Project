@@ -29,6 +29,8 @@ const mockSqlUnsafe = jest.fn();
 
 const REQ_ID = '55555555-5555-4555-8555-555555555555';
 const USER_ID = '66666666-6666-4666-8666-666666666666';
+const SESSION_ID = '77777777-7777-4777-8777-777777777777';
+const QUESTION_ID = '88888888-8888-4888-8888-888888888888';
 
 beforeEach(() => {
   mockSqlUnsafe.mockReset();
@@ -115,5 +117,49 @@ describe('Admin practice subscriptions', () => {
     });
     res = await app.inject({ method: 'POST', url: '/practice/grant', payload: { email: 'ghost@example.com', plan: 'pro' } });
     expect(res.statusCode).toBe(404);
+  });
+
+  test('interview list joins the candidate and counts answered questions', async () => {
+    mockSqlUnsafe.mockImplementation(async (query: string): Promise<any> => {
+      if (query.includes('COUNT(*) OVER()')) {
+        return [{
+          id: SESSION_ID, user_id: USER_ID, user_email: 'c@example.com',
+          role_focus: 'Data Analyst', difficulty: 'standard', avatar_id: 'neha',
+          job_title: 'Data Analyst', job_company: 'Acme', status: 'completed', model: 'gemini-2.5-flash',
+          overall_score: 78, verdict: 'Strong showing', question_count: 4,
+          started_at: new Date().toISOString(), completed_at: new Date().toISOString(),
+          report: { dimensions: [] }, presentation: { available: true },
+          question_total: 4, answered_count: 4, total_count: 1,
+        }];
+      }
+      return [];
+    });
+    const res = await app.inject({ method: 'GET', url: '/practice/sessions?status=completed&search=analyst' });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.sessions).toHaveLength(1);
+    expect(body.sessions[0]).toMatchObject({ user_email: 'c@example.com', answered_count: 4, has_report: true, camera_review: true });
+    expect(body.total).toBe(1);
+    const [query, params] = mockSqlUnsafe.mock.calls[0];
+    expect(query).toContain('ILIKE');
+    expect(params).toContain('%analyst%');
+  });
+
+  test('interview detail returns the full transcript including Hinglish answers', async () => {
+    mockSqlUnsafe.mockImplementation(async (query: string): Promise<any> => {
+      if (query.includes('FROM interview_sessions s') && query.includes('JOIN users u')) {
+        return [{ id: SESSION_ID, user_id: USER_ID, user_email: 'c@example.com', report: { dimensions: [] }, presentation: { available: true } }];
+      }
+      if (query.includes('FROM interview_questions')) {
+        return [{ id: QUESTION_ID, idx: 0, category: 'intro', question: 'Tell me about yourself.', answer: 'Maine dashboard banaya tha.', answer_language: 'hinglish', interviewer_reply: 'Theek hai, aage badhte hain.', score: 70, ideal_points: [], answered_at: new Date().toISOString() }];
+      }
+      return [];
+    });
+    const res = await app.inject({ method: 'GET', url: `/practice/sessions/${SESSION_ID}` });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.candidate.email).toBe('c@example.com');
+    expect(body.questions[0].answer_language).toBe('hinglish');
+    expect(body.questions[0].interviewer_reply).toMatch(/theek/i);
   });
 });

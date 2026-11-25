@@ -693,6 +693,95 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
     return { ok: true, user_id: user.id, plan, expires_at: expiresAt ? expiresAt.toISOString() : null };
   });
 
+  // ---- AI practice: review every candidate interview transcript ----
+  // Read-only. Admins see the same transcript, grades, Hinglish reactions,
+  // camera review and end-of-round report the candidate saw, so quality issues
+  // can be investigated without querying the database by hand.
+  const practiceSessionsQuery = z.object({
+    status: z.enum(['all', 'in_progress', 'completed', 'abandoned']).default('all'),
+    search: z.string().trim().max(160).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    offset: z.coerce.number().int().min(0).default(0),
+  });
+
+  fastify.get('/practice/sessions', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const parsed = practiceSessionsQuery.safeParse(req.query || {});
+    if (!parsed.success) return reply.status(400).send({ error: 'Invalid query', details: parsed.error.issues });
+    const { status, search, limit, offset } = parsed.data;
+    const sql = getDB();
+
+    const values: any[] = [];
+    const where: string[] = [];
+    if (status !== 'all') {
+      values.push(status);
+      where.push(`s.status = $${values.length}`);
+    }
+    if (search) {
+      values.push(`%${search}%`);
+      where.push(`(u.email ILIKE $${values.length} OR s.role_focus ILIKE $${values.length} OR s.job_title ILIKE $${values.length} OR s.avatar_id ILIKE $${values.length})`);
+    }
+    values.push(limit, offset);
+    const limitIndex = values.length - 1;
+    const offsetIndex = values.length;
+
+    const rows = await sql.unsafe(
+      `SELECT s.id, s.user_id, u.email AS user_email, s.role_focus, s.difficulty,
+              s.avatar_id, s.job_title, s.job_company, s.status, s.model,
+              s.overall_score, s.verdict, s.question_count, s.started_at, s.completed_at,
+              s.report, s.presentation,
+              (SELECT COUNT(*)::int FROM interview_questions q WHERE q.session_id = s.id) AS question_total,
+              (SELECT COUNT(*)::int FROM interview_questions q WHERE q.session_id = s.id AND q.answered_at IS NOT NULL) AS answered_count,
+              COUNT(*) OVER()::int AS total_count
+         FROM interview_sessions s
+         JOIN users u ON u.id = s.user_id
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY s.started_at DESC
+        LIMIT $${limitIndex} OFFSET $${offsetIndex}`,
+      values,
+    );
+    const total = Number((rows[0] as any)?.total_count || 0);
+    return reply.send({
+      sessions: (rows as any[]).map((row) => ({
+        ...row,
+        total_count: undefined,
+        has_report: Boolean(row.report),
+        camera_review: Boolean(row.presentation?.available),
+      })),
+      total,
+      limit,
+      offset,
+    });
+  });
+
+  fastify.get('/practice/sessions/:id', { preValidation: [authorize(['admin'])] }, async (req, reply) => {
+    const id = z.string().uuid().safeParse((req.params as { id: string }).id);
+    if (!id.success) return reply.status(400).send({ error: 'Invalid session id' });
+    const sql = getDB();
+    const sessions = await sql.unsafe(
+      `SELECT s.*, u.email AS user_email
+         FROM interview_sessions s
+         JOIN users u ON u.id = s.user_id
+        WHERE s.id = $1
+        LIMIT 1`,
+      [id.data],
+    );
+    const session = sessions[0] as any;
+    if (!session) return reply.status(404).send({ error: 'Interview not found' });
+    const questions = await sql.unsafe(
+      `SELECT id, idx, category, topic, question, answer, answer_language, interviewer_reply,
+              feedback, score, ideal_points, answered_at
+         FROM interview_questions
+        WHERE session_id = $1
+        ORDER BY idx`,
+      [session.id],
+    );
+    return reply.send({
+      session,
+      candidate: { id: session.user_id, email: session.user_email },
+      questions,
+    });
+  });
+
   // ---- Prometheus metrics (Track 5, dependency-free exposition format) ----
   // Aggregates only — no PII. Admin-gated; point Prometheus at this target
   // with a bearer token (see docs/BACKUP_RESTORE.md companion note in README).

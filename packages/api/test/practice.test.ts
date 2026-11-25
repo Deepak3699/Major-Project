@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { heuristicGrade } from '../src/utils/practice-ai';
 
 // AI practice routes. Real practice-ai engine runs (template fallbacks, no
 // GEMINI_API_KEY set), while DB/auth/redis/audit are mocked at the seams like
@@ -240,6 +241,11 @@ describe('AI practice routes', () => {
     expect(body.grade.score).toBeGreaterThanOrEqual(0);
     expect(body.grade.score).toBeLessThanOrEqual(100);
     expect(body.question.answered_at).toBeTruthy();
+    // JSONB parameters are bound as values so the driver serialises them once.
+    const update = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('UPDATE interview_questions'));
+    expect(update).toBeTruthy();
+    expect(typeof update[1][2]).toBe('object');
+    expect(update[1][2]).not.toBeNull();
   });
 
   test('an answer generates the next question from the transcript, not a preloaded queue', async () => {
@@ -279,6 +285,7 @@ describe('AI practice routes', () => {
     // The generated question is anchored on the candidate's own words.
     const insertCall = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('INSERT INTO interview_questions'));
     expect(insertCall?.[1]?.[5]).toMatch(/react/i);
+    expect(Array.isArray(insertCall?.[1]?.[6])).toBe(true);
   });
 
   test('a Hinglish answer gets a Hinglish reaction and follow-up', async () => {
@@ -391,7 +398,9 @@ describe('AI practice routes', () => {
     // Only the written review is persisted — snapshots are never sent to the DB.
     const update = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('report = $5::jsonb'));
     expect(update).toBeTruthy();
-    expect(update[1][5]).not.toContain('data:image');
+    expect(typeof update[1][4]).toBe('object');
+    expect(typeof update[1][5]).toBe('object');
+    expect(JSON.stringify(update[1][5])).not.toContain('data:image');
   });
 
   test('finish with the camera off marks the presentation review unavailable', async () => {
@@ -515,5 +524,30 @@ describe('AI practice routes', () => {
     });
     const res = await app.inject({ method: 'GET', url: '/candidate/practice/subscription' });
     expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('heuristicGrade', () => {
+  const spec = {
+    category: 'project',
+    topic: 'Performance',
+    question: 'Walk me through a performance change you owned.',
+    ideal_points: ['trade-off', 'measurement', 'result'],
+  };
+
+  test('rewards concrete metrics and outcome language', () => {
+    const grade = heuristicGrade(
+      spec as any,
+      'I measured the stale-data risk and chose server-driven caching with a 30 second TTL. That cut API calls by 45 percent and reduced p95 load time for 40,000 users.',
+      'standard',
+    );
+    expect(grade.score).toBeGreaterThanOrEqual(58);
+    expect(grade.strengths.join(' ')).toMatch(/concrete numbers/i);
+  });
+
+  test('still flags a vague answer', () => {
+    const grade = heuristicGrade(spec as any, 'I think we did some work on performance and it was kind of better.', 'standard');
+    expect(grade.score).toBeLessThan(55);
+    expect(grade.improvements.length).toBeGreaterThan(0);
   });
 });

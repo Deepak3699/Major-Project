@@ -530,7 +530,7 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
       const userId = currentUser(request).id;
       await getDB().unsafe(`INSERT INTO settings (key,value,updated_by,updated_at)
         VALUES ('recommendation_model_runtime',$1::jsonb,$2,NOW())
-        ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_by=EXCLUDED.updated_by,updated_at=NOW()`, [JSON.stringify({ enabled }), userId]);
+        ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated_by=EXCLUDED.updated_by,updated_at=NOW()`, [{ enabled }, userId]);
       setRecommendationModelEnabled(enabled);
       await logAuditEvent({ user_id: userId, action: enabled ? 'recommendation_model_started' : 'recommendation_model_stopped', resource_type: 'recommendation_model', details: { enabled } });
       return reply.send(recommendationModelStatus());

@@ -376,7 +376,7 @@ export function heuristicGrade(spec: QuestionSpec, answer: string, difficulty: D
   if (words.length < 15) improvements.push('Give more substance — aim for 4-6 specific sentences.');
 
   // Specificity: tools, numbers, names, concrete years.
-  if (/\d/.test(text) && /%|hour|month|year|day|week|user|record|ms|kg|₹|rs\b|\$/.test(text)) {
+  if (/\d/.test(text) && /%|percent|hour|month|year|day|week|second|minute|\buser\b|\brecord\b|\bms\b|\bkg\b|₹|\brs\b|\$|\bteam\b|\bcustomer\b|\brequest\b|\bapi\b|latency|load time|\brevenue\b|\bcost\b|\bticket\b/i.test(text)) {
     score += 10;
     strengths.push('You anchored the answer with concrete numbers and context.');
   } else if (words.length >= 30) {
@@ -399,8 +399,12 @@ export function heuristicGrade(spec: QuestionSpec, answer: string, difficulty: D
   }
 
   // Structure: past situation → action → outcome language.
-  const structureHits = [/situation/i, /we (built|decided|had|were|used)/i, /i (built|led|wrote|designed|fixed|chose|owned)/i, /result|outcome|impact|so that/i]
-    .filter((re) => re.test(lower)).length;
+  const structureHits = [
+    /situation|context|problem/i,
+    /we (built|decided|had|were|used|agreed|shipped|chose|cut|reduced)/i,
+    /i (built|led|wrote|designed|fixed|chose|owned|measured|decided|reduced|cut|shipped|launched|migrated|implemented|moved|tested)/i,
+    /result|outcome|impact|so that|reduced|cut|improved|increased|saved|grew|dropped|faster|slower/i,
+  ].filter((re) => re.test(lower)).length;
   if (structureHits >= 2) {
     score += 8;
     strengths.push('Good structure: situation, your action, and the outcome are visible.');
@@ -766,18 +770,39 @@ const REPLY_LEADS: Record<string, { strong: string; okay: string; weak: string }
   },
 };
 
+export function templatePick<T>(items: T[], seed: string): T {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+  return items[hash % items.length];
+}
+
 export function templateInterviewerReply(input: {
   avatar: AvatarPersona;
   score: number;
   hasFollowUp?: boolean;
+  answer?: string;
 }): string {
   const leads = REPLY_LEADS[input.avatar.id] || REPLY_LEADS.aria;
   const lead = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
   const bridge = input.hasFollowUp
-    ? ' There is something in that answer I want to unpack.'
+    ? templatePick([
+        ' There is something in that answer I want to unpack.',
+        ' Hold that thought - I want to go one level deeper.',
+        ' One part of that answer needs a closer look.',
+      ], input.answer || String(input.score))
     : input.score < 60
-      ? ' Let us keep going, and I will come back to depth.'
-      : ' Let us keep moving.';
+      ? templatePick([
+          ' Let us keep going, and I will come back to depth.',
+          ' We will move on, but I am noting the depth gap.',
+          ' Next question, then we will circle back to the detail.',
+        ], input.answer || String(input.score))
+      : templatePick([
+          ' Let us keep moving.',
+          ' Good - let us build on that.',
+          ' Okay, next angle.',
+        ], input.answer || String(input.score));
   return `${lead}${bridge}`;
 }
 
@@ -807,6 +832,7 @@ export async function generateInterviewerReply(input: {
     avatar: input.avatar,
     score: input.score,
     hasFollowUp: Boolean(input.followUp),
+    answer: input.answer,
   });
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || !String(input.answer || '').trim()) return fallback();

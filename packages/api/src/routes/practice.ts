@@ -376,7 +376,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       `INSERT INTO interview_questions (session_id, user_id, idx, category, topic, question, ideal_points)
        VALUES ($1, $2, 0, $3, $4, $5, $6::jsonb)
        RETURNING id, idx, category, topic, question, answer, interviewer_reply, feedback, score, answered_at, ideal_points`,
-      [session.id, userId, firstQuestion.category, firstQuestion.topic, firstQuestion.question, JSON.stringify(firstQuestion.ideal_points || [])],
+      [session.id, userId, firstQuestion.category, firstQuestion.topic, firstQuestion.question, firstQuestion.ideal_points || []],
     );
     await simpleAudit(userId, 'practice.session_started', session.id, {
       model,
@@ -463,7 +463,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
           SET answer = $2, answer_language = $5, feedback = $3::jsonb, score = $4, answered_at = now()
         WHERE id = $1
         RETURNING id, idx, category, topic, question, answer, answer_language, feedback, score, answered_at`,
-      [question.id, parsed.data.answer, JSON.stringify(grade), grade.score, language],
+      [question.id, parsed.data.answer, grade, grade.score, language],
     );
 
     // The next question is written from the conversation itself: the intro
@@ -510,7 +510,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
           `INSERT INTO interview_questions (session_id, user_id, idx, category, topic, question, ideal_points)
             VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
             RETURNING id, idx, category, topic, question, answer, answer_language, interviewer_reply, feedback, score, answered_at, ideal_points`,
-          [session.id, userId, maxIdx + 1, generated.category, generated.topic, generated.question, JSON.stringify(generated.ideal_points || [])],
+          [session.id, userId, maxIdx + 1, generated.category, generated.topic, generated.question, generated.ideal_points || []],
         );
         nextQuestion = inserted.length ? serializeQuestion(inserted[0]) : null;
       }
@@ -654,7 +654,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
               report = $5::jsonb, presentation = $6::jsonb, completed_at = now()
         WHERE id = $1
         RETURNING *`,
-      [session.id, overall, verdict, summary, JSON.stringify(finalReport), JSON.stringify(presentationFeedback)],
+      [session.id, overall, verdict, summary, finalReport, presentationFeedback],
     );
     await simpleAudit(userId, 'practice.session_completed', session.id, {
       overall,
@@ -763,7 +763,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       trackId = (existing[0] as any).id;
       const upd = await sql.unsafe(
         `UPDATE learning_tracks SET payload = $2::jsonb, model = $3, updated_at = now() WHERE id = $1 RETURNING id, role_focus, model, created_at, updated_at`,
-        [trackId, JSON.stringify(modules), model],
+        [trackId, modules as any, model],
       );
       // Fresh material resets per-module progress so the new plan starts clean.
       await sql.unsafe(`DELETE FROM learning_module_progress WHERE track_id = $1`, [trackId]);
@@ -772,7 +772,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     const created = await sql.unsafe(
       `INSERT INTO learning_tracks (user_id, role_focus, payload, model) VALUES ($1, $2, $3::jsonb, $4)
        RETURNING id, role_focus, model, created_at, updated_at`,
-      [userId, role, JSON.stringify(modules), model],
+      [userId, role, modules as any, model],
     );
     await simpleAudit(userId, 'practice.learning_track_generated', (created[0] as any).id, { role, model });
     return reply.status(201).send({ track: { ...((created[0] as any)), modules } });
@@ -835,9 +835,7 @@ function serializeQuestion(q: any) {
     answer: q.answer || '',
     answer_language: q.answer_language || 'english',
     interviewer_reply: q.interviewer_reply || '',
-    feedback: q.feedback && typeof q.feedback === 'object' && !Array.isArray(q.feedback) && q.feedback !== null
-      ? (typeof (q.feedback as any).score === 'number' ? q.feedback : safeParse(q.feedback))
-      : null,
+    feedback: objectOrNull(q.feedback),
     score: q.score ?? null,
     answered_at: q.answered_at ?? null,
   };

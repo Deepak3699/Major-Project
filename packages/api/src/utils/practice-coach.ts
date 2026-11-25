@@ -10,6 +10,7 @@ import type {
 } from '../types/practice';
 import {
   templateFollowUp,
+  templatePick,
   templateQuestions,
   type Difficulty,
 } from './practice-ai';
@@ -155,23 +156,37 @@ const HINGLISH_LEADS: Record<string, { strong: string; okay: string; weak: strin
 };
 
 const HINGLISH_BRIDGES = {
-  dig: ' Ek cheez hai jo main unpack karna chahta hoon.',
-  continue: ' Chaliye aage badhte hain.',
-  depth: ' Chaliye aage badhte hain, depth par main wapas aaunga.',
+  dig: [
+    ' Ek cheez hai jo main unpack karna chahta hoon.',
+    ' Yeh point hold kijiye - main isko thoda deeper jaana chahta hoon.',
+    ' Is answer mein ek cheez hai jo mujhe clear karni hai.',
+  ],
+  continue: [
+    ' Chaliye aage badhte hain.',
+    ' Achha, isi par aage build karte hain.',
+    ' Theek hai, agla angle dekhte hain.',
+  ],
+  depth: [
+    ' Chaliye aage badhte hain, depth par main wapas aaunga.',
+    ' Agla question lete hain, par depth wali baat main note kar raha hoon.',
+    ' Aage chalte hain, phir detail par wapas aayenge.',
+  ],
 };
 
 export function templateHinglishReply(input: {
   avatar: AvatarPersona;
   score: number;
   hasFollowUp?: boolean;
+  answer?: string;
 }): string {
   const leads = HINGLISH_LEADS[input.avatar.id] || HINGLISH_LEADS.aria;
   const lead = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
+  const seed = input.answer || String(input.score);
   const bridge = input.hasFollowUp
-    ? HINGLISH_BRIDGES.dig
+    ? templatePick(HINGLISH_BRIDGES.dig, seed)
     : input.score < 60
-      ? HINGLISH_BRIDGES.depth
-      : HINGLISH_BRIDGES.continue;
+      ? templatePick(HINGLISH_BRIDGES.depth, seed)
+      : templatePick(HINGLISH_BRIDGES.continue, seed);
   return `${lead}${bridge}`;
 }
 
@@ -192,6 +207,7 @@ export async function generateHinglishReply(input: {
     avatar: input.avatar,
     score: input.score,
     hasFollowUp: input.hasFollowUp,
+    answer: input.answer,
   });
 
   const parsed = await geminiJson([
@@ -468,8 +484,8 @@ export function templatePresentationFeedback(metrics: PresentationMetrics): Pres
     available: true,
     score,
     summary: `Camera presence scored ${score}/100 from ${metrics.samples} sample${metrics.samples === 1 ? '' : 's'}. ${lighting}`,
-    dress: 'Dress and grooming need the visual model. For a real interview: a solid, ironed shirt or blouse and a neat neckline read well on camera.',
-    grooming: 'Grooming needs the visual model. Keep hair clear of your eyes and check the camera preview before you start.',
+    dress: 'I could not assess the outfit from the sampled frames. For the next round, a solid, ironed shirt or blouse with a neat neckline reads well on camera.',
+    grooming: 'I could not assess grooming from the sampled frames. Keep hair clear of your eyes and check the camera preview before you start.',
     expression: metrics.motion_score > 0.2
       ? 'Your expression changed often; slow down at the start of an answer so the key point lands.'
       : 'Your expression stayed composed. Add a small smile at the greeting and at the close.',

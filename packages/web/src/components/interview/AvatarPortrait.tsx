@@ -323,7 +323,7 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
       aria-label={`${displayName}, AI interviewer — ${statusText.toLowerCase()}`}
       data-avatar={avatarId}
     >
-      <svg viewBox="0 0 240 240" preserveAspectRatio={fit === 'cover' ? 'xMidYMid slice' : 'xMidYMid meet'} className="relative block h-full w-full" aria-hidden>
+      <svg viewBox="0 0 240 240" preserveAspectRatio={fit === 'cover' ? 'xMidYMin slice' : 'xMidYMid meet'} className="relative block h-full w-full" aria-hidden>
         <defs>
           <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="0.4" y2="1">
             <stop offset="0%" stopColor={look.bg} />

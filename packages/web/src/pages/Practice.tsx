@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from 'react-query';
 import {
   Briefcase,
-  Check,
   ChevronRight,
   GraduationCap,
   Mic,
@@ -13,10 +12,9 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
-  Volume2,
 } from 'lucide-react';
 import { candidate, practice } from '@/lib/api';
-import { CandidateJob, PracticeAvatar, PracticeDifficulty, PracticeSessionSummary, PracticeSubscription } from '@/lib/types';
+import { CandidateJob, PracticeDifficulty, PracticeSessionSummary, PracticeSubscription } from '@/lib/types';
 import { StatCard, StatCardGrid } from '@/components/ui/stat-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useToast } from '@/components/ui/toast';
 import { AvatarPortrait } from '@/components/interview/AvatarPortrait';
+import { InterviewerDeck } from '@/components/interview/InterviewerDeck';
 import { FALLBACK_AVATARS } from '@/components/interview/roster';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
@@ -55,88 +54,6 @@ function scoreTone(score: number | null): 'success' | 'warning' | 'danger' | 'mu
   if (score >= 55) return 'warning';
   return 'danger';
 }
-
-const AvatarCard = ({
-  avatar,
-  selected,
-  recommended,
-  reason,
-  onSelect,
-}: {
-  avatar: PracticeAvatar;
-  selected: boolean;
-  recommended: boolean;
-  reason?: string;
-  onSelect: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onSelect}
-    aria-pressed={selected}
-    className={cn(
-      'group relative overflow-hidden rounded-xl border p-3 text-left transition-all duration-200',
-      selected
-        ? 'border-signal/70 bg-signal-soft/40 shadow-[0_0_0_1px_hsl(var(--signal)/0.25)]'
-        : 'border-border bg-surface hover:border-border-strong hover:bg-accent/40',
-    )}
-  >
-    <div className="flex gap-3">
-      <AvatarPortrait
-        avatarId={avatar.id}
-        name={avatar.name}
-        title={avatar.title}
-        state="idle"
-        animated={false}
-        showNameplate={false}
-        className="h-[92px] w-[76px] shrink-0"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-1.5">
-          <p className="truncate text-[13.5px] font-semibold text-foreground">{avatar.name}</p>
-          {recommended && (
-            <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-signal/40 bg-signal-soft px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.05em] text-signal">
-              <Sparkles className="h-2.5 w-2.5" /> Best fit
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{avatar.title}</p>
-        <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-relaxed text-muted-foreground">{avatar.tagline}</p>
-      </div>
-    </div>
-
-    <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-foreground/80">{avatar.ability}</p>
-
-    <div className="mt-2 flex flex-wrap gap-1">
-      {avatar.specialties.slice(0, 3).map((specialty) => (
-        <span
-          key={specialty}
-          className="rounded border border-border bg-muted/70 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.04em] text-muted-foreground"
-        >
-          {specialty}
-        </span>
-      ))}
-    </div>
-
-    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border/80 pt-2">
-      <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.05em] text-muted-foreground">
-        <Volume2 className="h-2.5 w-2.5" /> {avatar.voice.gender} · {avatar.voice.lang}
-      </span>
-      {selected ? (
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-signal">
-          <Check className="h-3.5 w-3.5" /> Selected
-        </span>
-      ) : (
-        <span className="text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">Choose</span>
-      )}
-    </div>
-
-    {recommended && reason && (
-      <p className="mt-2 rounded-md border border-signal/20 bg-signal-soft/70 px-2 py-1.5 text-[11px] leading-relaxed text-foreground/80">
-        {reason}
-      </p>
-    )}
-  </button>
-);
 
 const UpgradeDialog = ({
   open,
@@ -384,8 +301,8 @@ const Practice: React.FC = () => {
               Practise with an interviewer who fits the job.
             </h1>
             <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
-              Six interviewers, six styles. Pick a saved or fresh job and the studio recommends the right one —
-              then the interview runs as a live conversation, spoken in Indian English.
+              Six interviewers, six rooms. Swipe the deck and the studio recommends the best fit for your job.
+              The round follows your answers, mirrors Hinglish, and reviews your camera presence at the end.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button onClick={() => studioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
@@ -405,6 +322,7 @@ const Practice: React.FC = () => {
                 state="idle"
                 animated={false}
                 showNameplate={false}
+                fit="cover"
                 className={cn(
                   'h-[112px] w-[86px] border-2 border-background shadow-lg',
                   index > 0 && '-ml-5',
@@ -574,7 +492,7 @@ const Practice: React.FC = () => {
               {activeAvatar ? `Start with ${activeAvatar.name.split(' ')[0]}` : 'Start interview'}
             </Button>
             <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-              Spoken in Indian English. Each interviewer has a different voice, pace and pitch.
+              Spoken in Indian English, Hinglish-friendly. Camera feedback is optional and processed only for your review.
             </p>
           </div>
         </div>
@@ -583,25 +501,21 @@ const Practice: React.FC = () => {
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
               <p className="eyebrow">Choose your interviewer</p>
-              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground">Six styles. One job-ready round.</h2>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground">Swipe the deck. Pick your room.</h2>
+              <p className="mt-1 text-[12px] text-muted-foreground">Each card is a different interviewer with their own voice, pace and pressure.</p>
             </div>
             {avatarData?.recommended && (
-              <Badge variant="signal"><Sparkles className="h-3 w-3" /> Recommended: {avatarData.recommended.name}</Badge>
+              <Badge variant="signal"><Sparkles className="h-3 w-3" /> Best fit: {avatarData.recommended.name.split(' ')[0]}</Badge>
             )}
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-            {avatars.map((avatar) => (
-              <AvatarCard
-                key={avatar.id}
-                avatar={avatar}
-                selected={avatar.id === avatarId}
-                recommended={avatar.id === recommendedId}
-                reason={avatar.id === recommendedId ? avatarData?.recommended?.reason : undefined}
-                onSelect={() => { setAvatarId(avatar.id); setAvatarTouched(true); }}
-              />
-            ))}
-          </div>
+          <InterviewerDeck
+            avatars={avatars}
+            activeId={avatarId || activeAvatar.id}
+            recommendedId={recommendedId}
+            reason={avatarData?.recommended?.reason}
+            onSelect={(id) => { setAvatarId(id); setAvatarTouched(true); }}
+          />
 
           {!avatarData && (
             <p className="text-[11.5px] text-muted-foreground">

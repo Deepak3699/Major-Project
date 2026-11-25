@@ -1,67 +1,132 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { cn } from '@/components/ui/cn';
 
 /**
- * Illustrated interviewer portraits — one look per avatar id.
+ * Interviewer portraits — six distinct people, rendered as layered vector
+ * portraits with soft studio lighting rather than flat clip-art.
  *
- * The same flat-illustration language as the original Aria portrait, but the
- * face, hair, outfit, accessories and accent colour are driven by a look table
- * so the roster reads as six different people rather than one recoloured
- * template. Animation is still imperative inside a single rAF loop: word
- * boundary pulses kick the jaw, blinks and breathing keep the face alive, and
- * the listening state drives a mic meter. No per-frame React renders.
+ * Each face is built from: a tinted studio backdrop, a shaded neck and
+ * shoulders, gradient skin with jaw/temple occlusion, rim light, individually
+ * shaped eyes with catchlights, styled brows, hair with specular strands,
+ * outfit folds, and per-person accessories (glasses, beard, earrings,
+ * headphones). The geometry and palette differ per person, so the roster reads
+ * as six humans rather than one recoloured template.
+ *
+ * Animation stays imperative inside a single rAF loop: word-boundary pulses
+ * kick the jaw, blinks and breathing keep the face alive, and the listening
+ * state drives a mic meter. No per-frame React renders.
  */
 
 export type InterviewerState = 'idle' | 'speaking' | 'listening' | 'thinking';
 
-type HairStyle = 'long' | 'short' | 'bun' | 'messy';
-type FacialHair = 'none' | 'beard' | 'stubble';
+type HairStyle = 'wavy' | 'crop' | 'sleek' | 'buzz' | 'bun' | 'messy';
+type Glasses = 'none' | 'rect' | 'round';
+type FacialHair = 'none' | 'full' | 'stubble';
+type Earrings = 'none' | 'hoop' | 'stud';
+type BrowStyle = 'soft' | 'thick' | 'arch';
 
 interface Look {
-  skin: string;
-  skinShade: string;
-  hair: string;
-  hairStyle: HairStyle;
-  lip: string;
-  blazer: string;
+  /** [light, base, shade, deep] */
+  skin: [string, string, string, string];
+  /** [highlight, base, shadow] */
+  hair: [string, string, string];
+  /** [base, light, dark] */
+  lips: [string, string, string];
+  /** [light, base] */
+  iris: [string, string];
+  eyeLine: string;
+  /** [light, base, dark] */
+  jacket: [string, string, string];
   lapel: string;
   shirt: string;
+  shirtShade: string;
   accent: string;
-  glasses: boolean;
-  facialHair: FacialHair;
-  earrings: boolean;
+  bg: string;
+  hairStyle: HairStyle;
+  glasses: Glasses;
+  beard: FacialHair;
+  earrings: Earrings;
+  faceScale: number;
+  brow: BrowStyle;
+  lashes: boolean;
+  necklace: boolean;
+  crew: boolean;
+  headphones?: boolean;
 }
 
 const LOOKS: Record<string, Look> = {
   aria: {
-    skin: '#e6b385', skinShade: '#d69f70', hair: '#241c18', hairStyle: 'long', lip: '#b96a60',
-    blazer: '#222227', lapel: '#2c2c33', shirt: '#f0ebe2', accent: '#c96f4a',
-    glasses: false, facialHair: 'none', earrings: true,
+    skin: ['#f2c6a0', '#e2aa7c', '#c98b5f', '#a86b45'],
+    hair: ['#5a4030', '#2f2018', '#170f0b'],
+    lips: ['#b25c58', '#d98b81', '#8e423f'],
+    iris: ['#7a5533', '#2f1d10'],
+    eyeLine: '#2a1a12',
+    jacket: ['#4a3327', '#33231b', '#21150f'],
+    lapel: '#553a2d', shirt: '#efe4d2', shirtShade: '#d8c9b4',
+    accent: '#d27a52', bg: '#1a1210',
+    hairStyle: 'wavy', glasses: 'none', beard: 'none', earrings: 'hoop',
+    faceScale: 1, brow: 'soft', lashes: true, necklace: true, crew: false,
   },
   vikram: {
-    skin: '#c98d63', skinShade: '#b57a52', hair: '#171310', hairStyle: 'short', lip: '#9c5a4d',
-    blazer: '#1d2a3a', lapel: '#26374b', shirt: '#dce6f0', accent: '#4f86a8',
-    glasses: true, facialHair: 'beard', earrings: false,
+    skin: ['#e0b089', '#c99268', '#a97148', '#895a37'],
+    hair: ['#3a3530', '#1a1512', '#0b0806'],
+    lips: ['#925449', '#b06d5e', '#6f3a31'],
+    iris: ['#5a4228', '#24160c'],
+    eyeLine: '#17100b',
+    jacket: ['#2c4056', '#1d2c3d', '#111c28'],
+    lapel: '#354b63', shirt: '#dbe7f0', shirtShade: '#bfd0dd',
+    accent: '#6197bd', bg: '#0f151c',
+    hairStyle: 'crop', glasses: 'rect', beard: 'full', earrings: 'none',
+    faceScale: 1.04, brow: 'thick', lashes: false, necklace: false, crew: false,
   },
   priya: {
-    skin: '#dca578', skinShade: '#c98f63', hair: '#2a1a14', hairStyle: 'long', lip: '#b85f62',
-    blazer: '#3a2230', lapel: '#4a2c3e', shirt: '#f3e6ea', accent: '#b25a7c',
-    glasses: false, facialHair: 'none', earrings: true,
+    skin: ['#f4cba8', '#e4b086', '#ca8e64', '#a97049'],
+    hair: ['#45291f', '#24130e', '#100806'],
+    lips: ['#a84e5d', '#cf7482', '#843844'],
+    iris: ['#5c3523', '#28160c'],
+    eyeLine: '#24120c',
+    jacket: ['#4d2a3f', '#321a2a', '#1f0f1a'],
+    lapel: '#5a3149', shirt: '#f3e6e8', shirtShade: '#dcc7cb',
+    accent: '#c46d8c', bg: '#190f14',
+    hairStyle: 'sleek', glasses: 'none', beard: 'none', earrings: 'stud',
+    faceScale: 0.99, brow: 'arch', lashes: true, necklace: true, crew: false,
   },
   arjun: {
-    skin: '#bd7f56', skinShade: '#a86d47', hair: '#120e0b', hairStyle: 'short', lip: '#8f4f43',
-    blazer: '#2a2a2f', lapel: '#35353b', shirt: '#e8e2d6', accent: '#c25a32',
-    glasses: false, facialHair: 'stubble', earrings: false,
+    skin: ['#d6a173', '#bc8354', '#9b643c', '#7b4a2a'],
+    hair: ['#2b2521', '#14100d', '#080605'],
+    lips: ['#8c4b3f', '#aa6052', '#6b332a'],
+    iris: ['#4c301b', '#1d1109'],
+    eyeLine: '#120c08',
+    jacket: ['#323238', '#212126', '#141418'],
+    lapel: '#3b3b43', shirt: '#202024', shirtShade: '#2b2b31',
+    accent: '#d2683f', bg: '#151110',
+    hairStyle: 'buzz', glasses: 'none', beard: 'stubble', earrings: 'none',
+    faceScale: 1.05, brow: 'thick', lashes: false, necklace: false, crew: true,
   },
   neha: {
-    skin: '#e3ad7c', skinShade: '#d09766', hair: '#1d1510', hairStyle: 'bun', lip: '#ad5f58',
-    blazer: '#1f2f2a', lapel: '#2a4038', shirt: '#e7efe9', accent: '#4f8a6d',
-    glasses: true, facialHair: 'none', earrings: true,
+    skin: ['#f0c69f', '#dda97b', '#c48a5d', '#a56f46'],
+    hair: ['#3a2a21', '#1e130e', '#0d0806'],
+    lips: ['#a95250', '#c97470', '#843c3a'],
+    iris: ['#523b24', '#22160c'],
+    eyeLine: '#1e120b',
+    jacket: ['#24483b', '#162f26', '#0d1d17'],
+    lapel: '#2d5949', shirt: '#eef2ec', shirtShade: '#d3dcd5',
+    accent: '#67a98a', bg: '#0e1713',
+    hairStyle: 'bun', glasses: 'round', beard: 'none', earrings: 'stud',
+    faceScale: 1.03, brow: 'soft', lashes: true, necklace: false, crew: false,
   },
   rohan: {
-    skin: '#d09568', skinShade: '#bb8256', hair: '#241a12', hairStyle: 'messy', lip: '#a25a4d',
-    blazer: '#33302a', lapel: '#403c34', shirt: '#2f3a42', accent: '#c08a45',
-    glasses: false, facialHair: 'stubble', earrings: false,
+    skin: ['#e4b184', '#cf9667', '#b0784b', '#8f5c35'],
+    hair: ['#423020', '#251a11', '#110c07'],
+    lips: ['#9a5849', '#b9705e', '#743d32'],
+    iris: ['#5e4329', '#26180d'],
+    eyeLine: '#1a110a',
+    jacket: ['#444331', '#2b2a1e', '#191811'],
+    lapel: '#4f4d38', shirt: '#2a3034', shirtShade: '#343b40',
+    accent: '#d29a52', bg: '#16140d',
+    hairStyle: 'messy', glasses: 'none', beard: 'stubble', earrings: 'none',
+    faceScale: 1.02, brow: 'thick', lashes: false, necklace: false, crew: true,
+    headphones: true,
   },
 };
 
@@ -87,28 +152,35 @@ interface AvatarPortraitProps {
   avatarId?: string;
   name?: string;
   title?: string;
-  state: InterviewerState;
+  state?: InterviewerState;
   /** Increments on each spoken word boundary; drives the lip-sync envelope. */
   pulse?: number;
   className?: string;
   /** Cards can opt out of the animation loop to keep a gallery cheap. */
   animated?: boolean;
   showNameplate?: boolean;
+  /** `cover` fills a tall card by cropping the sides; `contain` letterboxes. */
+  fit?: 'contain' | 'cover';
 }
 
 export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
   avatarId = 'aria',
   name,
   title,
-  state,
+  state = 'idle',
   pulse = 0,
   className,
   animated = true,
   showNameplate = true,
+  fit = 'contain',
 }) => {
   const look = LOOKS[avatarId] || LOOKS.aria;
   const displayName = name || DEFAULT_NAMES[avatarId] || DEFAULT_NAMES.aria;
   const displayTitle = title || DEFAULT_TITLES[avatarId] || DEFAULT_TITLES.aria;
+
+  // Unique gradient/filter ids: several portraits render on one page and SVG
+  // ids are document-global, so a shared prefix would cross-wire the shading.
+  const uid = `p${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -116,6 +188,7 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
   pulseRef.current = pulse;
 
   const headRef = useRef<SVGGElement>(null);
+  const bodyRef = useRef<SVGGElement>(null);
   const browRef = useRef<SVGGElement>(null);
   const mouthRef = useRef<SVGEllipseElement>(null);
   const lowerLipRef = useRef<SVGPathElement>(null);
@@ -151,27 +224,32 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
 
       const mouth = mouthRef.current;
       if (mouth) {
-        mouth.setAttribute('ry', (1.6 + open * 9.2).toFixed(2));
-        mouth.setAttribute('rx', (12.5 + open * 4).toFixed(2));
+        mouth.setAttribute('ry', (1.3 + open * 8.4).toFixed(2));
+        mouth.setAttribute('rx', (11 + open * 3.4).toFixed(2));
       }
       const lower = lowerLipRef.current;
-      if (lower) lower.setAttribute('transform', `translate(0 ${(open * 4.2).toFixed(2)})`);
+      if (lower) lower.setAttribute('transform', `translate(0 ${(open * 3.8).toFixed(2)})`);
       const teeth = teethRef.current;
       if (teeth) {
-        const show = open > 0.22;
-        teeth.setAttribute('height', show ? '2.6' : '0');
-        teeth.setAttribute('y', (141.4 - open * 9.2).toFixed(2));
+        const show = open > 0.24;
+        teeth.setAttribute('height', show ? '2.4' : '0');
+        teeth.setAttribute('y', (138.3 - open * 8.4).toFixed(2));
       }
 
       const head = headRef.current;
       if (head) {
-        const bob = current === 'speaking' ? Math.sin(now / 210) * 1.1 : Math.sin(now / 1500) * 0.5;
-        const tilt = current === 'speaking' ? Math.sin(now / 340) * 0.9 : Math.sin(now / 2100) * 0.4;
+        const bob = current === 'speaking' ? Math.sin(now / 210) * 1.1 : Math.sin(now / 1500) * 0.55;
+        const tilt = current === 'speaking' ? Math.sin(now / 340) * 0.9 : Math.sin(now / 2100) * 0.45;
         head.setAttribute('transform', `translate(0 ${bob.toFixed(2)}) rotate(${tilt.toFixed(2)} 120 104)`);
+      }
+      const body = bodyRef.current;
+      if (body) {
+        const breath = Math.sin(now / 2600) * 0.45;
+        body.setAttribute('transform', `translate(0 ${breath.toFixed(2)})`);
       }
       const brow = browRef.current;
       if (brow) {
-        const lift = current === 'speaking' ? -1.1 + Math.sin(now / 260) * 0.6 : current === 'thinking' ? -1.8 : 0;
+        const lift = current === 'speaking' ? -1.1 + Math.sin(now / 260) * 0.6 : current === 'thinking' ? -1.9 : 0;
         brow.setAttribute('transform', `translate(0 ${lift.toFixed(2)})`);
       }
 
@@ -200,8 +278,8 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
     const blink = () => {
       const left = lidLeftRef.current;
       const right = lidRightRef.current;
-      left?.setAttribute('height', '10.6');
-      right?.setAttribute('height', '10.6');
+      left?.setAttribute('height', '10.8');
+      right?.setAttribute('height', '10.8');
       window.setTimeout(() => {
         left?.setAttribute('height', '0');
         right?.setAttribute('height', '0');
@@ -213,6 +291,24 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
   }, [animated]);
 
   const statusText = state === 'speaking' ? 'Speaking' : state === 'listening' ? 'Listening' : state === 'thinking' ? 'Thinking' : 'Ready';
+  const eye = (cx: number) => (
+    <g>
+      <ellipse cx={cx} cy={106} rx={11} ry={7.2} fill={look.skin[2]} opacity={0.18} filter={`url(#${uid}-soft)`} />
+      <path d={`M${cx - 10} 105 Q${cx} 96 ${cx + 10} 105 Q${cx} 113 ${cx - 10} 105 Z`} fill="#f7f1e8" />
+      <circle cx={cx + 0.5} cy={104.6} r={4.2} fill={`url(#${uid}-iris)`} />
+      <circle cx={cx + 0.5} cy={104.6} r={1.9} fill="#120c08" />
+      <circle cx={cx - 0.8} cy={103.1} r={1.15} fill="#fff" opacity={0.95} />
+      <circle cx={cx + 2.2} cy={106.2} r={0.55} fill="#fff" opacity={0.55} />
+      <path d={`M${cx - 10.5} 104.6 Q${cx} 95.6 ${cx + 10.5} 104.6`} stroke={look.eyeLine} strokeWidth={1.7} fill="none" strokeLinecap="round" />
+      <path d={`M${cx - 7} 108.4 Q${cx} 112.2 ${cx + 7} 108.4`} stroke={look.skin[2]} strokeWidth={0.9} fill="none" opacity={0.65} />
+      {look.lashes && (
+        <g stroke={look.eyeLine} strokeWidth={1.1} strokeLinecap="round">
+          <path d={`M${cx - 9.6} 103.4 L${cx - 12} 101.2`} />
+          <path d={`M${cx + 9.6} 103.4 L${cx + 12} 101.2`} />
+        </g>
+      )}
+    </g>
+  );
 
   return (
     <div
@@ -225,140 +321,308 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
       )}
       role="img"
       aria-label={`${displayName}, AI interviewer — ${statusText.toLowerCase()}`}
+      data-avatar={avatarId}
     >
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-[0.055]"
-        style={{ backgroundImage: 'linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)', backgroundSize: '22px 22px' }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-24 opacity-40"
-        style={{ background: `radial-gradient(ellipse at 50% 0%, ${look.accent}55, transparent 70%)` }}
-      />
+      <svg viewBox="0 0 240 240" preserveAspectRatio={fit === 'cover' ? 'xMidYMid slice' : 'xMidYMid meet'} className="relative block h-full w-full" aria-hidden>
+        <defs>
+          <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="0.4" y2="1">
+            <stop offset="0%" stopColor={look.bg} />
+            <stop offset="55%" stopColor="#0c0c0f" />
+            <stop offset="100%" stopColor="#070708" />
+          </linearGradient>
+          <radialGradient id={`${uid}-glow`} cx="50%" cy="18%" r="78%">
+            <stop offset="0%" stopColor={look.accent} stopOpacity="0.32" />
+            <stop offset="52%" stopColor={look.accent} stopOpacity="0.08" />
+            <stop offset="100%" stopColor={look.accent} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id={`${uid}-vignette`} cx="50%" cy="42%" r="76%">
+            <stop offset="55%" stopColor="#000" stopOpacity="0" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0.55" />
+          </radialGradient>
+          <radialGradient id={`${uid}-skin`} cx="38%" cy="30%" r="82%">
+            <stop offset="0%" stopColor={look.skin[0]} />
+            <stop offset="48%" stopColor={look.skin[1]} />
+            <stop offset="100%" stopColor={look.skin[2]} />
+          </radialGradient>
+          <linearGradient id={`${uid}-hair`} x1="0.15" y1="0" x2="0.85" y2="1">
+            <stop offset="0%" stopColor={look.hair[0]} />
+            <stop offset="42%" stopColor={look.hair[1]} />
+            <stop offset="100%" stopColor={look.hair[2]} />
+          </linearGradient>
+          <linearGradient id={`${uid}-jacket`} x1="0.1" y1="0" x2="0.9" y2="1">
+            <stop offset="0%" stopColor={look.jacket[0]} />
+            <stop offset="55%" stopColor={look.jacket[1]} />
+            <stop offset="100%" stopColor={look.jacket[2]} />
+          </linearGradient>
+          <radialGradient id={`${uid}-iris`} cx="35%" cy="30%" r="80%">
+            <stop offset="0%" stopColor={look.iris[0]} />
+            <stop offset="62%" stopColor={look.iris[1]} />
+            <stop offset="100%" stopColor="#100a06" />
+          </radialGradient>
+          <linearGradient id={`${uid}-lip`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={look.lips[1]} />
+            <stop offset="52%" stopColor={look.lips[0]} />
+            <stop offset="100%" stopColor={look.lips[2]} />
+          </linearGradient>
+          <filter id={`${uid}-soft`} x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3" />
+          </filter>
+          <filter id={`${uid}-blur`} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+        </defs>
 
-      <svg viewBox="0 0 240 220" className="relative block h-full w-full" aria-hidden>
-        {/* back hair */}
-        {look.hairStyle === 'long' && (
-          <>
-            <path
-              d="M62 122 C62 66 88 40 120 40 C152 40 178 66 178 122 L178 170 C178 181 169 187 157 187 L157 122 C157 104 142 94 120 94 C98 94 83 104 83 122 L83 187 C71 187 62 181 62 170 Z"
-              fill={look.hair}
-            />
-            <circle cx="120" cy="34" r="15" fill={look.hair} />
-          </>
-        )}
-        {look.hairStyle === 'short' && (
-          <path d="M70 122 C70 76 92 48 120 48 C148 48 170 76 170 122 L170 140 C170 150 164 155 156 155 L156 118 C156 102 141 92 120 92 C99 92 84 102 84 118 L84 155 C76 155 70 150 70 140 Z" fill={look.hair} />
-        )}
-        {look.hairStyle === 'bun' && (
-          <>
-            <circle cx="120" cy="28" r="17" fill={look.hair} />
-            <path d="M68 122 C68 74 92 46 120 46 C148 46 172 74 172 122 L172 150 C172 160 166 165 158 165 L158 118 C158 102 142 92 120 92 C98 92 82 102 82 118 L82 165 C74 165 68 160 68 150 Z" fill={look.hair} />
-          </>
-        )}
-        {look.hairStyle === 'messy' && (
-          <>
-            <path d="M70 120 C68 78 92 46 120 46 C150 46 172 78 170 120 L170 142 C170 152 164 157 156 157 L156 118 C156 102 141 92 120 92 C99 92 84 102 84 118 L84 157 C76 157 70 152 70 142 Z" fill={look.hair} />
-            <path d="M86 56 L76 36 L96 46 Z M112 44 L108 22 L126 40 Z M144 46 L158 28 L154 52 Z" fill={look.hair} />
-          </>
-        )}
+        {/* studio backdrop */}
+        <rect width="240" height="240" fill={`url(#${uid}-bg)`} />
+        <rect width="240" height="240" fill={`url(#${uid}-glow)`} />
+        <circle cx="44" cy="58" r="4" fill={look.accent} opacity="0.22" filter={`url(#${uid}-soft)`} />
+        <circle cx="196" cy="88" r="5" fill={look.accent} opacity="0.16" filter={`url(#${uid}-soft)`} />
+        <circle cx="206" cy="42" r="2" fill="#fff" opacity="0.18" />
+        <circle cx="34" cy="120" r="1.6" fill="#fff" opacity="0.12" />
+        <ellipse cx="120" cy="232" rx="118" ry="30" fill="#000" opacity="0.5" filter={`url(#${uid}-blur)`} />
 
-        {/* neck */}
-        <rect x="107" y="132" width="26" height="42" rx="11" fill={look.skinShade} />
+        {/* neck, behind the shoulders and face */}
+        <path d="M105 138 L135 138 L137 181 C137 190 129 195 120 195 C111 195 103 190 103 181 Z" fill={look.skin[2]} />
+        <path d="M105 138 C109 152 131 152 135 138 L135 152 C129 161 111 161 105 152 Z" fill={look.skin[3]} opacity="0.45" filter={`url(#${uid}-soft)`} />
 
-        {/* outfit */}
-        <path d="M28 220 C40 184 76 171 120 171 C164 171 200 184 212 220 Z" fill={look.blazer} />
-        <path d="M107 172 L120 199 L133 172 Z" fill={look.shirt} />
-        <path d="M99 175 L120 205 L108 220 L88 188 Z" fill={look.lapel} />
-        <path d="M141 175 L120 205 L132 220 L152 188 Z" fill={look.lapel} />
+        {/* shoulders / outfit */}
+        <g ref={bodyRef}>
+          <path d="M10 240 C20 198 56 180 94 172 L120 197 L146 172 C184 180 220 198 230 240 Z" fill={`url(#${uid}-jacket)`} />
 
-        <g ref={headRef}>
-          {/* ears + earrings */}
-          <ellipse cx="72" cy="107" rx="7.5" ry="11" fill={look.skinShade} />
-          <ellipse cx="168" cy="107" rx="7.5" ry="11" fill={look.skinShade} />
-          {look.earrings && (
+          {look.crew ? (
             <>
-              <circle cx="72" cy="120" r="2.4" fill="#d9b36a" />
-              <circle cx="168" cy="120" r="2.4" fill="#d9b36a" />
+              <path d="M94 172 C100 190 109 198 120 198 C131 198 140 190 146 172 C138 181 129 186 120 186 C111 186 102 181 94 172 Z" fill={look.shirt} />
+              <path d="M94 172 C100 190 109 198 120 198" stroke={look.shirtShade} strokeWidth="2" fill="none" opacity="0.7" />
+            </>
+          ) : (
+            <>
+              <path d="M94 172 L120 201 L146 172 C139 167 130 164 120 164 C110 164 101 167 94 172 Z" fill={look.shirt} />
+              <path d="M104 171 L120 190 L112 196 L95 177 Z" fill={look.shirtShade} opacity="0.85" />
+              <path d="M136 171 L120 190 L128 196 L145 177 Z" fill={look.shirtShade} opacity="0.85" />
             </>
           )}
 
-          {/* face */}
-          <ellipse cx="120" cy="104" rx="48" ry="55" fill={look.skin} />
+          <path d="M94 172 L120 201 L107 240 L68 198 C76 185 84 178 94 172 Z" fill={look.lapel} />
+          <path d="M146 172 L120 201 L133 240 L172 198 C164 185 156 178 146 172 Z" fill={look.lapel} />
+          <path d="M94 172 L120 201" stroke={look.jacket[0]} strokeWidth="1.2" opacity="0.5" fill="none" />
+          <path d="M146 172 L120 201" stroke={look.jacket[0]} strokeWidth="1.2" opacity="0.5" fill="none" />
 
-          {/* fringe */}
-          {look.hairStyle === 'long' && (
-            <>
-              <path d="M74 94 C76 60 95 46 120 46 C145 46 164 60 166 94 C154 72 139 64 120 64 C101 64 86 72 74 94 Z" fill={look.hair} />
-              <path d="M74 94 C70 82 72 68 80 58 C78 72 80 86 84 96 Z" fill={look.hair} />
-              <path d="M166 94 C170 82 168 68 160 58 C162 72 160 86 156 96 Z" fill={look.hair} />
-            </>
-          )}
-          {look.hairStyle === 'short' && (
-            <path d="M76 96 C78 62 96 48 120 48 C144 48 162 62 164 96 C154 74 138 66 120 66 C102 66 86 74 76 96 Z" fill={look.hair} />
-          )}
-          {look.hairStyle === 'bun' && (
-            <path d="M76 94 C78 62 96 50 120 50 C144 50 162 62 164 94 C154 72 138 64 120 64 C102 64 86 72 76 94 Z" fill={look.hair} />
-          )}
-          {look.hairStyle === 'messy' && (
-            <>
-              <path d="M74 96 C76 60 96 46 120 46 C146 46 164 60 166 96 C154 72 138 64 120 64 C102 64 86 72 74 96 Z" fill={look.hair} />
-              <path d="M84 70 L72 52 L90 60 Z M128 54 L136 34 L146 58 Z" fill={look.hair} />
-            </>
-          )}
+          <path d="M70 210 C78 220 82 230 82 240" stroke={look.jacket[2]} strokeWidth="2.4" opacity="0.65" fill="none" />
+          <path d="M170 210 C162 220 158 230 158 240" stroke={look.jacket[2]} strokeWidth="2.4" opacity="0.65" fill="none" />
+          <path d="M58 198 C72 204 82 216 86 228" stroke="#fff" strokeWidth="1.2" opacity="0.06" fill="none" />
+          <path d="M182 198 C168 204 158 216 154 228" stroke="#fff" strokeWidth="1" opacity="0.05" fill="none" />
 
-          {/* brows */}
-          <g ref={browRef}>
-            <path d="M93 88 Q101 84 110 87" stroke="#3a2b22" strokeWidth="3" strokeLinecap="round" fill="none" />
-            <path d="M130 87 Q139 84 147 88" stroke="#3a2b22" strokeWidth="3" strokeLinecap="round" fill="none" />
-          </g>
-
-          {/* eyes */}
-          <ellipse cx="100" cy="102" rx="8.4" ry="5.2" fill="#f6efe6" />
-          <ellipse cx="140" cy="102" rx="8.4" ry="5.2" fill="#f6efe6" />
-          <circle cx="100.5" cy="102" r="3.6" fill="#3d2c22" />
-          <circle cx="139.5" cy="102" r="3.6" fill="#3d2c22" />
-          <circle cx="99.4" cy="100.9" r="1.1" fill="#ffffff" opacity="0.9" />
-          <circle cx="138.4" cy="100.9" r="1.1" fill="#ffffff" opacity="0.9" />
-          <rect ref={lidLeftRef} x="91.4" y="96.6" width="17.2" height="0" rx="8" fill={look.skin} />
-          <rect ref={lidRightRef} x="131.4" y="96.6" width="17.2" height="0" rx="8" fill={look.skin} />
-
-          {/* glasses */}
-          {look.glasses && (
-            <g stroke={look.accent} strokeWidth="2.2" fill="none" opacity="0.95">
-              <rect x="89" y="93" width="22" height="18" rx="6" />
-              <rect x="129" y="93" width="22" height="18" rx="6" />
-              <path d="M111 101 Q120 97 129 101" />
-              <path d="M89 99 L80 97 M151 99 L160 97" />
+          {look.necklace && (
+            <g>
+              <path d="M104 184 Q120 199 136 184" stroke="#d9b36a" strokeWidth="1.3" fill="none" opacity="0.9" />
+              <circle cx="120" cy="197" r="2.1" fill="#e5c27c" />
             </g>
           )}
 
-          {/* nose */}
-          <path d="M120 104 C118 111 116 115 113 118 Q120 121 127 118" stroke="#c9905f" strokeWidth="2" fill="none" strokeLinecap="round" />
+          {look.headphones && (
+            <g>
+              <path d="M84 207 C88 180 152 180 156 207" stroke="#17171b" strokeWidth="8" fill="none" strokeLinecap="round" />
+              <path d="M84 207 C88 180 152 180 156 207" stroke={look.accent} strokeWidth="1.2" opacity="0.45" fill="none" />
+              <rect x="74" y="196" width="17" height="25" rx="6" fill="#1b1b20" stroke="#35363d" strokeWidth="1" />
+              <rect x="149" y="196" width="17" height="25" rx="6" fill="#1b1b20" stroke="#35363d" strokeWidth="1" />
+              <circle cx="82.5" cy="208.5" r="4" fill="none" stroke={look.accent} strokeWidth="1.2" opacity="0.7" />
+              <circle cx="157.5" cy="208.5" r="4" fill="none" stroke={look.accent} strokeWidth="1.2" opacity="0.7" />
+            </g>
+          )}
+        </g>
 
-          {/* cheeks */}
-          <ellipse cx="88" cy="121" rx="9" ry="5.5" fill="#e39a76" opacity="0.22" />
-          <ellipse cx="152" cy="121" rx="9" ry="5.5" fill="#e39a76" opacity="0.22" />
-
-          {/* facial hair */}
-          {look.facialHair !== 'none' && (
+        <g ref={headRef}>
+          {/* back hair */}
+          {look.hairStyle === 'wavy' && (
             <>
-              <path
-                d="M82 118 C86 150 102 163 120 163 C138 163 154 150 158 118 C150 142 138 151 120 151 C102 151 90 142 82 118 Z"
-                fill={look.hair}
-                opacity={look.facialHair === 'beard' ? 0.92 : 0.28}
-              />
-              <path d="M108 130 Q120 126 132 130 Q120 134 108 130 Z" fill={look.hair} opacity={look.facialHair === 'beard' ? 0.9 : 0.3} />
+              <path d="M120 28 C79 28 55 59 57 108 C58 140 49 168 58 195 C64 213 85 217 95 204 C86 180 90 154 89 128 C88 106 101 90 120 90 C139 90 152 106 151 128 C150 154 154 180 145 204 C155 217 176 213 182 195 C191 168 182 140 183 108 C185 59 161 28 120 28 Z" fill={`url(#${uid}-hair)`} />
+              <path d="M69 96 C67 140 61 176 67 198" stroke={look.hair[0]} strokeWidth="2" opacity="0.3" fill="none" strokeLinecap="round" />
+              <path d="M171 96 C173 140 179 176 173 198" stroke={look.hair[0]} strokeWidth="1.6" opacity="0.22" fill="none" strokeLinecap="round" />
+            </>
+          )}
+          {look.hairStyle === 'crop' && (
+            <path d="M69 106 C67 63 92 41 120 41 C148 41 173 63 171 106 L171 117 C168 92 152 78 120 78 C88 78 72 92 69 117 Z" fill={`url(#${uid}-hair)`} />
+          )}
+          {look.hairStyle === 'sleek' && (
+            <>
+              <path d="M120 26 C79 26 57 57 59 108 L59 201 C59 212 70 216 80 209 L82 122 C82 100 97 88 120 88 C143 88 158 100 158 122 L160 209 C170 216 181 212 181 201 L181 108 C183 57 161 26 120 26 Z" fill={`url(#${uid}-hair)`} />
+              <path d="M70 100 C68 142 68 176 72 202" stroke={look.hair[0]} strokeWidth="1.8" opacity="0.28" fill="none" strokeLinecap="round" />
+              <path d="M170 100 C172 142 172 176 168 202" stroke={look.hair[0]} strokeWidth="1.5" opacity="0.2" fill="none" strokeLinecap="round" />
+            </>
+          )}
+          {look.hairStyle === 'buzz' && (
+            <path d="M73 102 C73 66 94 45 120 45 C146 45 167 66 167 102 L167 111 C161 86 144 73 120 73 C96 73 79 86 73 111 Z" fill={`url(#${uid}-hair)`} opacity="0.92" />
+          )}
+          {look.hairStyle === 'bun' && (
+            <>
+              <circle cx="120" cy="29" r="19" fill={`url(#${uid}-hair)`} />
+              <circle cx="114" cy="24" r="7" fill={look.hair[0]} opacity="0.25" filter={`url(#${uid}-soft)`} />
+              <path d="M120 33 C83 33 61 62 62 110 L62 160 C62 172 74 176 84 169 L84 122 C84 102 99 90 120 90 C141 90 156 102 156 122 L156 169 C166 176 178 172 178 160 L178 110 C179 62 157 33 120 33 Z" fill={`url(#${uid}-hair)`} />
+              <path d="M74 108 C72 136 72 152 75 166" stroke={look.hair[0]} strokeWidth="1.6" opacity="0.24" fill="none" strokeLinecap="round" />
+            </>
+          )}
+          {look.hairStyle === 'messy' && (
+            <>
+              <path d="M120 28 C81 28 57 59 59 108 C60 138 53 165 62 188 C68 204 86 208 96 197 C88 173 92 150 90 126 C89 106 101 90 120 90 C139 90 151 106 150 126 C148 150 152 173 144 197 C154 208 172 204 178 188 C187 165 180 138 181 108 C183 59 159 28 120 28 Z" fill={`url(#${uid}-hair)`} />
+              <path d="M70 96 C68 138 63 170 69 190" stroke={look.hair[0]} strokeWidth="1.8" opacity="0.24" fill="none" strokeLinecap="round" />
             </>
           )}
 
-          {/* mouth */}
-          <ellipse ref={mouthRef} cx="120" cy="142.5" rx="12.5" ry="1.6" fill="#4b2420" />
-          <rect ref={teethRef} x="109.5" y="141.4" width="21" height="0" rx="1.6" fill="#f7f0e6" />
-          <path d="M102 141 Q111 136 120 139 Q129 136 138 141 Q129 142.6 120 141.6 Q111 142.6 102 141 Z" fill={look.lip} />
-          <path ref={lowerLipRef} d="M104 142.6 Q120 152.4 136 142.6 Q120 149.2 104 142.6 Z" fill={look.lip} opacity="0.82" />
+          {/* ears */}
+          <ellipse cx="72" cy="108" rx="7" ry="11" fill={look.skin[2]} />
+          <ellipse cx="168" cy="108" rx="7" ry="11" fill={look.skin[2]} />
+          <path d="M70 104 Q75 108 71 114" stroke={look.skin[3]} strokeWidth="1.4" fill="none" opacity="0.6" />
+          <path d="M170 104 Q165 108 169 114" stroke={look.skin[3]} strokeWidth="1.4" fill="none" opacity="0.6" />
+
+          {/* face */}
+          <g transform={look.faceScale !== 1 ? `translate(120 104) scale(${look.faceScale} 1) translate(-120 -104)` : undefined}>
+            <path d="M120 50 C151 50 167 71 167 102 C167 133 149 159 120 160 C91 159 73 133 73 102 C73 71 89 50 120 50 Z" fill={`url(#${uid}-skin)`} />
+
+            {/* lighting and occlusion */}
+            <path d="M82 118 C86 144 102 156 120 156 C138 156 154 144 158 118 C150 140 136 148 120 148 C104 148 90 140 82 118 Z" fill={look.skin[3]} opacity="0.24" filter={`url(#${uid}-soft)`} />
+            <path d="M75 94 C77 76 87 63 100 58 C89 71 83 84 81 100 Z" fill={look.skin[2]} opacity="0.28" filter={`url(#${uid}-soft)`} />
+            <ellipse cx="103" cy="78" rx="23" ry="13" fill="#fff" opacity="0.09" filter={`url(#${uid}-blur)`} />
+            <ellipse cx="92" cy="121" rx="11" ry="7" fill={look.skin[0]} opacity="0.4" filter={`url(#${uid}-soft)`} />
+            <ellipse cx="148" cy="121" rx="10" ry="6" fill={look.skin[0]} opacity="0.28" filter={`url(#${uid}-soft)`} />
+            <ellipse cx="88" cy="123" rx="10" ry="5" fill="#d97a63" opacity="0.15" filter={`url(#${uid}-soft)`} />
+            <ellipse cx="152" cy="123" rx="9" ry="4.5" fill="#d97a63" opacity="0.12" filter={`url(#${uid}-soft)`} />
+            {/* rim light along the right jaw */}
+            <path d="M164 94 C165 120 153 145 128 157" stroke={look.accent} strokeWidth="3" opacity="0.38" fill="none" strokeLinecap="round" filter={`url(#${uid}-soft)`} />
+            <path d="M78 96 C77 118 84 138 98 149" stroke="#fff" strokeWidth="2" opacity="0.06" fill="none" strokeLinecap="round" filter={`url(#${uid}-soft)`} />
+
+            {/* front hair */}
+            {look.hairStyle === 'wavy' && (
+              <>
+                <path d="M75 97 C77 59 96 39 122 39 C141 39 155 46 163 60 C150 57 139 61 129 69 C115 81 99 84 87 78 C81 75 77 85 75 97 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M82 78 C92 85 109 82 121 71" stroke={look.hair[0]} strokeWidth="2.2" opacity="0.38" fill="none" strokeLinecap="round" />
+                <path d="M74 96 C70 84 72 68 80 56" stroke={look.hair[2]} strokeWidth="3" opacity="0.5" fill="none" strokeLinecap="round" />
+                <path d="M156 60 C160 68 163 80 163 92" stroke={look.hair[0]} strokeWidth="1.6" opacity="0.3" fill="none" strokeLinecap="round" />
+              </>
+            )}
+            {look.hairStyle === 'crop' && (
+              <>
+                <path d="M73 97 C73 57 94 39 120 39 C146 39 167 57 167 97 C158 74 142 64 120 64 C98 64 82 74 73 97 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M80 74 C94 62 111 58 127 61" stroke={look.hair[0]} strokeWidth="2" opacity="0.32" fill="none" strokeLinecap="round" />
+                <path d="M158 72 C162 80 165 88 166 96" stroke={look.hair[2]} strokeWidth="2" opacity="0.5" fill="none" strokeLinecap="round" />
+              </>
+            )}
+            {look.hairStyle === 'sleek' && (
+              <>
+                <path d="M73 99 C73 59 94 39 119 39 C113 58 104 72 92 82 C86 87 79 93 73 99 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M167 99 C167 59 146 39 121 39 C127 58 136 72 148 82 C154 87 161 93 167 99 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M120 40 L120 63" stroke={look.hair[2]} strokeWidth="1.4" opacity="0.5" />
+                <path d="M84 78 C90 70 96 60 100 50" stroke={look.hair[0]} strokeWidth="1.8" opacity="0.32" fill="none" strokeLinecap="round" />
+                <path d="M156 78 C150 70 144 60 140 50" stroke={look.hair[0]} strokeWidth="1.4" opacity="0.26" fill="none" strokeLinecap="round" />
+              </>
+            )}
+            {look.hairStyle === 'buzz' && (
+              <>
+                <path d="M75 99 C75 63 96 45 120 45 C144 45 165 63 165 99 C158 78 142 69 120 69 C98 69 82 78 75 99 Z" fill={`url(#${uid}-hair)`} opacity="0.94" />
+                <path d="M84 76 C96 66 108 62 120 62" stroke={look.hair[0]} strokeWidth="1.6" opacity="0.2" fill="none" strokeLinecap="round" />
+              </>
+            )}
+            {look.hairStyle === 'bun' && (
+              <>
+                <path d="M75 97 C76 61 95 43 120 43 C145 43 164 61 165 97 C157 76 141 66 120 66 C99 66 83 76 75 97 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M90 60 C102 52 116 49 130 53" stroke={look.hair[0]} strokeWidth="1.8" opacity="0.32" fill="none" strokeLinecap="round" />
+              </>
+            )}
+            {look.hairStyle === 'messy' && (
+              <>
+                <path d="M73 99 C75 59 94 39 120 39 C146 39 165 59 167 99 C157 76 142 66 122 68 C104 70 88 78 73 99 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M86 58 L72 39 L93 49 Z M116 45 L112 23 L130 41 Z M144 49 L161 31 L154 56 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M90 64 C104 54 122 50 138 58" stroke={look.hair[0]} strokeWidth="1.8" opacity="0.34" fill="none" strokeLinecap="round" />
+              </>
+            )}
+
+            {/* earrings sit over the ear, under the jaw line */}
+            {look.earrings === 'hoop' && (
+              <>
+                <circle cx="72" cy="121" r="4" fill="none" stroke="#d9b36a" strokeWidth="1.4" />
+                <circle cx="168" cy="121" r="4" fill="none" stroke="#d9b36a" strokeWidth="1.4" />
+              </>
+            )}
+            {look.earrings === 'stud' && (
+              <>
+                <circle cx="72" cy="119" r="1.9" fill="#e5c27c" />
+                <circle cx="168" cy="119" r="1.9" fill="#e5c27c" />
+              </>
+            )}
+
+            {/* brows */}
+            <g ref={browRef}>
+              {look.brow === 'thick' ? (
+                <>
+                  <path d="M89 91.5 Q101 86.5 112 91" stroke={look.hair[1]} strokeWidth="3.6" strokeLinecap="round" fill="none" />
+                  <path d="M128 91 Q139 86.5 151 91.5" stroke={look.hair[1]} strokeWidth="3.6" strokeLinecap="round" fill="none" />
+                </>
+              ) : look.brow === 'arch' ? (
+                <>
+                  <path d="M90 92 Q101 85.5 112 90" stroke={look.hair[1]} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                  <path d="M128 90 Q139 85.5 150 92" stroke={look.hair[1]} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                </>
+              ) : (
+                <>
+                  <path d="M90 91 Q101 86.5 111 90.5" stroke={look.hair[1]} strokeWidth="2.9" strokeLinecap="round" fill="none" />
+                  <path d="M129 90.5 Q139 86.5 150 91" stroke={look.hair[1]} strokeWidth="2.9" strokeLinecap="round" fill="none" />
+                </>
+              )}
+            </g>
+
+            {/* eyes */}
+            {eye(101)}
+            {eye(139)}
+            <rect ref={lidLeftRef} x="90.4" y="97.6" width="21.2" height="0" rx="10" fill={look.skin[1]} />
+            <rect ref={lidRightRef} x="128.4" y="97.6" width="21.2" height="0" rx="10" fill={look.skin[1]} />
+
+            {/* glasses */}
+            {look.glasses === 'rect' && (
+              <g>
+                <rect x="88" y="97" width="26" height="17" rx="4" fill="#dfe9f2" fillOpacity="0.06" stroke="#2a2f36" strokeWidth="2" />
+                <rect x="126" y="97" width="26" height="17" rx="4" fill="#dfe9f2" fillOpacity="0.06" stroke="#2a2f36" strokeWidth="2" />
+                <path d="M114 103 Q120 100 126 103" stroke="#2a2f36" strokeWidth="2" fill="none" />
+                <path d="M88 102 L79 100 M152 102 L161 100" stroke="#2a2f36" strokeWidth="2" fill="none" strokeLinecap="round" />
+                <path d="M92 100 L98 109" stroke="#fff" strokeWidth="1.4" opacity="0.18" />
+                <path d="M130 100 L136 109" stroke="#fff" strokeWidth="1.2" opacity="0.12" />
+              </g>
+            )}
+            {look.glasses === 'round' && (
+              <g>
+                <circle cx="101" cy="105" r="13" fill="#f6e7c8" fillOpacity="0.05" stroke="#c9a55e" strokeWidth="1.8" />
+                <circle cx="139" cy="105" r="13" fill="#f6e7c8" fillOpacity="0.05" stroke="#c9a55e" strokeWidth="1.8" />
+                <path d="M114 103 Q120 100 126 103" stroke="#c9a55e" strokeWidth="1.8" fill="none" />
+                <path d="M88 103 L79 101 M152 103 L161 101" stroke="#c9a55e" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+                <path d="M94 100 Q98 97 103 97" stroke="#fff" strokeWidth="1.3" opacity="0.2" fill="none" />
+              </g>
+            )}
+
+            {/* nose */}
+            <path d="M120 106 C118 114 115 119 111 122 Q120 126 129 122" stroke={look.skin[2]} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+            <path d="M118 108 C117 114 115 118 113 121" stroke="#fff" strokeWidth="2" opacity="0.1" fill="none" strokeLinecap="round" />
+            <ellipse cx="120" cy="122" rx="6" ry="2.4" fill={look.skin[0]} opacity="0.18" />
+            <circle cx="111" cy="122" r="1.1" fill={look.skin[3]} opacity="0.5" />
+            <circle cx="129" cy="122" r="1.1" fill={look.skin[3]} opacity="0.5" />
+
+            {/* facial hair */}
+            {look.beard !== 'none' && (
+              <g opacity={look.beard === 'full' ? 0.96 : 0.22}>
+                <path d="M78 111 C80 146 97 164 120 164 C143 164 160 146 162 111 C158 140 144 154 120 154 C96 154 82 140 78 111 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M103 131 Q120 125 137 131 Q120 136 103 131 Z" fill={`url(#${uid}-hair)`} />
+                <path d="M88 120 C92 142 104 152 120 152" stroke={look.hair[0]} strokeWidth="1.4" opacity="0.25" fill="none" />
+              </g>
+            )}
+
+            {/* mouth */}
+            <path d="M106 138.5 Q112 133.5 120 136 Q128 133.5 134 138.5 Q127 139.6 120 139.1 Q113 139.6 106 138.5 Z" fill={look.lips[2]} />
+            <ellipse ref={mouthRef} cx="120" cy="139.2" rx="11" ry="1.3" fill="#3b1a18" />
+            <rect ref={teethRef} x="110" y="138.3" width="20" height="0" rx="1.5" fill="#f8f1e7" />
+            <path ref={lowerLipRef} d="M105 139.8 Q120 150.5 135 139.8 Q120 146.5 105 139.8 Z" fill={`url(#${uid}-lip)`} />
+            <path d="M108 143 Q120 148 132 143" stroke="#fff" strokeWidth="1.2" opacity="0.18" fill="none" />
+            <ellipse cx="120" cy="152" rx="12" ry="3" fill={look.skin[3]} opacity="0.12" filter={`url(#${uid}-soft)`} />
+          </g>
         </g>
+
+        <rect width="240" height="240" fill={`url(#${uid}-vignette)`} />
       </svg>
 
       {showNameplate && (

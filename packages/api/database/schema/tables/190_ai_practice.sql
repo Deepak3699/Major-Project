@@ -35,6 +35,11 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
   question_count SMALLINT NOT NULL DEFAULT 6,
   status TEXT NOT NULL DEFAULT 'in_progress',
   model TEXT NOT NULL DEFAULT 'template',
+  avatar_id TEXT NOT NULL DEFAULT 'aria',
+  job_id UUID REFERENCES job_postings(id) ON DELETE SET NULL,
+  job_title TEXT NOT NULL DEFAULT '',
+  job_company TEXT NOT NULL DEFAULT '',
+  opening_line TEXT NOT NULL DEFAULT '',
   overall_score SMALLINT,
   verdict TEXT NOT NULL DEFAULT '',
   summary TEXT NOT NULL DEFAULT '',
@@ -52,6 +57,7 @@ CREATE TABLE IF NOT EXISTS interview_questions (
   question TEXT NOT NULL,
   ideal_points JSONB NOT NULL DEFAULT '[]'::jsonb,
   answer TEXT NOT NULL DEFAULT '',
+  interviewer_reply TEXT NOT NULL DEFAULT '',
   feedback JSONB NOT NULL DEFAULT 'null'::jsonb,
   score SMALLINT,
   answered_at TIMESTAMPTZ,
@@ -81,6 +87,10 @@ CREATE TABLE IF NOT EXISTS learning_module_progress (
 
 CREATE INDEX IF NOT EXISTS idx_interview_sessions_user_started
   ON interview_sessions (user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interview_sessions_avatar
+  ON interview_sessions (user_id, avatar_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_interview_sessions_job
+  ON interview_sessions (job_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_interview_questions_session
   ON interview_questions (session_id, idx);
 CREATE INDEX IF NOT EXISTS idx_practice_upgrade_requests_pending

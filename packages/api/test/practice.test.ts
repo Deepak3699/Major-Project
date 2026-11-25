@@ -33,6 +33,7 @@ const QUESTION_ID = '22222222-2222-4222-8222-222222222222';
 const TRACK_ID = '33333333-3333-4333-8333-333333333333';
 const UPREQ_ID = '44444444-4444-4444-8444-444444444444';
 const FOLLOW_UP_ID = '66666666-6666-4666-8666-666666666666';
+const JOB_ID = '77777777-7777-4777-8777-777777777777';
 
 delete process.env.GEMINI_API_KEY;
 
@@ -130,6 +131,84 @@ describe('AI practice routes', () => {
     const body = JSON.parse(res.body);
     expect(body.session).toMatchObject({ status: 'in_progress', role_focus: 'Frontend Developer', model: 'template', question_count: 6 });
     expect(body.session.overall_score).toBeNull();
+  });
+
+  test('GET /avatars recommends a data interviewer for an analytics job', async () => {
+    mockSqlUnsafe.mockImplementation(async (query: string) => {
+      if (query.includes('FROM job_postings jp')) {
+        return [{
+          id: JOB_ID,
+          title: 'Data Analyst',
+          skills: ['SQL', 'Tableau', 'Experimentation'],
+          description: 'Build dashboards and run A/B tests for the growth team.',
+          about_job: '',
+          company_name: 'Acme Analytics',
+        }];
+      }
+      return defaultImpl(query);
+    });
+
+    const res = await app.inject({ method: 'GET', url: `/candidate/practice/avatars?job_id=${JOB_ID}` });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.avatars).toHaveLength(6);
+    expect(body.avatars[0]).toMatchObject({ id: 'aria', voice: { lang: 'en-IN' } });
+    expect(body.recommended.avatar_id).toBe('neha');
+    expect(body.recommended.reason).toMatch(/data analyst/i);
+    expect(body.job).toMatchObject({ title: 'Data Analyst', company: 'Acme Analytics' });
+
+    // An unrecognised role has no keyword evidence, so the generalist leads.
+    const generic = await app.inject({ method: 'GET', url: '/candidate/practice/avatars?role_focus=Astronaut' });
+    expect(generic.statusCode).toBe(200);
+    expect(JSON.parse(generic.body).recommended.avatar_id).toBe('aria');
+  });
+
+  test('POST /sessions pins the chosen avatar and job to the session', async () => {
+    mockSqlUnsafe.mockImplementation(async (query: string, params?: any[]) => {
+      if (query.includes('FROM job_postings jp')) {
+        return [{
+          id: JOB_ID,
+          title: 'Data Analyst',
+          skills: ['SQL', 'Tableau'],
+          description: 'Dashboards and experiments.',
+          about_job: '',
+          company_name: 'Acme Analytics',
+        }];
+      }
+      if (query.includes('INSERT INTO interview_sessions')) {
+        return [{
+          id: SESSION_ID,
+          status: 'in_progress',
+          role_focus: 'Data Analyst',
+          difficulty: 'standard',
+          question_count: 6,
+          model: 'template',
+          avatar_id: params?.[5],
+          job_id: params?.[6],
+          job_title: params?.[7],
+          job_company: params?.[8],
+          opening_line: params?.[9],
+          overall_score: null,
+          verdict: '',
+          summary: '',
+          started_at: new Date().toISOString(),
+          completed_at: null,
+        }];
+      }
+      return defaultImpl(query);
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/candidate/practice/sessions',
+      payload: { job_id: JOB_ID, avatar_id: 'vikram', difficulty: 'standard', question_count: 6 },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.body);
+    expect(body.session.avatar).toMatchObject({ id: 'vikram', name: 'Vikram Rao' });
+    expect(body.session.job).toMatchObject({ id: JOB_ID, title: 'Data Analyst', company: 'Acme Analytics' });
+    expect(body.session.opening_line).toMatch(/Vikram Rao/);
+    expect(body.session.opening_line).toMatch(/Data Analyst/);
   });
 
   test('POST /sessions/:id/answer grades a submission and returns feedback', async () => {

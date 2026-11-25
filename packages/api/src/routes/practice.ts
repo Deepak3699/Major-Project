@@ -10,8 +10,16 @@ import {
   summarizeSession,
   generateLearningTrack,
   generateFollowUp,
+  generateOpeningLine,
+  generateInterviewerReply,
   type Difficulty,
 } from '../utils/practice-ai';
+import {
+  AVATARS,
+  getAvatar,
+  recommendAvatar,
+  type JobContext,
+} from '../utils/interview-avatars';
 import type { SubscriptionState, SessionRecord } from '../types/practice';
 
 /**
@@ -37,6 +45,13 @@ const startSchema = z.object({
   role_focus: z.string().trim().min(2).max(120).optional(),
   difficulty: z.enum(DIFFICULTIES).default('standard'),
   question_count: z.coerce.number().int().min(4).max(8).default(6),
+  avatar_id: z.string().trim().max(40).optional(),
+  job_id: idSchema.optional(),
+});
+
+const avatarQuerySchema = z.object({
+  job_id: idSchema.optional(),
+  role_focus: z.string().trim().max(120).optional(),
 });
 
 const answerSchema = z.object({
@@ -125,6 +140,43 @@ async function loadProfile(sql: ReturnType<typeof getDB>, userId: string) {
   return (rows[0] as any) || {};
 }
 
+/**
+ * Load the specific job a session is being practised for. Returns null for a
+ * missing / deleted / unpublished job so the session still starts with the
+ * role string instead of failing the candidate's click.
+ */
+async function loadJobContext(sql: ReturnType<typeof getDB>, jobId?: string | null): Promise<JobContext | null> {
+  if (!jobId) return null;
+  const rows = await sql.unsafe(
+    `SELECT jp.id, jp.title, jp.skills, jp.description, jp.about_job, c.name AS company_name
+       FROM job_postings jp
+       LEFT JOIN companies c ON c.id = jp.company_id
+      WHERE jp.id = $1
+        AND jp.is_active = true
+        AND jp.review_status = 'published'
+      LIMIT 1`,
+    [jobId],
+  );
+  const job = rows[0] as any;
+  if (!job) return null;
+  const skills = Array.isArray(job.skills)
+    ? job.skills.map((s: any) => String(s || '').trim()).filter(Boolean).slice(0, 25)
+    : [];
+  return {
+    id: String(job.id),
+    title: String(job.title || '').trim() || 'General',
+    company: String(job.company_name || '').trim(),
+    description: String(job.description || ''),
+    about_job: String(job.about_job || ''),
+    skills,
+  };
+}
+
+function candidateFirstName(profile: Record<string, any>): string {
+  const raw = String(profile?.full_name || profile?.name || '').trim();
+  return raw.split(/\s+/).filter(Boolean)[0] || '';
+}
+
 async function simpleAudit(userId: string, action: string, targetId: string | null, detail: Record<string, unknown>) {
   try {
     // logAuditEvent owns its own connection and swallows nothing — audit stays
@@ -173,6 +225,32 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send({ request_id: (created[0] as any).id, status: 'pending', message: 'Request received. An administrator reviews Pro upgrades.' });
   });
 
+  /* ------------------------ interviewer roster ------------------------ */
+
+  fastify.get('/avatars', async (request, reply) => {
+    if (!isCandidate(request, reply)) return;
+    const parsed = avatarQuerySchema.safeParse(request.query || {});
+    if (!parsed.success) return reply.status(400).send({ error: 'Invalid avatar query', details: parsed.error.issues });
+    const sql = getDB();
+    const userId = currentUser(request).id;
+
+    const job = parsed.data.job_id ? await loadJobContext(sql, parsed.data.job_id) : null;
+    const role = parsed.data.role_focus || job?.title || await resolveRole(sql, userId, '');
+    const recommendation = recommendAvatar({ role, job });
+
+    return reply.send({
+      avatars: AVATARS,
+      recommended: {
+        avatar_id: recommendation.avatar.id,
+        name: recommendation.avatar.name,
+        reason: recommendation.reason,
+        score: recommendation.score,
+      },
+      job,
+      role_focus: role,
+    });
+  });
+
   /* ------------------------ interview sessions ------------------------ */
 
   fastify.get('/sessions', async (request, reply) => {
@@ -180,6 +258,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     const sql = getDB();
     const rows = await sql.unsafe(
       `SELECT s.id, s.role_focus, s.difficulty, s.question_count, s.status, s.model,
+              s.avatar_id, s.job_id, s.job_title, s.job_company, s.opening_line,
               s.overall_score, s.verdict, s.summary, s.started_at, s.completed_at,
               (SELECT COUNT(*)::int FROM interview_questions q WHERE q.session_id = s.id AND q.answered_at IS NOT NULL) AS answered_count
          FROM interview_sessions s
@@ -188,7 +267,12 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
         LIMIT 50`,
       [currentUser(request).id],
     );
-    return { sessions: rows };
+    return {
+      sessions: rows.map((row: any) => ({
+        ...serializeSession(row),
+        answered_count: Number(row.answered_count || 0),
+      })),
+    };
   });
 
   fastify.post('/sessions', async (request, reply) => {
@@ -207,7 +291,11 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const role = await resolveRole(sql, userId, parsed.data.role_focus || '');
+    const job = await loadJobContext(sql, parsed.data.job_id);
+    const role = await resolveRole(sql, userId, parsed.data.role_focus || job?.title || '');
+    const avatar = parsed.data.avatar_id
+      ? getAvatar(parsed.data.avatar_id)
+      : recommendAvatar({ role, job }).avatar;
     const profile = await loadProfile(sql, userId);
 
     // Recent topics (all prior sessions) so question sets do not repeat.
@@ -222,12 +310,36 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       difficulty: parsed.data.difficulty as Difficulty,
       count: parsed.data.question_count,
       recentTopics,
+      job,
+      avatar,
+    });
+
+    // The avatar greets the candidate before the first question. Kept on the
+    // session row so reopening an interview resumes the same opening line.
+    const openingLine = await generateOpeningLine({
+      avatar,
+      role,
+      job,
+      candidateName: candidateFirstName(profile),
     });
 
     const created = await sql.unsafe(
-      `INSERT INTO interview_sessions (user_id, role_focus, difficulty, question_count, model)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [userId, role, parsed.data.difficulty, questions.length, model],
+      `INSERT INTO interview_sessions
+         (user_id, role_focus, difficulty, question_count, model, avatar_id, job_id, job_title, job_company, opening_line)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        userId,
+        role,
+        parsed.data.difficulty,
+        questions.length,
+        model,
+        avatar.id,
+        job?.id || null,
+        job?.title || '',
+        job?.company || '',
+        openingLine,
+      ],
     );
     const session = created[0] as any;
 
@@ -238,7 +350,13 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
         [session.id, userId, q.idx, q.category, q.topic, q.question, JSON.stringify(q.ideal_points || [])],
       );
     }
-    await simpleAudit(userId, 'practice.session_started', session.id, { model, role, difficulty: parsed.data.difficulty });
+    await simpleAudit(userId, 'practice.session_started', session.id, {
+      model,
+      role,
+      difficulty: parsed.data.difficulty,
+      avatar_id: avatar.id,
+      job_id: job?.id || null,
+    });
 
     return reply.status(201).send({ session: serializeSession(session), subscription: gate.state });
   });
@@ -255,7 +373,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     const session = rows[0] as any;
     if (!session) return reply.status(404).send({ error: 'Session not found' });
     const questions = await sql.unsafe(
-      `SELECT id, idx, category, topic, question, answer, feedback, score, answered_at
+      `SELECT id, idx, category, topic, question, answer, interviewer_reply, feedback, score, answered_at
          FROM interview_questions WHERE session_id = $1 ORDER BY idx`,
       [session.id],
     );
@@ -369,7 +487,35 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       }
     } catch { /* best-effort: the interview continues with the standard queue */ }
 
-    return reply.send({ question: serializeQuestion((updated[0] as any)), grade, follow_up: followUp });
+    // The avatar reacts in character before the next question opens. This is
+    // what makes the round feel live rather than a form; it is best-effort so
+    // a provider hiccup never blocks the candidate's progress.
+    let interviewerReply = '';
+    try {
+      interviewerReply = await generateInterviewerReply({
+        avatar: getAvatar(session.avatar_id || 'aria'),
+        role: String(session.role_focus || ''),
+        job: session.job_id
+          ? { id: session.job_id, title: session.job_title || session.role_focus, company: session.job_company || '' }
+          : null,
+        difficulty: String(session.difficulty || 'standard'),
+        question: question.question,
+        answer: parsed.data.answer,
+        score: grade.score,
+        strengths: grade.strengths,
+        improvements: grade.improvements,
+        followUp: followUp?.question || '',
+      });
+      if (interviewerReply) {
+        await sql.unsafe(
+          `UPDATE interview_questions SET interviewer_reply = $2 WHERE id = $1`,
+          [question.id, interviewerReply],
+        );
+      }
+    } catch { /* spoken reaction is best-effort; grading already succeeded */ }
+
+    const answeredQuestion = serializeQuestion({ ...(updated[0] as any), interviewer_reply: interviewerReply });
+    return reply.send({ question: answeredQuestion, grade, follow_up: followUp, reply: interviewerReply });
   });
 
   fastify.post('/sessions/:id/finish', async (request, reply) => {
@@ -580,6 +726,7 @@ function serializeQuestion(q: any) {
     topic: q.topic,
     question: q.question,
     answer: q.answer || '',
+    interviewer_reply: q.interviewer_reply || '',
     feedback: q.feedback && typeof q.feedback === 'object' && !Array.isArray(q.feedback) && q.feedback !== null
       ? (typeof (q.feedback as any).score === 'number' ? q.feedback : safeParse(q.feedback))
       : null,
@@ -589,6 +736,7 @@ function serializeQuestion(q: any) {
 }
 
 export function serializeSession(s: any): SessionRecord {
+  const avatar = getAvatar(s.avatar_id || 'aria');
   return {
     id: s.id,
     status: s.status,
@@ -596,6 +744,15 @@ export function serializeSession(s: any): SessionRecord {
     difficulty: s.difficulty,
     question_count: s.question_count,
     model: s.model,
+    avatar,
+    job: s.job_id
+      ? {
+          id: s.job_id,
+          title: s.job_title || s.role_focus || 'General',
+          company: s.job_company || '',
+        }
+      : null,
+    opening_line: s.opening_line || '',
     overall_score: s.overall_score ?? null,
     verdict: s.verdict || '',
     summary: s.summary || '',

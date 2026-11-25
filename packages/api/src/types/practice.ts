@@ -1,5 +1,7 @@
 /** Shared contracts for the AI practice feature (interviews + learning). */
 
+import type { AvatarPersona } from '../utils/interview-avatars';
+
 export type Profile = Record<string, any>;
 
 export interface QuestionSpec {
@@ -58,9 +60,16 @@ export interface SessionAnswerItem {
   topic: string;
   question: string;
   answer: string;
+  interviewer_reply: string;
   feedback: AnswerGrade | null;
   score: number | null;
   answered_at: string | null;
+}
+
+export interface SessionJobContext {
+  id: string;
+  title: string;
+  company: string;
 }
 
 export interface SessionRecord {
@@ -70,6 +79,9 @@ export interface SessionRecord {
   difficulty: string;
   question_count: number;
   model: string;
+  avatar: AvatarPersona;
+  job: SessionJobContext | null;
+  opening_line: string;
   overall_score: number | null;
   verdict: string;
   summary: string;

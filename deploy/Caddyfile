@@ -1,0 +1,15 @@
+# Automatic HTTPS for the free DuckDNS (or any) subdomain pointed at the VM.
+# Caddy obtains and renews a Let's Encrypt certificate over HTTP-01; ports 80
+# and 443 must be open in both Oracle's security list and the VM firewall.
+{$DOMAIN} {
+	encode gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Same-origin API: the web image proxies /api and /sse to the API service.
+	# No CORS or mixed-content problems because everything is under one domain.
+	reverse_proxy web:80
+}

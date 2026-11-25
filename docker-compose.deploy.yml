@@ -1,0 +1,189 @@
+# Production stack for a single always-free Oracle Cloud ARM VM.
+#
+# Only Caddy publishes ports (80/443). Postgres, Redis, workers and n8n stay on
+# the internal Docker network. Start with:
+#   docker compose -f docker-compose.deploy.yml up -d --build
+#
+# Required in .env: DOMAIN, POSTGRES_PASSWORD, JWT_SECRET, ENCRYPTION_SECRET,
+# BOOTSTRAP_ADMIN_EMAIL, BOOTSTRAP_ADMIN_PASSWORD (see deploy/.env.deploy.example).
+name: hiregen
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: leads_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Declarative schema first; incremental migrations run right after.
+  pg-migrator:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./packages/api/database:/db:ro
+    entrypoint:
+      - sh
+      - -c
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/leads_db sh /db/utils/apply_schema.sh
+
+  api:
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile
+    image: hiregen-api:local
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/leads_db
+      REDIS_URL: redis://redis:6379
+      HOST: 0.0.0.0
+      WORKERS_URL: http://workers:8000
+      CORS_ORIGIN: https://${DOMAIN:?set DOMAIN in .env}
+      PORT: 3000
+      LOG_FORMAT: json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./packages/api/src/models/recommender:/app/src/models/recommender
+      - ./packages/api/data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  migrator:
+    image: hiregen-api:local
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/leads_db
+      REDIS_URL: redis://redis:6379
+    working_dir: /app
+    command: ["sh", "-c", "npm run migrate"]
+    depends_on:
+      api:
+        condition: service_healthy
+      pg-migrator:
+        condition: service_completed_successfully
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./packages/web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  workers:
+    build:
+      context: ./packages/scrapers
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/leads_db
+      REDIS_URL: redis://redis:6379
+      REACHER_URL: http://reacher:3000
+      ENABLE_DAILY_SCHEDULER: ${ENABLE_DAILY_SCHEDULER:-1}
+      DAILY_SCRAPE_CATCHUP: ${DAILY_SCRAPE_CATCHUP:-1}
+      DAILY_SCRAPE_HOUR: ${DAILY_SCRAPE_HOUR:-3}
+      DAILY_SCRAPE_MINUTE: ${DAILY_SCRAPE_MINUTE:-0}
+      SCRAPER_MAX_CONCURRENCY: ${SCRAPER_MAX_CONCURRENCY:-3}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  reacher:
+    image: reacherhq/check-if-email-exists:latest
+    restart: unless-stopped
+
+  # Optional workflow automation. Enable with:
+  #   docker compose -f docker-compose.deploy.yml --profile n8n up -d
+  n8n:
+    image: n8nio/n8n:latest
+    profiles: ["n8n"]
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin123}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - N8N_PORT=5678
+      - N8N_HOST=0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - n8n-data:/home/node/.n8n
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  n8n-data:
+  caddy-data:
+  caddy-config:

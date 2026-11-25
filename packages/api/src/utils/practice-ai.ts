@@ -1,4 +1,5 @@
 import type { Profile, QuestionSpec, GeneratedQuestion, AnswerGrade, LearningModule, LearningResource, FollowUpQuestion } from '../types/practice';
+import type { AvatarPersona, JobContext } from './interview-avatars';
 
 /**
  * AI practice engine: interview question generation, answer grading and
@@ -178,8 +179,9 @@ function firstSkill(profile: Profile): string {
   return String(skills[0] || 'your core skill');
 }
 
-function fillTemplate(template: string, profile: Profile): string {
-  return template.replace(/\{skills0\}/g, firstSkill(profile));
+function fillTemplate(template: string, profile: Profile, job?: JobContext | null): string {
+  const jobSkill = (job?.skills || []).map(String).find((skill) => skill.trim().length > 0);
+  return template.replace(/\{skills0\}/g, jobSkill || firstSkill(profile));
 }
 
 function recentTopicSet(recentTopics: string[] | undefined): Set<string> {
@@ -187,7 +189,14 @@ function recentTopicSet(recentTopics: string[] | undefined): Set<string> {
 }
 
 /** Select template questions avoiding topics the candidate already practiced. */
-export function templateQuestions(profile: Profile, role: string, difficulty: Difficulty, count: number, recentTopics?: string[]): GeneratedQuestion[] {
+export function templateQuestions(
+  profile: Profile,
+  role: string,
+  difficulty: Difficulty,
+  count: number,
+  recentTopics?: string[],
+  job?: JobContext | null,
+): GeneratedQuestion[] {
   const family = classifyRole(role);
   const bank = FAMILY_TEMPLATES[family];
   const seen = recentTopicSet(recentTopics);
@@ -205,14 +214,27 @@ export function templateQuestions(profile: Profile, role: string, difficulty: Di
     if (chosen.length >= count) break;
     if (!chosen.includes(q)) chosen.push(q);
   }
-  return chosen.map((q, i) => ({
-    idx: i,
-    category: q.category,
-    topic: q.topic,
-    question: fillTemplate(q.question, profile),
-    ideal_points: q.points,
-    source: 'template' as const,
-  }));
+  return chosen.map((q, i) => {
+    const base = {
+      idx: i,
+      category: q.category,
+      topic: q.topic,
+      question: fillTemplate(q.question, profile, job),
+      ideal_points: q.points,
+      source: 'template' as const,
+    };
+    // Make the opening question visibly about the actual job, so a key-less
+    // (template) session still feels tailored rather than generic.
+    if (i === 0 && q.category === 'intro' && job?.title) {
+      const company = job.company ? ` at ${job.company}` : '';
+      return {
+        ...base,
+        question: `You are interviewing for the ${job.title} role${company}. Walk me through the experience that makes you a strong fit, and one thing you would need to learn quickly.`,
+        ideal_points: ['relevant experience', 'specific evidence', 'honest gap plus learning plan'],
+      };
+    }
+    return base;
+  });
 }
 
 const QUESTION_SYSTEM_PROMPT = [
@@ -231,10 +253,12 @@ export async function generateInterviewQuestions(profile: Profile, options: {
   difficulty: Difficulty;
   count: number;
   recentTopics?: string[];
+  job?: JobContext | null;
+  avatar?: AvatarPersona | null;
 }): Promise<{ questions: GeneratedQuestion[]; model: string }> {
-  const { role, difficulty, count, recentTopics } = options;
+  const { role, difficulty, count, recentTopics, job, avatar } = options;
   const fallback = () => ({
-    questions: templateQuestions(profile, role, difficulty, count, recentTopics),
+    questions: templateQuestions(profile, role, difficulty, count, recentTopics, job),
     model: 'template',
   });
 
@@ -261,6 +285,19 @@ export async function generateInterviewQuestions(profile: Profile, options: {
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: [
           QUESTION_SYSTEM_PROMPT,
+          avatar ? [
+            `You are ${avatar.name}, ${avatar.title}.`,
+            `Personality: ${avatar.personality}`,
+            `Interviewing ability: ${avatar.ability}`,
+            'Speak like a real Indian interviewer: natural Indian English, warm but professional, never robotic.',
+            'Phrase the questions in your own voice and let your specialty shape what you probe.',
+          ].join('\n') : '',
+          job ? [
+            `The candidate is interviewing for this specific job: ${job.title}${job.company ? ` at ${job.company}` : ''}.`,
+            (job.skills || []).length ? `Job skills: ${JSON.stringify((job.skills || []).slice(0, 20))}` : '',
+            (job.description || job.about_job) ? `Job description excerpt: ${String(job.description || job.about_job).slice(0, 2500)}` : '',
+            'Ask the questions this employer would actually ask for this job, not generic role questions.',
+          ].filter(Boolean).join('\n') : '',
           `Target role: ${role}`,
           `Difficulty: ${difficulty} (calm = encouraging standard questions; standard = typical interview; brutal = follow-the-thread pressure questions)`,
           `Generate ${count} question objects.`,
@@ -297,7 +334,7 @@ export async function generateInterviewQuestions(profile: Profile, options: {
     // Top up from the template bank so the session always has full count.
     if (questions.length < count) {
       const existingTopics = new Set(questions.map((q: any) => String(q.question).toLowerCase()));
-      for (const extra of templateQuestions(profile, role, difficulty, count, [...(recentTopics || []), ...questions.map((q: any) => q.topic)])) {
+      for (const extra of templateQuestions(profile, role, difficulty, count, [...(recentTopics || []), ...questions.map((q: any) => q.topic)], job)) {
         if (questions.length >= count) break;
         if (existingTopics.has(extra.question.toLowerCase())) continue;
         existingTopics.add(extra.question.toLowerCase());
@@ -598,6 +635,209 @@ export async function generateFollowUp(input: {
       ideal_points: Array.isArray(parsed?.ideal_points) ? parsed.ideal_points.filter((p: any) => typeof p === 'string').slice(0, 4) : [],
       source: GEMINI_MODEL as any,
     };
+  } catch {
+    return fallback();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Live persona: opening greeting + in-character reactions             */
+/* ------------------------------------------------------------------ */
+
+function firstName(value: unknown): string {
+  const clean = String(value || '').replace(/[^\p{L}\s'-]/gu, ' ').trim();
+  const first = clean.split(/\s+/).filter(Boolean)[0] || '';
+  return first.slice(0, 40);
+}
+
+function roleLabel(role: string, job?: JobContext | null): string {
+  return String(role || job?.title || 'this role').trim();
+}
+
+function companyLabel(job?: JobContext | null): string {
+  return job?.company ? ` at ${job.company}` : '';
+}
+
+export function templateOpeningLine(input: {
+  avatar: AvatarPersona;
+  role: string;
+  job?: JobContext | null;
+  candidateName?: string;
+}): string {
+  const name = firstName(input.candidateName);
+  const hello = name ? `Hi ${name}, ` : 'Hi, ';
+  const role = roleLabel(input.role, input.job);
+  const company = companyLabel(input.job);
+  switch (input.avatar.id) {
+    case 'vikram':
+      return `Hello${name ? ` ${name}` : ''}, I'm Vikram Rao. I'll be running your ${role} interview${company}. I care about how you reason under constraints, so expect me to go a layer deeper. Let's begin.`;
+    case 'priya':
+      return `${hello}I'm Priya Nair, and I'll be your interviewer for the ${role} role${company}. I'm interested in how you make decisions and what evidence you use. Let's dive in.`;
+    case 'arjun':
+      return `I'm Arjun Mehta, your bar raiser for the ${role} interview${company}. I'll push on your claims — that's the point of this round. Let's start.`;
+    case 'neha':
+      return `Hello${name ? ` ${name}` : ''}, I'm Neha Iyer. I'll be your interviewer for the ${role} role${company}. I'll be looking for the evidence and numbers behind your answers. Let's begin.`;
+    case 'rohan':
+      return `Hey${name ? ` ${name}` : ''}, I'm Rohan Kapoor. I'll be running your ${role} interview${company}. I care about what you've actually shipped and how you think on your feet. Let's get into it.`;
+    default:
+      return `${hello}I'm Aria Sharma. I'll be your interviewer for the ${role} role${company} today. We'll keep this conversational — think aloud, give me specifics, and I'll follow up where it matters. Ready when you are.`;
+  }
+}
+
+const OPENING_SYSTEM_PROMPT = [
+  'You are an Indian interviewer opening a live mock interview.',
+  'Write 1-2 spoken sentences (max 55 words) in your own voice.',
+  'Say your name, the role, and (if given) the company. Set a human, conversational tone.',
+  'Natural Indian English. No bullet points, no headings, no stage directions.',
+  'Do not ask the first interview question in the opening line; the question appears separately.',
+  'Return JSON: {"opening_line":string}.',
+].join('\n');
+
+/** Generate a persona-specific greeting; template fallback when no key / bad output. */
+export async function generateOpeningLine(input: {
+  avatar: AvatarPersona;
+  role: string;
+  job?: JobContext | null;
+  candidateName?: string;
+}): Promise<string> {
+  const fallback = () => templateOpeningLine(input);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return fallback();
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(12_000),
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: [
+          OPENING_SYSTEM_PROMPT,
+          `You are ${input.avatar.name}, ${input.avatar.title}.`,
+          `Personality: ${input.avatar.personality}`,
+          `Interviewing ability: ${input.avatar.ability}`,
+          `Candidate first name: ${firstName(input.candidateName) || '(not given)'}`,
+          `Role: ${roleLabel(input.role, input.job)}${companyLabel(input.job)}`,
+        ].join('\n\n') }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.75, maxOutputTokens: 300 },
+      }),
+    });
+    if (!response.ok) return fallback();
+    const payload: any = await response.json();
+    const generatedText = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+    const parsed = JSON.parse(generatedText);
+    const line = typeof parsed?.opening_line === 'string' ? parsed.opening_line.trim() : '';
+    if (line.length < 20 || line.length > 420) return fallback();
+    return line;
+  } catch {
+    return fallback();
+  }
+}
+
+const REPLY_LEADS: Record<string, { strong: string; okay: string; weak: string }> = {
+  aria: {
+    strong: 'Thank you — that was clear and specific, and I could follow your role in it.',
+    okay: 'Thanks — that gives me the picture, though I would have liked one more concrete example.',
+    weak: 'Thank you for being direct. That answer stayed a little high level, so let me give you another angle to show more depth.',
+  },
+  vikram: {
+    strong: 'Good. The reasoning holds together, and you named the trade-off instead of hiding it.',
+    okay: 'Okay. You covered the surface; I would want more depth on the trade-off and the failure mode.',
+    weak: 'Let us slow down. That answer stayed at the surface, and I need the reasoning underneath it.',
+  },
+  priya: {
+    strong: 'Nice — I can see the user problem and the decision behind it.',
+    okay: 'That is a reasonable direction, though I am not fully convinced by the evidence yet.',
+    weak: 'I am not convinced yet. Help me see the user impact and the trade-off you chose.',
+  },
+  arjun: {
+    strong: 'That one holds up. You backed the claim with evidence, which is what I was testing.',
+    okay: 'Fine. But I would push harder on what you personally owned versus what the team did.',
+    weak: 'That is not going to survive a real bar-raiser round. I need specifics, not intentions.',
+  },
+  neha: {
+    strong: 'Good — you anchored that with evidence, which is exactly what I listen for.',
+    okay: 'Directionally useful, but I am missing the measurement method behind that result.',
+    weak: 'I am missing the evidence. Next time, walk me through how you measured it.',
+  },
+  rohan: {
+    strong: 'Love that you shipped it and can explain what changed. That is the signal I want.',
+    okay: 'Solid start, but I would want to know what you would cut and why.',
+    weak: 'That is a bit theoretical for me. I want to hear what you actually built and what broke.',
+  },
+};
+
+export function templateInterviewerReply(input: {
+  avatar: AvatarPersona;
+  score: number;
+  hasFollowUp?: boolean;
+}): string {
+  const leads = REPLY_LEADS[input.avatar.id] || REPLY_LEADS.aria;
+  const lead = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
+  const bridge = input.hasFollowUp
+    ? ' There is something in that answer I want to unpack.'
+    : input.score < 60
+      ? ' Let us keep going, and I will come back to depth.'
+      : ' Let us keep moving.';
+  return `${lead}${bridge}`;
+}
+
+const REPLY_SYSTEM_PROMPT = [
+  'You are an Indian interviewer mid-conversation. The candidate just answered your question.',
+  'React in character in 1-3 spoken sentences (max 60 words).',
+  'Mention one concrete thing the candidate actually said. Be honest but professional: praise a real strength, name the main gap without insulting them.',
+  'If a follow-up is coming, signal that you want to unpack something — do not ask the follow-up itself and do not repeat the next question.',
+  'Natural Indian English. No bullet points, no headings, no stage directions. Never invent facts they did not state.',
+  'Return JSON: {"reply":string}.',
+].join('\n');
+
+/** Generate an in-character reaction to the candidate's answer; template fallback. */
+export async function generateInterviewerReply(input: {
+  avatar: AvatarPersona;
+  role: string;
+  job?: JobContext | null;
+  difficulty: string;
+  question: string;
+  answer: string;
+  score: number;
+  strengths?: string[];
+  improvements?: string[];
+  followUp?: string;
+}): Promise<string> {
+  const fallback = () => templateInterviewerReply({
+    avatar: input.avatar,
+    score: input.score,
+    hasFollowUp: Boolean(input.followUp),
+  });
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || !String(input.answer || '').trim()) return fallback();
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(15_000),
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: [
+          REPLY_SYSTEM_PROMPT,
+          `You are ${input.avatar.name}, ${input.avatar.title}.`,
+          `Personality: ${input.avatar.personality}`,
+          `Interviewing ability: ${input.avatar.ability}`,
+          `Role: ${roleLabel(input.role, input.job)}${companyLabel(input.job)}; difficulty: ${input.difficulty}.`,
+          `Your question: ${String(input.question).slice(0, 400)}`,
+          `Their answer (verbatim): ${String(input.answer).slice(0, 3000)}`,
+          `Grade: ${input.score}/100. Strengths: ${JSON.stringify((input.strengths || []).slice(0, 3))}. Gaps: ${JSON.stringify((input.improvements || []).slice(0, 3))}.`,
+          input.followUp ? `A follow-up is coming: ${String(input.followUp).slice(0, 300)}` : 'No follow-up is coming; the next planned question is next.',
+        ].join('\n\n') }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 300 },
+      }),
+    });
+    if (!response.ok) return fallback();
+    const payload: any = await response.json();
+    const generatedText = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+    const parsed = JSON.parse(generatedText);
+    const reply = typeof parsed?.reply === 'string' ? parsed.reply.trim() : '';
+    if (reply.length < 12 || reply.length > 420) return fallback();
+    return reply;
   } catch {
     return fallback();
   }

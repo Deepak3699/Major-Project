@@ -1,5 +1,7 @@
 import { geminiFetch } from './gemini';
 
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+
 /**
  * Job-specific preparation generator.
  *
@@ -50,8 +52,6 @@ export interface PreparationContext {
   sources: PreparationSource[];
   evidence_notes: string[];
 }
-
-const GEMINI_MODEL = 'gemini-2.5-flash';
 
 function clean(value: unknown, max = 500): string {
   return typeof value === 'string'
@@ -369,7 +369,7 @@ export async function generatePreparation(
     const payload: any = await response.json();
     const generatedText = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
     const validated = validateGenerated(module, JSON.parse(generatedText), context);
-    return validated ? { payload: validated, model: GEMINI_MODEL } : fallback;
+    return validated ? { payload: validated, model: response.model } : fallback;
   } catch {
     return fallback;
   }

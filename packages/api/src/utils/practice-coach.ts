@@ -14,64 +14,22 @@ import {
   type Difficulty,
 } from './practice-ai';
 import type { AvatarPersona, JobContext } from './interview-avatars';
-import { geminiFetch, type GeminiFeature } from './gemini';
+import { geminiFetch, getAiConfig, type GeminiFeature } from './gemini';
 
 /**
- * The live-interview layer: conversation-driven questioning, Hinglish
- * mirroring, webcam presentation feedback and the end-of-round report.
+ * The live-interview layer: conversation-driven questioning, webcam
+ * presentation feedback and the end-of-round report.
  *
- * Everything here has a deterministic fallback. The provider is optional, so a
- * key-less install still runs a coherent, answer-aware interview — it simply
- * uses the template brain instead of Gemini.
+ * All interviewer output is proper English. Everything here has a
+ * deterministic fallback, so a provider hiccup never blocks the candidate.
  */
 
 const MAX_SNAPSHOTS = 3;
 const MAX_SNAPSHOT_CHARS = 700_000;
 
-/* ------------------------------------------------------------------ */
-/* Language mirroring                                                  */
-/* ------------------------------------------------------------------ */
-
-const DEVANAGARI = /[\u0900-\u097F]/g;
-
-/**
- * Strong Hinglish markers only. Ambiguous English/Hindi words ("main", "to",
- * "do", "par", "log", "the") are deliberately excluded so a normal English
- * answer is never misread as Hinglish.
- */
-const STRONG_HINGLISH = new Set([
-  'nahi', 'nahin', 'kya', 'kyun', 'kyu', 'hai', 'hain', 'tha', 'thi',
-  'maine', 'mera', 'meri', 'mere', 'hum', 'humne', 'aap', 'aapka', 'aapki',
-  'bhai', 'yaar', 'matlab', 'accha', 'acha', 'theek', 'thik', 'bahut', 'bohot',
-  'karna', 'karta', 'karti', 'kiya', 'kiye', 'raha', 'rahi', 'rahe',
-  'chahiye', 'kaise', 'abhi', 'phir', 'bhi', 'aur', 'lekin', 'toh',
-  'wala', 'wali', 'hoga', 'hota', 'hoti', 'sakta', 'sakti', 'diya', 'liya',
-  'gaya', 'gayi', 'jaisa', 'jaise', 'samajh', 'pata', 'bata', 'batao',
-  'dekho', 'suno', 'kaam', 'cheez', 'baat', 'zyada', 'thoda', 'wapas',
-]);
-
-export function detectAnswerLanguage(answer: string): AnswerLanguage {
-  const text = String(answer || '').trim();
-  if (!text) return 'english';
-
-  const devanagari = (text.match(DEVANAGARI) || []).length;
-  if (devanagari >= 4) return 'hindi';
-
-  const words = text.toLowerCase().replace(/[^a-z\s']/g, ' ').split(/\s+/).filter(Boolean);
-  const hits = new Set(words.filter((word) => STRONG_HINGLISH.has(word)));
-  if (hits.size >= 2) return 'hinglish';
-  if (hits.size === 1 && words.length >= 9) return 'hinglish';
-  return 'english';
-}
-
-function languageInstruction(language: AnswerLanguage): string {
-  if (language === 'hindi') {
-    return 'The candidate spoke in Hindi. Reply in natural Hinglish (Hindi-English mix) written in Roman script, the way a fluent Indian interviewer speaks. Keep technical terms in English.';
-  }
-  if (language === 'hinglish') {
-    return 'The candidate spoke in Hinglish. Mirror them: reply in natural, fluent Hinglish written in Roman script, mixing Hindi and English the way a real Indian interviewer does. Keep technical terms in English. Do not overdo slang.';
-  }
-  return 'Reply in natural Indian English.';
+/** Shared instruction: never mirror into Hindi/Hinglish, always proper English. */
+function languageInstruction(_language?: AnswerLanguage): string {
+  return 'Reply in natural, proper Indian English. Do not use Hindi, Hinglish or Roman-script Hindi, even if the candidate does.';
 }
 
 /* ------------------------------------------------------------------ */
@@ -111,181 +69,6 @@ async function geminiJson(
 }
 
 /* ------------------------------------------------------------------ */
-/* Hinglish reactions                                                  */
-/* ------------------------------------------------------------------ */
-
-const HINGLISH_LEADS: Record<string, { strong: string[]; okay: string[]; weak: string[] }> = {
-  aria: {
-    strong: [
-      'Bahut accha, answer clear tha aur aapka apna contribution samajh aa gaya.',
-      'Aapne situation, apna action aur result teeno clear rakhe - yahi main sunna chahti thi.',
-    ],
-    okay: [
-      'Theek hai, direction sahi hai — mujhe bas ek concrete example aur chahiye tha.',
-      'Ek concrete example add karte to answer aur strong hota.',
-    ],
-    weak: [
-      'Haan, aapne seedha jawab diya, lekin depth thodi kam thi.',
-      'Mujhe specific example chahiye, general baat nahi. Chaliye phir se try karte hain.',
-    ],
-  },
-  vikram: {
-    strong: [
-      'Haan, ab baat bani. Aapne trade-off clearly bola, yahi main sunna chahta tha.',
-      'Reasoning is level par thi aur constraints clear the - yahi depth main dhoondh raha hoon.',
-    ],
-    okay: [
-      'Theek hai, surface cover ho gaya. Mujhe failure mode aur reasoning thoda aur chahiye.',
-      'Shape samajh aa gaya, par failure mode par main push karunga.',
-    ],
-    weak: [
-      'Ruko, thoda dheere. Yeh answer surface pe reh gaya — mujhe neeche ki reasoning chahiye.',
-      'Mujhe actual mechanism chahiye, summary nahi. Batao exactly kya hua.',
-    ],
-  },
-  priya: {
-    strong: [
-      'Achha, user problem aur decision dono dikh rahe hain. Isi clarity ko aage bhi rakhiye.',
-      'User problem aur decision dono clear the - isi balance ki zaroorat hai.',
-    ],
-    okay: [
-      'Direction theek hai, par evidence abhi poori tarah convince nahi kar raha.',
-      'Intent dikh raha hai, par user evidence ke bina main sign off nahi karungi.',
-    ],
-    weak: [
-      'Main abhi convince nahi hui. User impact aur aapne kaunsa trade-off chuna, wo clear karo.',
-      'User problem se shuru karo, phir batao aapne kya badla aur kyun.',
-    ],
-  },
-  arjun: {
-    strong: [
-      'Yeh claim ab evidence ke saath hai — isi liye maine push kiya tha. Achha.',
-      'Aapne apna ownership aur team ka role alag rakha - yahi honesty main test karta hoon.',
-    ],
-    okay: [
-      'Theek hai. Par main yeh puchhunga ki usme aapka personally kya role tha.',
-      'Outcome theek hai, par aapne personally kya move kiya, wo abhi clear nahi hai.',
-    ],
-    weak: [
-      'Yeh bar-raiser round mein survive nahi karega. Mujhe specifics chahiye, intentions nahi.',
-      'Ek decision batao jo aapne personally liya, aur uska evidence kya tha.',
-    ],
-  },
-  neha: {
-    strong: [
-      'Good, aapne numbers se anchor kiya — yahi main sunna chahti hoon.',
-      'Aapne result ke saath measurement bhi dikhaya - yahi difference hai.',
-    ],
-    okay: [
-      'Useful hai, par measurement method abhi missing hai.',
-      'Result interesting hai, par method ke bina main trust nahi karungi.',
-    ],
-    weak: [
-      'Evidence missing hai. Agli baar batao ki aapne result kaise measure kiya.',
-      'Batao aapne kaise measure kiya, aur kis cheez se doubt hota.',
-    ],
-  },
-  rohan: {
-    strong: [
-      'Arre wah, shipped product ki baat clear hai. Yahi signal main dhoondh raha hoon.',
-      'Trade-off aur outcome dono explain kar sakte hain - yahi signal hai.',
-    ],
-    okay: [
-      'Solid start, par mujhe jaanna hai aap kya cut karte aur kyun.',
-      'Direction samajh aa gaya, par cut list aur reason chahiye.',
-    ],
-    weak: [
-      'Thoda theoretical lag raha hai. Batao aapne actually kya banaya aur kya toota.',
-      'Jo ship kiya, constraint kya tha, aur kya toota - yeh batao.',
-    ],
-  },
-};
-
-const HINGLISH_BRIDGES = {
-  dig: [
-    ' Ek cheez hai jo main unpack karna chahta hoon.',
-    ' Yeh point hold kijiye - main isko thoda deeper jaana chahta hoon.',
-    ' Is answer mein ek cheez hai jo mujhe clear karni hai.',
-  ],
-  continue: [
-    ' Chaliye aage badhte hain.',
-    ' Achha, isi par aage build karte hain.',
-    ' Theek hai, agla angle dekhte hain.',
-  ],
-  depth: [
-    ' Chaliye aage badhte hain, depth par main wapas aaunga.',
-    ' Agla question lete hain, par depth wali baat main note kar raha hoon.',
-    ' Aage chalte hain, phir detail par wapas aayenge.',
-  ],
-};
-
-export function templateHinglishReply(input: {
-  avatar: AvatarPersona;
-  score: number;
-  hasFollowUp?: boolean;
-  answer?: string;
-  turn?: number;
-}): string {
-  const leads = HINGLISH_LEADS[input.avatar.id] || HINGLISH_LEADS.aria;
-  const variants = input.score >= 82 ? leads.strong : input.score >= 60 ? leads.okay : leads.weak;
-  const turn = Math.abs(Number(input.turn) || 0);
-  const lead = variants[turn % variants.length];
-  const bridges = input.hasFollowUp
-    ? HINGLISH_BRIDGES.dig
-    : input.score < 60
-      ? HINGLISH_BRIDGES.depth
-      : HINGLISH_BRIDGES.continue;
-  return `${lead}${bridges[turn % bridges.length]}`;
-}
-
-export async function generateHinglishReply(input: {
-  avatar: AvatarPersona;
-  role: string;
-  job?: JobContext | null;
-  difficulty: string;
-  question: string;
-  answer: string;
-  score: number;
-  strengths?: string[];
-  improvements?: string[];
-  language: AnswerLanguage;
-  hasFollowUp?: boolean;
-  turn?: number;
-}): Promise<string> {
-  const fallback = () => templateHinglishReply({
-    avatar: input.avatar,
-    score: input.score,
-    hasFollowUp: input.hasFollowUp,
-    answer: input.answer,
-    turn: input.turn,
-  });
-
-  const parsed = await geminiJson('hinglish_reply', [
-    {
-      text: [
-        'You are an Indian interviewer mid-conversation. The candidate just answered your question.',
-        languageInstruction(input.language),
-        'React in character in 1-3 spoken sentences (max 60 words).',
-        'Mention one concrete thing the candidate actually said. Be honest but professional: praise a real strength, name the main gap without insulting them.',
-        'If a follow-up is coming, signal that you want to unpack something — do not ask the follow-up itself.',
-        'No bullet points, no headings, no stage directions. Never invent facts they did not state.',
-        'Return JSON: {"reply":string}.',
-        `You are ${input.avatar.name}, ${input.avatar.title}.`,
-        `Personality: ${input.avatar.personality}`,
-        `Role: ${input.role}${input.job?.company ? ` at ${input.job.company}` : ''}; difficulty: ${input.difficulty}.`,
-        `Your question: ${String(input.question).slice(0, 400)}`,
-        `Their answer (verbatim): ${String(input.answer).slice(0, 3000)}`,
-        `Grade: ${input.score}/100. Strengths: ${JSON.stringify((input.strengths || []).slice(0, 3))}. Gaps: ${JSON.stringify((input.improvements || []).slice(0, 3))}.`,
-      ].join('\n\n'),
-    },
-  ], { temperature: 0.75, maxOutputTokens: 320, timeoutMs: 15_000 });
-
-  const reply = typeof parsed?.reply === 'string' ? parsed.reply.trim() : '';
-  if (reply.length < 12 || reply.length > 420) return fallback();
-  return reply;
-}
-
-/* ------------------------------------------------------------------ */
 /* Adaptive next question                                              */
 /* ------------------------------------------------------------------ */
 
@@ -309,13 +92,6 @@ export interface AdaptiveQuestionInput {
 
 function normalize(value: unknown): string {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-const HINGLISH_ANCHOR = /\b(react|node\.?js|python|sql|typescript|javascript|java|docker|kubernetes|aws|gcp|azure|next\.?js|angular|vue|django|flask|spring|figma|power bi|tableau|excel|tensorflow|pytorch|pandas|api|dashboard|app|website|project|team|client|customer|revenue|sales)\b/i;
-
-function hinglishAnchor(answer: string): string {
-  const match = String(answer || '').match(HINGLISH_ANCHOR);
-  return match ? String(match[0]).toLowerCase() : '';
 }
 
 const GENERIC_PROBES: Array<{ category: string; topic: string; question: string; ideal_points: string[] }> = [
@@ -353,38 +129,11 @@ export function templateNextQuestion(input: AdaptiveQuestionInput): GeneratedQue
   const last = asked[asked.length - 1];
   const dig = templateFollowUp(last.question, last.answer || '', last.topic || '');
 
-  // Hinglish candidates get ONE immediate Hinglish dig so mirroring is audible
-  // within a turn. Subsequent odd turns get a *different* Hinglish probe;
-  // even turns always pull a fresh role question (see below).
-  const followUpTurn = idx % 2 === 1;
-  if (input.language !== 'english' && followUpTurn) {
-    const anchor = hinglishAnchor(last.answer || '');
-    const hinge = anchor ? `Aapne ${anchor} ka zikr kiya.` : 'Aapne jo bataya.';
-    const probes = [
-      `${hinge} Usme sabse tough decision kya tha, aur aaj wapas jaake kya differently karte?`,
-      `${hinge} Uska asli impact kya tha, aur aapne success kaise measure kiya?`,
-      `${hinge} Wahan jo challenge aaya, aapne usse kaise handle kiya — ek concrete example se samjhaie?`,
-      `${hinge} Agar dobara karne ka mauka mile to aap pehle kya badaloge, aur kyun?`,
-    ];
-    const digCount = asked.filter((item) => item.category === 'follow_up').length;
-    const probe = probes.map((_, offset) => probes[(digCount + offset) % probes.length])
-      .find((candidate) => !askedQuestions.has(normalize(candidate)));
-    if (probe) {
-      return {
-        idx,
-        category: 'follow_up',
-        topic: 'Aapke answer se',
-        question: probe,
-        ideal_points: ['specific decision', 'trade-off', 'what they would change'],
-        source: 'template',
-      };
-    }
-  }
-
   // Only one intro-anchored dig in a row. The turn after the introduction and
   // every second turn after that pulls a fresh role-specific question so the
   // round moves into technical/behavioral/case territory instead of circling
-  // the candidate's self-introduction.
+  // the candidate's self-introduction. Every probe is proper English.
+  const followUpTurn = idx % 2 === 1;
   if (followUpTurn && !askedQuestions.has(normalize(dig.question))) {
     return {
       idx,
@@ -405,16 +154,16 @@ export function templateNextQuestion(input: AdaptiveQuestionInput): GeneratedQue
     input.job,
   );
   const fresh = bank.find((question) => (
-    !askedQuestions.has(normalize(question.question))
+    question.category !== 'intro' // the opening is the only introduction
+    && !askedQuestions.has(normalize(question.question))
     && !askedTopics.has(normalize(question.topic))
   ));
   if (fresh) {
-    const lead = input.language !== 'english' ? 'Theek hai. Ab ek role-specific sawaal: ' : '';
     return {
       idx,
       category: fresh.category,
       topic: fresh.topic,
-      question: `${lead}${fresh.question}`,
+      question: fresh.question,
       ideal_points: fresh.ideal_points,
       source: 'template',
     };
@@ -480,7 +229,7 @@ export async function generateNextQuestion(input: AdaptiveQuestionInput): Promis
   // dig, the template brain takes over so the interview keeps progressing.
   const lastTwo = asked.slice(-2).map((item) => item.category);
   const stackedFollowUps = lastTwo.length === 2 && lastTwo.every((item) => item === 'follow_up');
-  if (asked.length >= 2 && category === 'intro') return fallback();
+  if (asked.length >= 1 && category === 'intro') return fallback();
   if (stackedFollowUps && category === 'follow_up') return fallback();
   return {
     idx: asked.length,
@@ -631,7 +380,7 @@ export async function generatePresentationFeedback(input: {
     tips: Array.isArray(parsed?.tips)
       ? parsed.tips.filter((tip: any) => typeof tip === 'string').slice(0, 4).map((tip: string) => tip.slice(0, 220))
       : [],
-    model: 'gemini-2.5-flash',
+    model: (await getAiConfig()).model,
   };
 }
 
@@ -847,6 +596,6 @@ export async function generateSessionReport(input: ReportInput): Promise<Session
     strengths,
     mistakes,
     next_steps: nextSteps.length ? nextSteps : fallback().next_steps,
-    model: 'gemini-2.5-flash',
+    model: (await getAiConfig()).model,
   };
 }

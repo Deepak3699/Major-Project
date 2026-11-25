@@ -23,7 +23,6 @@ const FEATURE_LABELS: Record<string, string> = {
   opening: 'Interviewer opening',
   reply: 'Interviewer replies',
   learning: 'Learning tracks',
-  hinglish_reply: 'Hinglish replies',
   adaptive_question: 'Adaptive questions',
   presentation: 'Camera presentation review',
   report: 'Interview reports',
@@ -33,10 +32,12 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 const MODELS = [
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (recommended)' },
-  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (cheapest)' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (most capable)' },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (recommended / cheapest)' },
+  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
+  { value: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash' },
+  { value: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
+  { value: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (preview)' },
 ];
 
 const money = (value: number) => `$${Number(value || 0).toFixed(4)}`;

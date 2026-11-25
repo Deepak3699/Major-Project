@@ -262,9 +262,6 @@ const InterviewDetail = ({ id }: { id: string }) => {
               <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">Q{index + 1}</span>
               <Badge variant="muted">{question.category}</Badge>
               {question.topic && <Badge variant="outline">{question.topic}</Badge>}
-              {question.answer_language === 'hinglish' || question.answer_language === 'hindi' ? (
-                <Badge variant="signal">{question.answer_language === 'hindi' ? 'Hindi' : 'Hinglish'}</Badge>
-              ) : null}
               <span className={cn('ml-auto grid h-7 min-w-7 place-items-center rounded-md border px-1 font-mono text-[11px] font-semibold tabular-nums', scoreClass(question.score))}>
                 {question.score ?? '–'}
               </span>

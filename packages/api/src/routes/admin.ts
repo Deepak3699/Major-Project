@@ -712,7 +712,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // ---- AI practice: review every candidate interview transcript ----
-  // Read-only. Admins see the same transcript, grades, Hinglish reactions,
+  // Read-only. Admins see the same transcript, grades, interviewer reactions,
   // camera review and end-of-round report the candidate saw, so quality issues
   // can be investigated without querying the database by hand.
   const practiceSessionsQuery = z.object({

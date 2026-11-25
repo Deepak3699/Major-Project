@@ -16,8 +16,6 @@ import { geminiFetch } from './gemini';
  *    the provider, mirroring the drafting privacy stance.
  */
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
-
 export type Difficulty = 'calm' | 'standard' | 'brutal';
 
 type RoleFamily =
@@ -339,7 +337,7 @@ export async function generateInterviewQuestions(profile: Profile, options: {
     }
     questions = questions.slice(0, count);
     if (questions.length === 0) return fallback();
-    return { questions, model: 'gemini-2.5-flash' };
+    return { questions, model: response.model };
   } catch {
     return fallback();
   }
@@ -457,7 +455,7 @@ export async function gradeAnswer(spec: QuestionSpec, answer: string, difficulty
       score,
       strengths: strengths.length ? strengths : ['You engaged directly with the question.'],
       improvements: improvements.length ? improvements : ['Tighten structure: situation, action, result.'],
-      model: GEMINI_MODEL,
+      model: response.model,
     };
   } catch {
     return fallback();
@@ -621,7 +619,7 @@ export async function generateFollowUp(input: {
       question,
       topic: typeof parsed?.topic === 'string' ? parsed.topic.slice(0, 60) : 'Follow-up',
       ideal_points: Array.isArray(parsed?.ideal_points) ? parsed.ideal_points.filter((p: any) => typeof p === 'string').slice(0, 4) : [],
-      source: GEMINI_MODEL as any,
+      source: response.model as any,
     };
   } catch {
     return fallback();
@@ -1032,7 +1030,7 @@ export async function generateLearningTrack(profile: Profile, role: string): Pro
       practice_exercise: typeof m.practice_exercise === 'string' ? m.practice_exercise.slice(0, 260) : '',
     }));
     if (!modules.every((m) => m.topics.length > 0)) return fallback();
-    return { modules, model: 'gemini-2.5-flash' };
+    return { modules, model: response.model };
   } catch {
     return fallback();
   }

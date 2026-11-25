@@ -134,7 +134,7 @@ const MOCK_QUESTIONS: PracticeQuestion[] = [
     topic: 'Conflict',
     question: 'Tell me about a disagreement.',
     answer: 'Once, in a sprint review…',
-    answer_language: 'hinglish',
+    answer_language: 'english',
     feedback: { score: 7, strengths: ['Gave context'], improvements: ['Add outcome'] },
     score: 7,
     answered_at: '2026-01-06T10:05:00.000Z',
@@ -275,7 +275,6 @@ describe('PracticeSession page smoke', () => {
     renderTrio(<PracticeSession />, '/practice/session/s2');
     expect(await screen.findByText(/walk me through your background/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /enable camera/i })).toBeTruthy();
-    expect(screen.getByText('Hinglish')).toBeTruthy();
   });
 
   it('renders the end-of-round report, mistakes and camera review', async () => {

@@ -88,7 +88,7 @@ export async function prepareApplicationDocuments(profile: Profile, job: Job) {
     return {
       tailored_resume: parsed.tailored_resume.slice(0, 40_000),
       email_draft: parsed.email_draft.slice(0, 12_000),
-      generated_by: 'gemini-2.5-flash',
+      generated_by: response.model,
     };
   } catch {
     return fallback;

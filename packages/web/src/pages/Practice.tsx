@@ -302,7 +302,7 @@ const Practice: React.FC = () => {
             </h1>
             <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
               Six interviewers, six rooms. Swipe the deck and the studio recommends the best fit for your job.
-              The round follows your answers, mirrors Hinglish, and reviews your camera presence at the end.
+              The round follows your answers in proper English and reviews your camera presence at the end.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button onClick={() => studioRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
@@ -492,7 +492,7 @@ const Practice: React.FC = () => {
               {activeAvatar ? `Start with ${activeAvatar.name.split(' ')[0]}` : 'Start interview'}
             </Button>
             <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-              Spoken in Indian English, Hinglish-friendly. Camera feedback is optional and processed only for your review.
+              Spoken in proper Indian English. Camera feedback is optional and processed only for your review.
             </p>
           </div>
         </div>

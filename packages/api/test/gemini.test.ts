@@ -85,7 +85,7 @@ describe('Gemini gateway', () => {
 
   test('estimateCostUsd uses the flash rate and unknown-model fallback', () => {
     expect(estimateCostUsd('gemini-2.5-flash', 1_000_000, 1_000_000)).toBeCloseTo(2.8, 5);
-    expect(estimateCostUsd('mystery-model', 1_000_000, 0)).toBeCloseTo(0.3, 5);
+    expect(estimateCostUsd('mystery-model', 1_000_000, 0)).toBeCloseTo(0.1, 5);
   });
 
   test('no configured key produces a safe non-ok response without a network call', async () => {

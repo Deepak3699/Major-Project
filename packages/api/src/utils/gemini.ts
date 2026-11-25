@@ -25,7 +25,6 @@ export type GeminiFeature =
   | 'opening'
   | 'reply'
   | 'learning'
-  | 'hinglish_reply'
   | 'adaptive_question'
   | 'presentation'
   | 'report'
@@ -45,7 +44,7 @@ export interface AiConfig {
 
 export const DEFAULT_AI_CONFIG: AiConfig = {
   enabled: true,
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.5-flash-lite',
   features: {},
   monthly_budget_usd: 50,
   daily_request_cap: 300,
@@ -56,13 +55,18 @@ export const DEFAULT_AI_CONFIG: AiConfig = {
 export const AI_CONFIG_KEY = 'ai_config';
 export const AI_FEATURES: GeminiFeature[] = [
   'questions', 'grading', 'summary', 'follow_up', 'opening', 'reply', 'learning',
-  'hinglish_reply', 'adaptive_question', 'presentation', 'report',
+  'adaptive_question', 'presentation', 'report',
   'preparation', 'application_documents', 'admin_test',
 ];
 
 // USD per 1M tokens. Kept in one place so admin estimates match what the
 // gateway enforces. Unknown models use the conservative flash rate.
 const PRICING: Record<string, { input: number; output: number }> = {
+  'gemini-3.5-flash': { input: 0.30, output: 2.50 },
+  'gemini-3.5-flash-lite': { input: 0.10, output: 0.40 },
+  'gemini-3.8-flash': { input: 0.30, output: 2.50 },
+  'gemini-3.1-pro-preview': { input: 1.25, output: 10.00 },
+  // Historical models are kept so older usage events stay costed correctly.
   'gemini-2.5-flash': { input: 0.30, output: 2.50 },
   'gemini-2.5-flash-lite': { input: 0.10, output: 0.40 },
   'gemini-2.5-pro': { input: 1.25, output: 10.00 },
@@ -70,7 +74,7 @@ const PRICING: Record<string, { input: number; output: number }> = {
 };
 
 export function estimateCostUsd(model: string, promptTokens: number, completionTokens: number): number {
-  const rate = PRICING[model] || PRICING['gemini-2.5-flash'];
+  const rate = PRICING[model] || PRICING['gemini-3.5-flash-lite'];
   const cost = (promptTokens / 1_000_000) * rate.input + (completionTokens / 1_000_000) * rate.output;
   return Math.round(cost * 1_000_000) / 1_000_000;
 }

@@ -8,6 +8,7 @@ const base = {
   targetCount: 6,
   job: null,
   recentTopics: [],
+  language: 'english' as const,
 };
 
 function asked(questions: Array<{ question: string; topic: string; category: string; answer: string }>) {
@@ -15,64 +16,94 @@ function asked(questions: Array<{ question: string; topic: string; category: str
 }
 
 describe('Adaptive interview question progression', () => {
-  test('the first question is an introduction', () => {
-    const first = templateNextQuestion({ ...base, asked: [], language: 'english' });
+  test('the first question is an English introduction', () => {
+    const first = templateNextQuestion({ ...base, asked: [] });
     expect(first.idx).toBe(0);
     expect(first.category).toBe('intro');
+    expect(first.question).not.toMatch(/aap|theek|bahut/i);
   });
 
-  test('a Hinglish interview digs once, then moves to a role-specific question', () => {
-    const intro = templateNextQuestion({ ...base, asked: [], language: 'hinglish' });
+  test('one follow-up is followed by a role-specific question', () => {
+    const intro = templateNextQuestion({ ...base, asked: [] });
     const history = asked([{
       question: intro.question, topic: intro.topic, category: 'intro',
-      answer: 'Maine React dashboard banaya tha aur API design kiya.',
+      answer: 'I built a React dashboard and we designed the API.',
     }]);
-    const dig = templateNextQuestion({ ...base, asked: history, language: 'hinglish' });
+    const dig = templateNextQuestion({ ...base, asked: history });
     expect(dig.category).toBe('follow_up');
+    expect(dig.question).not.toMatch(/aap|theek|bahut/i);
 
     const next = templateNextQuestion({
       ...base,
       asked: [...history, {
         question: dig.question, topic: dig.topic, category: 'follow_up',
-        answer: 'Ek decision tha: virtualization. Humne measured kiya.',
+        answer: 'We chose virtualization and measured the result.',
       }],
-      language: 'hinglish',
     });
     expect(['technical', 'project', 'behavioral', 'case']).toContain(next.category);
-    expect(next.question).not.toMatch(/^Aapne/);
+    expect(next.question).not.toMatch(/aap|theek|bahut/i);
   });
 
-  test('Hinglish follow-up probes rotate instead of repeating the same line', () => {
-    const history = asked([
-      { question: 'Tell me about yourself.', topic: 'Background', category: 'intro', answer: 'I built a React app.' },
-      { question: 'Aapne react ka zikr kiya...', topic: 'Aapke answer se', category: 'follow_up', answer: 'Virtualization use kiya.' },
-    ]);
-    const firstDig = templateNextQuestion({ ...base, asked: history.slice(0, 1), language: 'hinglish' });
-    const secondDig = templateNextQuestion({
+  test('the template fallback never asks a second introduction', () => {
+    const intro = templateNextQuestion({ ...base, asked: [] });
+    const afterIntro = templateNextQuestion({
       ...base,
-      asked: [...history.slice(0, 1), {
-        question: firstDig.question, topic: firstDig.topic, category: 'follow_up', answer: 'Team ke saath kiya.',
-      }, history[1]],
-      language: 'hinglish',
+      asked: asked([{
+        question: intro.question, topic: intro.topic, category: 'intro',
+        answer: 'I built a React dashboard with an API.',
+      }]),
     });
-    expect(secondDig.category).toBe('follow_up');
-    expect(secondDig.question).not.toBe(firstDig.question);
+    expect(afterIntro.category).not.toBe('intro');
+
+    const later = templateNextQuestion({
+      ...base,
+      asked: [
+        ...asked([{
+          question: intro.question, topic: intro.topic, category: 'intro',
+          answer: 'I built a React dashboard with an API.',
+        }]),
+        ...asked([{
+          question: 'You mentioned React — what was the hardest decision?',
+          topic: 'Tool deep-dive', category: 'follow_up', answer: 'We chose virtualization.',
+        }]),
+      ],
+    });
+    expect(later.category).not.toBe('intro');
+  });
+
+  test('follow-up probes vary with the candidate answer', () => {
+    const tool = templateNextQuestion({
+      ...base,
+      asked: asked([{
+        question: 'Tell me about yourself.', topic: 'Background', category: 'intro',
+        answer: 'I built a React app with TypeScript.',
+      }]),
+    });
+    const metric = templateNextQuestion({
+      ...base,
+      asked: asked([{
+        question: 'Tell me about yourself.', topic: 'Background', category: 'intro',
+        answer: 'I improved conversion by 20 percent for 5000 users.',
+      }]),
+    });
+    expect(tool.topic).toBe('Tool deep-dive');
+    expect(metric.topic).toBe('Metrics probe');
+    expect(tool.question).not.toBe(metric.question);
   });
 
   test('English interviews alternate digs with fresh role questions', () => {
-    const intro = templateNextQuestion({ ...base, asked: [], language: 'english' });
+    const intro = templateNextQuestion({ ...base, asked: [] });
     const history = asked([{
       question: intro.question, topic: intro.topic, category: 'intro',
       answer: 'I built a React interface with 10 users and an API.',
     }]);
-    const dig = templateNextQuestion({ ...base, asked: history, language: 'english' });
+    const dig = templateNextQuestion({ ...base, asked: history });
     expect(dig.category).toBe('follow_up');
     const next = templateNextQuestion({
       ...base,
       asked: [...history, {
         question: dig.question, topic: dig.topic, category: 'follow_up', answer: 'We chose a heap and measured it.',
       }],
-      language: 'english',
     });
     expect(['technical', 'project', 'behavioral', 'case']).toContain(next.category);
   });

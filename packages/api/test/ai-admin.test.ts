@@ -64,7 +64,7 @@ describe('Admin AI routes', () => {
     const res = await app.inject({ method: 'GET', url: '/admin/ai' });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
-    expect(body.config.model).toBe('gemini-2.5-flash');
+    expect(body.config.model).toBe('gemini-3.5-flash-lite');
     expect(body.summary.calls_this_month).toBe(9);
     expect(body.usage.daily_requests).toBe(3);
     expect(body.daily[0].day).toBe('2026-11-25');

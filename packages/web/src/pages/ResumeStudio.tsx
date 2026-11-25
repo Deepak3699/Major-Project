@@ -75,7 +75,7 @@ const ResumeStudio: React.FC = () => {
       const documents = Array.isArray(result?.documents) ? result.documents : [];
       const resume = documents.find((document) => document.document_type === 'tailored_resume');
       if (resume?.content) setDraft(resume.content);
-      setSourceLabel(result.generated_by === 'gemini-2.5-flash' ? 'Gemini draft · review every fact' : 'Local profile draft');
+      setSourceLabel(result.generated_by !== 'truthful-template' ? 'Gemini draft · review every fact' : 'Local profile draft');
       setNotice('Draft is ready. Check every detail and edit anything you want before saving it as PDF.');
     },
     onError: (error) => setNotice((error as Error).message),

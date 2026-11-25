@@ -76,9 +76,6 @@ const SessionBadgeRow = ({ q, score }: { q: PracticeQuestion; score?: boolean })
     <Badge variant="muted">{CATEGORY_LABEL[q.category] || q.category}</Badge>
     {q.topic && <Badge variant="outline">{q.topic}</Badge>}
     {q.category === 'follow_up' && <Badge variant="signal">From your last answer</Badge>}
-    {(q.answer_language === 'hinglish' || q.answer_language === 'hindi') && (
-      <Badge variant="outline">{q.answer_language === 'hindi' ? 'Hindi' : 'Hinglish'}</Badge>
-    )}
     {score !== false && (
       <span className={cn('ml-auto grid h-8 min-h-8 min-w-8 place-items-center rounded-lg border px-1 font-mono text-[12px] font-semibold tabular-nums', feedbackClass(q.score))}>
         {q.score ?? '–'}
@@ -174,7 +171,7 @@ const Scorecard = ({ report }: { report: PracticeSessionReport }) => (
         <h2 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-foreground">Five dimensions of the round</h2>
       </div>
       <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-muted-foreground">
-        {report.model === 'gemini-2.5-flash' ? 'AI review' : 'Rule-based review'}
+        {report.model !== 'template' ? 'AI review' : 'Rule-based review'}
       </span>
     </div>
 
@@ -592,8 +589,8 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
             {graded
               ? 'Graded from your own answer — the breakdown below explains the score.'
               : voiceOn && speech.supported
-                ? `${avatar.name.split(' ')[0]} asks aloud. Answer by voice (words land below, editable) or just type — four to six specific sentences. English or Hinglish, whichever is natural.`
-                : 'Answer in four to six specific sentences — English or Hinglish is fine, and the interviewer mirrors your language.'}
+                ? `${avatar.name.split(' ')[0]} asks aloud in English. Answer by voice (words land below, editable) or just type — four to six specific sentences in English.`
+                : 'Answer in four to six specific sentences in English.'}
           </p>
           {!graded && !micArmed && voiceOn && voice.supported && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">

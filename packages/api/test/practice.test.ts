@@ -288,7 +288,7 @@ describe('AI practice routes', () => {
     expect(Array.isArray(insertCall?.[1]?.[6])).toBe(true);
   });
 
-  test('a Hinglish answer gets a Hinglish reaction and follow-up', async () => {
+  test('an answer gets an English reaction and follow-up', async () => {
     mockSqlUnsafe.mockImplementation(async (query: string, params?: any[]): Promise<any> => {
       if (query.includes('FROM interview_sessions WHERE id = $1')) {
         return [{ id: SESSION_ID, user_id: 'cand-1', status: 'in_progress', difficulty: 'standard', role_focus: 'Data Analyst', question_count: 6, avatar_id: 'neha' }];
@@ -297,14 +297,14 @@ describe('AI practice routes', () => {
         return [{ id: QUESTION_ID, idx: 0, category: 'intro', topic: 'Background', question: 'Tell me about yourself.', ideal_points: ['x'], feedback: null, score: null, answered_at: null }];
       }
       if (query.includes('UPDATE interview_questions') && query.includes('answer_language')) {
-        return [{ id: QUESTION_ID, idx: 0, category: 'intro', topic: 'Background', question: 'Tell me about yourself.', answer: 'ans', answer_language: 'hinglish', feedback: { score: 70, strengths: [], improvements: [] }, score: 70, answered_at: new Date().toISOString() }];
+        return [{ id: QUESTION_ID, idx: 0, category: 'intro', topic: 'Background', question: 'Tell me about yourself.', answer: 'ans', answer_language: 'english', feedback: { score: 70, strengths: [], improvements: [] }, score: 70, answered_at: new Date().toISOString() }];
       }
       if (query.includes('COUNT(*) FILTER (WHERE answered_at IS NOT NULL)')) return [{ answered: 1, max_idx: 0 }];
       if (query.includes('SELECT category, topic, question, answer, score FROM interview_questions')) {
         return [{ category: 'intro', topic: 'Background', question: 'Tell me about yourself.', answer: 'Maine ek dashboard banaya tha jisme React aur SQL use kiya, aur reporting 30% fast hui.', score: 70 }];
       }
       if (query.includes('INSERT INTO interview_questions')) {
-        return [{ id: FOLLOW_UP_ID, idx: 1, category: 'follow_up', topic: 'Aapke answer se', question: 'Aapne react mention kiya — usme sabse tough decision kya tha?', answer: '', answer_language: 'hinglish', feedback: null, score: null, answered_at: null }];
+        return [{ id: FOLLOW_UP_ID, idx: 1, category: 'follow_up', topic: 'Tool deep-dive', question: 'You mentioned React — what was the hardest decision you made with it?', answer: '', answer_language: 'english', feedback: null, score: null, answered_at: null }];
       }
       return defaultImpl(query);
     });
@@ -315,11 +315,12 @@ describe('AI practice routes', () => {
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
-    expect(body.language).toBe('hinglish');
-    expect(body.reply).toMatch(/haan|theek|bahut|chaliye|aap/i);
-    expect(body.next_question.question).toMatch(/aapne|kya|theek/i);
+    expect(body.language).toBe('english');
+    expect(body.reply).not.toMatch(/aap|theek|bahut|chaliye/i);
+    expect(body.reply).toMatch(/unpack|deeper|closer|moving|I am|That is|start/i);
+    expect(body.next_question.question).toMatch(/you mentioned|what|how/i);
     const update = mockSqlUnsafe.mock.calls.find(([q]: [string]) => q.includes('answer_language'));
-    expect(update?.[1]?.[4]).toBe('hinglish');
+    expect(update?.[1]?.[4]).toBe('english');
   });
 
   test('POST /sessions/:id/finish averages scores and returns per-category means', async () => {

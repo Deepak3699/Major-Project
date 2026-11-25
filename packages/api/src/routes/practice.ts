@@ -13,8 +13,6 @@ import {
   type Difficulty,
 } from '../utils/practice-ai';
 import {
-  detectAnswerLanguage,
-  generateHinglishReply,
   generateNextQuestion,
   generatePresentationFeedback,
   generateSessionReport,
@@ -27,6 +25,7 @@ import {
   type JobContext,
 } from '../utils/interview-avatars';
 import type { SubscriptionState, SessionRecord, PresentationMetrics } from '../types/practice';
+import { getAiConfig } from '../utils/gemini';
 
 /**
  * AI practice — subscription-gated mock interviews and adaptive learning.
@@ -341,7 +340,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       language: 'english',
       recentTopics,
     });
-    const model = firstQuestion.source === 'gemini' ? 'gemini-2.5-flash' : 'template';
+    const model = firstQuestion.source === 'gemini' ? (await getAiConfig()).model : 'template';
 
     // The avatar greets the candidate before the first question. Kept on the
     // session row so reopening an interview resumes the same opening line.
@@ -441,7 +440,9 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     // Small, owned-context hint only: years of experience and headline. Answers
     // themselves are never copied into the hint, mirroring the drafting privacy stance.
     const profile = await loadProfile(sql, userId);
-    const language = detectAnswerLanguage(parsed.data.answer);
+    // Interviewer output is always proper English, regardless of how the
+    // candidate phrases their answer.
+    const language = 'english' as const;
 
     const grade = await gradeAnswer(
       {
@@ -516,10 +517,9 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
       }
     } catch { /* the candidate can still finish if generation hiccups */ }
 
-    // The avatar reacts in character before the next question opens. A
-    // Hinglish/Hindi answer gets a Hinglish reaction so the mirroring is
-    // audible within one turn. Best-effort: a provider hiccup never blocks
-    // the candidate's progress.
+    // The avatar reacts in character before the next question opens. The
+    // reaction is always in English. Best-effort: a provider hiccup never
+    // blocks the candidate's progress.
     let interviewerReply = '';
     try {
       const replyInput = {
@@ -536,9 +536,7 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
         improvements: grade.improvements,
         turn: Number(question.idx) || 0,
       };
-      interviewerReply = language === 'english'
-        ? await generateInterviewerReply({ ...replyInput, followUp: nextQuestion?.question || '' })
-        : await generateHinglishReply({ ...replyInput, language, hasFollowUp: Boolean(nextQuestion) });
+      interviewerReply = await generateInterviewerReply({ ...replyInput, followUp: nextQuestion?.question || '' });
       if (interviewerReply) {
         await sql.unsafe(
           `UPDATE interview_questions SET interviewer_reply = $2 WHERE id = $1`,

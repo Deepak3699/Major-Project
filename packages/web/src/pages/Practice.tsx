@@ -245,7 +245,10 @@ const Practice: React.FC = () => {
   const otherJobOptions = jobOptions.filter((job) => !savedIds.has(job.id));
   const recommendedId = avatarData?.recommended?.avatar_id;
   const avatars = avatarData?.avatars?.length ? avatarData.avatars : FALLBACK_AVATARS;
-  const activeAvatar = avatars.find((avatar) => avatar.id === avatarId) || avatars[0];
+  // Apply the recommendation as soon as it arrives rather than waiting for a
+  // state effect; this keeps the start button and the deck in sync on first paint.
+  const selectedAvatarId = !avatarTouched && recommendedId ? recommendedId : avatarId;
+  const activeAvatar = avatars.find((avatar) => avatar.id === selectedAvatarId) || avatars[0];
 
   useEffect(() => {
     if (recommendedId && !avatarTouched) setAvatarId(recommendedId);
@@ -272,7 +275,7 @@ const Practice: React.FC = () => {
         role_focus: selectedJob?.title || role.trim() || undefined,
         difficulty,
         question_count: count,
-        avatar_id: avatarId || recommendedId,
+        avatar_id: selectedAvatarId || activeAvatar.id,
         job_id: jobId || undefined,
       });
       await queryClient.invalidateQueries('practice-sessions');
@@ -511,7 +514,7 @@ const Practice: React.FC = () => {
 
           <InterviewerDeck
             avatars={avatars}
-            activeId={avatarId || activeAvatar.id}
+            activeId={selectedAvatarId || activeAvatar.id}
             recommendedId={recommendedId}
             reason={avatarData?.recommended?.reason}
             onSelect={(id) => { setAvatarId(id); setAvatarTouched(true); }}

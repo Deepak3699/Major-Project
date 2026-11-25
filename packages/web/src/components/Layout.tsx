@@ -59,6 +59,13 @@ const Layout: React.FC = () => {
     queryClient.invalidateQueries();
   });
 
+  // A route change must never leave the new page empty. `refetchOnMount` in the
+  // query defaults covers most cases; this also refreshes queries that stayed
+  // mounted while the route changed (e.g. shared layouts / search params).
+  useEffect(() => {
+    queryClient.invalidateQueries();
+  }, [location.pathname, location.search, queryClient]);
+
   useEffect(() => {
     const goOffline = () => setOnline(false);
     const goOnline = () => setOnline(true);
@@ -88,7 +95,9 @@ const Layout: React.FC = () => {
           </div>
         )}
         <main className="flex-1 overflow-y-auto scroll-smooth bg-[radial-gradient(ellipse_at_top,hsl(var(--signal)/0.04),transparent_45%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background)))]">
-          <AnimatePresence mode="wait" initial={false}>
+          {/* No mode="wait": the new page mounts immediately instead of
+              leaving an empty gap while the old page animates out. */}
+          <AnimatePresence initial={false}>
             <motion.div
               key={location.pathname}
               initial={{ opacity: 0, y: 8 }}

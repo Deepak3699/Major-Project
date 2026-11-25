@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -462,7 +462,15 @@ export const preparation = {
 export const practice = {
   subscription: async () => (await api.get('/candidate/practice/subscription')).data as { subscription: PracticeSubscription },
   sessions: async () => (await api.get('/candidate/practice/sessions')).data as { sessions: PracticeSessionSummary[] },
-  createSession: async (values: { role_focus?: string; difficulty?: PracticeDifficulty; question_count?: number }) =>
+  avatars: async (jobId?: string) =>
+    (await api.get('/candidate/practice/avatars', { params: jobId ? { job_id: jobId } : {} })).data as PracticeAvatarsResult,
+  createSession: async (values: {
+    role_focus?: string;
+    difficulty?: PracticeDifficulty;
+    question_count?: number;
+    avatar_id?: string;
+    job_id?: string;
+  }) =>
     (await api.post('/candidate/practice/sessions', values)).data as { session: PracticeSessionSummary; subscription: PracticeSubscription },
   session: async (id: string) => (await api.get(`/candidate/practice/sessions/${id}`)).data as { session: PracticeSessionSummary; questions: PracticeQuestion[] },
   answer: async (sessionId: string, values: { question_id: string; answer: string }) =>

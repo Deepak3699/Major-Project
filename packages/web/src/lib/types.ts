@@ -392,6 +392,48 @@ export interface PreparationArtifact {
 
 export type PracticeDifficulty = 'calm' | 'standard' | 'brutal';
 
+export interface PracticeVoiceProfile {
+  gender: 'female' | 'male';
+  lang: string;
+  rate: number;
+  pitch: number;
+  hints: string[];
+}
+
+export interface PracticeAvatar {
+  id: string;
+  name: string;
+  title: string;
+  tagline: string;
+  personality: string;
+  ability: string;
+  specialties: string[];
+  accent: string;
+  voice: PracticeVoiceProfile;
+  palette: { accent: string; surface: string };
+}
+
+export interface PracticeJobContext {
+  id: string;
+  title: string;
+  company: string;
+  skills?: string[];
+}
+
+export interface PracticeAvatarRecommendation {
+  avatar_id: string;
+  name: string;
+  reason: string;
+  score: number;
+}
+
+export interface PracticeAvatarsResult {
+  avatars: PracticeAvatar[];
+  recommended: PracticeAvatarRecommendation;
+  job: PracticeJobContext | null;
+  role_focus: string;
+}
+
 export interface PracticeSubscription {
   plan: 'free' | 'pro';
   status: string;
@@ -409,6 +451,9 @@ export interface PracticeSessionSummary {
   question_count: number;
   status: 'in_progress' | 'completed' | 'abandoned';
   model: string;
+  avatar?: PracticeAvatar;
+  job?: PracticeJobContext | null;
+  opening_line?: string;
   overall_score: number | null;
   verdict: string;
   summary: string;
@@ -424,6 +469,7 @@ export interface PracticeQuestion {
   topic: string;
   question: string;
   answer: string;
+  interviewer_reply?: string;
   feedback: { score: number; strengths: string[]; improvements: string[] } | null;
   score: number | null;
   answered_at: string | null;
@@ -433,6 +479,7 @@ export interface PracticeAnswerResult {
   question: PracticeQuestion;
   grade: { score: number; strengths: string[]; improvements: string[] };
   follow_up?: PracticeQuestion | null;
+  reply?: string;
 }
 
 export interface PracticeFinishResult {

@@ -22,6 +22,17 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
+    // After a deploy, an open tab can hold stale lazy-chunk URLs. Reload once
+    // (guarded so a genuinely broken chunk cannot cause an infinite loop).
+    if (typeof window !== 'undefined' && /chunk|dynamically imported module/i.test(error.message || '')) {
+      const key = 'chunk-reload-at';
+      let last = 0;
+      try { last = Number(window.sessionStorage.getItem(key) || 0); } catch { /* noop */ }
+      if (Date.now() - last > 5000) {
+        try { window.sessionStorage.setItem(key, String(Date.now())); } catch { /* noop */ }
+        window.location.reload();
+      }
+    }
   }
 
   render() {

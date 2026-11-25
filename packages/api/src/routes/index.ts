@@ -15,6 +15,7 @@ import { creditsAdminRoutes } from './credits-admin';
 import { engagementRoutes } from './engagement';
 import { engagementAdminRoutes } from './engagement-admin';
 import { preparationRoutes } from './preparation';
+import { aiAdminRoutes } from './ai-admin';
 
 const routes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -36,6 +37,7 @@ const routes: FastifyPluginAsync = async (fastify) => {
   fastify.register(engagementRoutes, { prefix: '/candidate' });
   fastify.register(engagementAdminRoutes, { prefix: '/admin' });
   fastify.register(preparationRoutes, { prefix: '/candidate/preparation' });
+  fastify.register(aiAdminRoutes, { prefix: '/admin/ai' });
 };
 
 export default routes;

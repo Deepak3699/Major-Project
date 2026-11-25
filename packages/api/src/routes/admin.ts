@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/auth';
 import { encryptApiKeys, decryptApiKeys, maskApiKeys } from '../utils/crypto';
 import { logAuditEvent } from '../utils/audit';
+import { invalidateGeminiCache } from '../utils/gemini';
 
 const triggerRunSchema = z.object({
   sources: z.array(z.string()).optional(),
@@ -177,21 +178,38 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
       const { api_keys } = parseResult.data;
 
       const sql = getDB();
-      const encryptedKeys = api_keys
-        ? encryptApiKeys({
-            snovio: api_keys.snovio,
-            contactout: api_keys.contactout,
-            resend: api_keys.resend,
-            brevo: api_keys.brevo,
-            gemini: api_keys.gemini,
-            whatsapp: api_keys.whatsapp,
-          })
-        : {};
+      const userId = (req.user as { id: string }).id;
+
+      // Merge, never replace: the UI submits only keys the admin actually
+      // changed. Replacing with that subset would silently wipe every other
+      // provider credential on save.
+      const existingRows = await sql.unsafe(
+        `SELECT api_keys FROM users WHERE id = $1`,
+        [userId],
+      );
+      const rawExisting = (existingRows as unknown as Array<{ api_keys: unknown }>)[0]?.api_keys;
+      const existingEncrypted: Record<string, string> =
+        typeof rawExisting === 'string' ? JSON.parse(rawExisting) : (rawExisting || {}) as Record<string, string>;
+
+      const isMasked = (value?: string) => Boolean(value && /^[•*]{2,}/.test(value.trim()));
+      const plainUpdates: Record<string, string | undefined> = {};
+      if (api_keys) {
+        for (const [key, value] of Object.entries(api_keys)) {
+          if (value && !isMasked(value)) plainUpdates[key] = value.trim();
+        }
+      }
+
+      // Preserve unknown/legacy keys verbatim; only replace submitted values.
+      const mergedEncrypted: Record<string, string> = { ...existingEncrypted };
+      Object.assign(mergedEncrypted, encryptApiKeys(plainUpdates));
 
       await sql.unsafe(
         `UPDATE users SET api_keys = $1::jsonb, updated_at = NOW() WHERE id = $2`,
-        [sql.json(encryptedKeys), (req.user as { id: string }).id],
+        [sql.json(mergedEncrypted), userId],
       );
+
+      // A rotated Gemini key must take effect on the very next call.
+      if (plainUpdates.gemini) invalidateGeminiCache();
 
       await logAuditEvent({
         user_id: (req.user as { id: string }).id,

@@ -609,3 +609,55 @@ export interface LearningTrackView {
   modules: LearningModuleView[];
   progress: { done: number; total: number };
 }
+
+export interface AiConfig {
+  enabled: boolean;
+  model: string;
+  features: Record<string, boolean>;
+  monthly_budget_usd: number;
+  daily_request_cap: number;
+  monthly_request_cap: number;
+  max_output_tokens: number;
+}
+
+export interface AiUsageSummary {
+  calls_today: number;
+  calls_this_month: number;
+  calls_all_time: number;
+  cost_today_usd: number;
+  cost_this_month_usd: number;
+  cost_all_time_usd: number;
+  tokens_this_month: number;
+  errors_this_month: number;
+}
+
+export interface AiUsageSnapshot {
+  daily_requests: number;
+  monthly_requests: number;
+  monthly_cost_usd: number;
+}
+
+export interface AiCall {
+  id: string;
+  user_id: string | null;
+  feature: string;
+  model: string;
+  status: 'success' | 'error' | 'blocked';
+  error_code: string | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number | string;
+  latency_ms: number;
+  created_at: string;
+}
+
+export interface AiOverview {
+  config: AiConfig;
+  usage: AiUsageSnapshot;
+  summary: AiUsageSummary;
+  daily: Array<{ day: string; calls: number; cost_usd: number }>;
+  key_configured: boolean;
+  features: string[];
+  defaults: AiConfig;
+}

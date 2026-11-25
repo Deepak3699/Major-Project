@@ -655,7 +655,9 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
               report = $5::jsonb, presentation = $6::jsonb, completed_at = now()
         WHERE id = $1
         RETURNING *`,
-      [session.id, overall, verdict, summary, finalReport, presentationFeedback],
+      // presentation is JSONB NOT NULL DEFAULT 'null'::jsonb: when no camera
+      // review exists we must write a JSON null, not a SQL NULL.
+      [session.id, overall, verdict, summary, finalReport, presentationFeedback ? presentationFeedback : 'null'],
     );
     await simpleAudit(userId, 'practice.session_completed', session.id, {
       overall,

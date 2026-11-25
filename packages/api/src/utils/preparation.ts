@@ -1,3 +1,5 @@
+import { geminiFetch } from './gemini';
+
 /**
  * Job-specific preparation generator.
  *
@@ -336,10 +338,9 @@ function validateGenerated(module: PreparationModule, parsed: any, c: Preparatio
 export async function generatePreparation(
   module: PreparationModule,
   context: PreparationContext,
-  apiKey?: string,
+  _apiKey?: string,
 ): Promise<{ payload: Record<string, unknown>; model: string }> {
   const fallback = { payload: templatePayload(module, context), model: 'template' };
-  if (!apiKey) return fallback;
 
   const instructions = [
     `Create ${module} preparation for the role "${context.role}" at "${context.company}".`,
@@ -358,18 +359,12 @@ export async function generatePreparation(
   ].join('\n\n');
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(20_000),
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: instructions }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 4096 },
-        }),
-      },
-    );
+    const response = await geminiFetch({
+      feature: 'preparation',
+      timeoutMs: 20_000,
+      parts: [{ text: instructions }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 4096 },
+    });
     if (!response.ok) return fallback;
     const payload: any = await response.json();
     const generatedText = payload?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';

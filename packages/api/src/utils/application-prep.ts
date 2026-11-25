@@ -1,3 +1,5 @@
+import { geminiFetch } from './gemini';
+
 type Profile = Record<string, any>;
 type Job = Record<string, any>;
 
@@ -41,8 +43,6 @@ function fallbackDocuments(profile: Profile, job: Job) {
 
 export async function prepareApplicationDocuments(profile: Profile, job: Job) {
   const fallback = fallbackDocuments(profile, job);
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return fallback;
 
   const sourceFacts = {
     candidate: {
@@ -68,20 +68,17 @@ export async function prepareApplicationDocuments(profile: Profile, job: Job) {
   };
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(20_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          'Prepare truthful application materials for this candidate and job.',
-          'Use only facts explicitly present in the supplied candidate profile. Never invent skills, employers, degrees, dates, achievements, metrics, certifications, or experience.',
-          'Reorder and emphasize existing facts to fit the job. If information is absent, omit it. Keep the email professional and concise.',
-          'Return JSON with exactly these string keys: tailored_resume and email_draft.',
-          JSON.stringify(sourceFacts),
-        ].join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
-      }),
+    const response = await geminiFetch({
+      feature: 'application_documents',
+      timeoutMs: 20_000,
+      parts: [{ text: [
+        'Prepare truthful application materials for this candidate and job.',
+        'Use only facts explicitly present in the supplied candidate profile. Never invent skills, employers, degrees, dates, achievements, metrics, certifications, or experience.',
+        'Reorder and emphasize existing facts to fit the job. If information is absent, omit it. Keep the email professional and concise.',
+        'Return JSON with exactly these string keys: tailored_resume and email_draft.',
+        JSON.stringify(sourceFacts),
+      ].join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
     });
     if (!response.ok) return fallback;
     const payload: any = await response.json();

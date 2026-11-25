@@ -38,6 +38,7 @@ const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
 const AdminPractice = lazy(() => import('@/pages/AdminPractice'));
 const AdminCredits = lazy(() => import('@/pages/AdminCredits'));
 const AdminPlacements = lazy(() => import('@/pages/AdminPlacements'));
+const AdminAI = lazy(() => import('@/pages/AdminAI'));
 
 function RouteFallback() {
   return (
@@ -118,6 +119,7 @@ function App() {
       <Route path="admin/practice" element={isAdmin ? <AdminPractice /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/credits" element={isAdmin ? <AdminCredits /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/placements" element={isAdmin ? <AdminPlacements /> : <Navigate to="/dashboard" replace />} />
+      <Route path="admin/ai" element={isAdmin ? <AdminAI /> : <Navigate to="/dashboard" replace />} />
       <Route path="leads" element={isAdmin ? <Leads /> : <Navigate to="/dashboard" replace />} />
       <Route path="leads/:id" element={isAdmin ? <LeadDetail /> : <Navigate to="/dashboard" replace />} />
       <Route path="companies" element={isAdmin ? <Companies /> : <Navigate to="/dashboard" replace />} />

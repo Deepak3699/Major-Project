@@ -1,5 +1,6 @@
-import React, { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect, useRef } from "react";
 import { Outlet, useLocation, NavLink } from "react-router-dom";
+import { useQueryClient } from "react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, LayoutDashboard, BriefcaseBusiness, Sparkles, UserRound } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
@@ -9,6 +10,7 @@ import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { SubscriptionDialog } from "@/components/SubscriptionDialog";
 import { useAuthStore } from "@/stores/auth";
+import { useSSE, isLeadLifecycleEvent } from "@/hooks/useSSE";
 
 function PageSkeleton() {
   return (
@@ -44,6 +46,18 @@ const Layout: React.FC = () => {
   );
   const location = useLocation();
   const isCandidate = useAuthStore((state) => state.user?.role === "candidate" || state.user?.role === "user");
+  const queryClient = useQueryClient();
+  const lastRefreshRef = useRef(0);
+
+  // One app-wide stream (shared with the page-level subscribers in useSSE)
+  // keeps every active view fresh after a lead changes, without a reload.
+  useSSE('/sse/token', (event) => {
+    if (!isLeadLifecycleEvent(event.type)) return;
+    const now = Date.now();
+    if (now - lastRefreshRef.current < 400) return; // coalesce bursts
+    lastRefreshRef.current = now;
+    queryClient.invalidateQueries();
+  });
 
   useEffect(() => {
     const goOffline = () => setOnline(false);

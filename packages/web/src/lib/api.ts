@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticePresentationMetrics, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, AdminInterviewDetail, AdminInterviewSession, CreditLedgerEntry, CreditPage, CreditsOverview } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticePresentationMetrics, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, AdminInterviewDetail, AdminInterviewSession, CreditLedgerEntry, CreditPage, CreditsOverview, AiCall, AiConfig, AiOverview } from './types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -518,6 +518,16 @@ export const creditsAdmin = {
     (await api.get(`/admin/credits/wallet/${userId}`)).data as { wallet: CreditsOverview['wallet'] },
   adjust: async (values: { user_id: string; delta: number; reason: string; idempotency_key?: string }) =>
     (await api.post('/admin/credits/adjust', values)).data as { wallet: CreditsOverview['wallet']; entry: CreditLedgerEntry | null; already_processed: boolean },
+};
+
+export const adminAI = {
+  overview: async () => (await api.get('/admin/ai')).data as AiOverview,
+  settings: async () => (await api.get('/admin/ai/settings')).data as { config: AiConfig; features: string[]; defaults: AiConfig },
+  saveSettings: async (values: Partial<AiConfig>) =>
+    (await api.put('/admin/ai/settings', values)).data as { message: string; config: AiConfig },
+  calls: async (limit = 50, offset = 0) =>
+    (await api.get('/admin/ai/calls', { params: { limit, offset } })).data as { calls: AiCall[] },
+  test: async () => (await api.post('/admin/ai/test')).data as { ok: boolean; model?: string; text?: string; usage?: Record<string, number> | null; error_code?: string; message?: string },
 };
 
 export const health = {

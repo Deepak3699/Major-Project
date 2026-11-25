@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings as SettingsIcon, LogOut, Search, PanelLeft, BriefcaseBusiness,
   Target, ClipboardList, UserRound, MessageCircle, Bookmark, FileText, X,
-  Mic, GraduationCap, Coins, Award, Sparkles, ArrowUpRight,
+  Mic, GraduationCap, Coins, Award, Sparkles, ArrowUpRight, Bot,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
@@ -58,6 +58,7 @@ const ADMIN_SECTIONS = [
     { to: "/admin/placements", label: "Placement outcomes", icon: Award },
     { to: "/admin/practice", label: "Practice subscriptions", icon: Mic, tour: "nav-admin-practice" },
     { to: "/admin/credits", label: "Credits ledger", icon: Coins },
+    { to: "/admin/ai", label: "Gemini usage & cost", icon: Bot },
     { to: "/settings", label: "System settings", icon: SettingsIcon },
   ] },
 ];

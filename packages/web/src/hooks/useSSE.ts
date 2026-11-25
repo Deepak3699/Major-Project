@@ -10,6 +10,14 @@ type SSEEvent = {
   [key: string]: unknown;
 };
 
+type Listener = (event: SSEEvent) => void;
+type Connection = { es: EventSource; listeners: Set<Listener> };
+
+// One EventSource per (url, token) shared by every subscriber. Without this,
+// each page opened its own stream and a global freshness listener would add a
+// duplicate connection on every route change.
+const connections = new Map<string, Connection>();
+
 // Single real-time contract (mirrors the event names the API + workers
 // publish; see api/src/utils/sse.ts). Heartbeats/connected are transport
 // noise and never match.
@@ -42,49 +50,53 @@ export function shouldRefreshLeadDetail(event: SSEEvent, leadId: string | undefi
   return event.lead_id === leadId;
 }
 
+function subscribe(url: string, token: string, listener: Listener): () => void {
+  const key = `${url}::${token}`;
+  let connection = connections.get(key);
+  if (!connection) {
+    const es = new EventSource(`${SSE_BASE}${url}?token=${encodeURIComponent(token)}`);
+    const listeners = new Set<Listener>();
+    es.onopen = () => console.info('[SSE] Connected');
+    es.onmessage = (event: MessageEvent) => {
+      let data: SSEEvent;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        data = { type: 'raw', data: event.data };
+      }
+      listeners.forEach((fn) => fn(data));
+    };
+    es.onerror = (err) => console.warn('[SSE] Connection error:', err);
+    connection = { es, listeners };
+    connections.set(key, connection);
+  }
+  const active = connection;
+  active.listeners.add(listener);
+  return () => {
+    active.listeners.delete(listener);
+    if (active.listeners.size === 0) {
+      try { active.es.close(); } catch { /* noop */ }
+      connections.delete(key);
+    }
+  };
+}
+
 export function useSSE(url: string, onEvent?: (event: SSEEvent) => void) {
   const { token } = useAuthStore();
-  const eventSourceRef = useRef<EventSource | null>(null);
   const onEventRef = useRef(onEvent);
-
   onEventRef.current = onEvent;
 
-  const connect = useCallback(() => {
+  useEffect(() => {
     if (!token) return;
-
-    const es = new EventSource(`${SSE_BASE}${url}?token=${encodeURIComponent(token)}`);
-
-    es.onopen = () => {
-      console.info('[SSE] Connected');
-    };
-
-    es.onmessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        onEventRef.current?.(data);
-      } catch {
-        onEventRef.current?.({ type: 'raw', data: event.data });
-      }
-    };
-
-    es.onerror = (err) => {
-      console.warn('[SSE] Connection error:', err);
-    };
-
-    eventSourceRef.current = es;
+    return subscribe(url, token, (event) => onEventRef.current?.(event));
   }, [token, url]);
 
-  const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+  const connect = useCallback(() => {
+    // Kept for API compatibility; the hook subscribes automatically.
   }, []);
-
-  useEffect(() => {
-    connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+  const disconnect = useCallback(() => {
+    // Kept for API compatibility; cleanup happens on unmount.
+  }, []);
 
   return { connect, disconnect };
 }

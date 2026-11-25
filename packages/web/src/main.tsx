@@ -10,9 +10,14 @@ import './index.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      // Pages should reflect server state quickly without a full reload.
+      // SSE + mutation invalidations push updates; these defaults cover the
+      // gaps (returning to a tab, reconnecting after a network blip).
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       retry: 1,
-      staleTime: 30000,
+      staleTime: 5000,
+      cacheTime: 5 * 60 * 1000,
     },
   },
 });

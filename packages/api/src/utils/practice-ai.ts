@@ -1,5 +1,6 @@
 import type { Profile, QuestionSpec, GeneratedQuestion, AnswerGrade, LearningModule, LearningResource, FollowUpQuestion } from '../types/practice';
 import type { AvatarPersona, JobContext } from './interview-avatars';
+import { geminiFetch } from './gemini';
 
 /**
  * AI practice engine: interview question generation, answer grading and
@@ -262,8 +263,6 @@ export async function generateInterviewQuestions(profile: Profile, options: {
     model: 'template',
   });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return fallback();
 
   const personal = {
     role_target: role,
@@ -278,13 +277,11 @@ export async function generateInterviewQuestions(profile: Profile, options: {
   const alreadyPracticed = (recentTopics || []).slice(0, 25);
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(30_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          QUESTION_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'questions',
+      timeoutMs: 30_000,
+      parts: [{ text: [
+        QUESTION_SYSTEM_PROMPT,
           avatar ? [
             `You are ${avatar.name}, ${avatar.title}.`,
             `Personality: ${avatar.personality}`,
@@ -303,9 +300,8 @@ export async function generateInterviewQuestions(profile: Profile, options: {
           `Generate ${count} question objects.`,
           alreadyPracticed.length ? `Avoid these recently practiced topics: ${JSON.stringify(alreadyPracticed)}` : '',
           JSON.stringify(personal),
-        ].filter(Boolean).join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.6, maxOutputTokens: 4096 },
-      }),
+      ].filter(Boolean).join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.6, maxOutputTokens: 4096 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();
@@ -433,25 +429,21 @@ export function heuristicGrade(spec: QuestionSpec, answer: string, difficulty: D
 
 export async function gradeAnswer(spec: QuestionSpec, answer: string, difficulty: Difficulty, profileHint?: Record<string, unknown>): Promise<AnswerGrade> {
   const fallback = () => heuristicGrade(spec, answer, difficulty);
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || !String(answer || '').trim()) return fallback();
+  if (!String(answer || '').trim()) return fallback();
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(25_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          GRADE_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'grading',
+      timeoutMs: 25_000,
+      parts: [{ text: [
+        GRADE_SYSTEM_PROMPT,
           `Question (${spec.category}, topic: ${spec.topic || 'general'}): ${spec.question}`,
           `What a good answer covers: ${JSON.stringify(spec.ideal_points || [])}`,
           `Difficulty context: ${difficulty}`,
           profileHint ? `Candidate context (for specificity only): ${JSON.stringify(profileHint)}` : '',
           `Candidate answer: ${String(answer).slice(0, 6000)}`,
-        ].filter(Boolean).join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 800 },
-      }),
+      ].filter(Boolean).join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 800 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();
@@ -497,17 +489,14 @@ export async function summarizeSession(session: { difficulty: string; role_focus
   const byCategory: Record<string, number> = {};
   for (const item of items) byCategory[item.category] = item.score;
   const fallback = () => templateSummary(session, items, byCategory);
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || items.length === 0) return fallback();
+  if (items.length === 0) return fallback();
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(25_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          SUMMARY_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'summary',
+      timeoutMs: 25_000,
+      parts: [{ text: [
+        SUMMARY_SYSTEM_PROMPT,
           `Role: ${session.role_focus}; difficulty: ${session.difficulty}.`,
           JSON.stringify(items.map((i) => ({
             category: i.category,
@@ -517,9 +506,8 @@ export async function summarizeSession(session: { difficulty: string; role_focus
             strengths: i.feedback?.strengths || [],
             improvements: i.feedback?.improvements || [],
           }))),
-        ].join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 900 },
-      }),
+      ].join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 900 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();
@@ -608,24 +596,20 @@ export async function generateFollowUp(input: {
   history: Array<{ question: string; answer: string }>;
 }): Promise<FollowUpQuestion> {
   const fallback = () => templateFollowUp(input.question, input.answer, input.topic);
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || !String(input.answer || '').trim()) return fallback();
+  if (!String(input.answer || '').trim()) return fallback();
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(25_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          FOLLOWUP_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'follow_up',
+      timeoutMs: 25_000,
+      parts: [{ text: [
+        FOLLOWUP_SYSTEM_PROMPT,
           `Target role: ${input.role_focus}; difficulty: ${input.difficulty}.`,
           `Previous question you asked: ${String(input.question).slice(0, 400)}`,
           ...input.history.slice(0, 3).map((h) => `Earlier you asked: ${String(h.question).slice(0, 250)} · they answered: ${String(h.answer).slice(0, 400)}`),
           `Their latest answer (verbatim): ${String(input.answer).slice(0, 3000)}`,
-        ].filter(Boolean).join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 400 },
-      }),
+      ].filter(Boolean).join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 400 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();
@@ -705,25 +689,20 @@ export async function generateOpeningLine(input: {
   candidateName?: string;
 }): Promise<string> {
   const fallback = () => templateOpeningLine(input);
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return fallback();
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(12_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          OPENING_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'opening',
+      timeoutMs: 12_000,
+      parts: [{ text: [
+        OPENING_SYSTEM_PROMPT,
           `You are ${input.avatar.name}, ${input.avatar.title}.`,
           `Personality: ${input.avatar.personality}`,
           `Interviewing ability: ${input.avatar.ability}`,
           `Candidate first name: ${firstName(input.candidateName) || '(not given)'}`,
           `Role: ${roleLabel(input.role, input.job)}${companyLabel(input.job)}`,
-        ].join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.75, maxOutputTokens: 300 },
-      }),
+      ].join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.75, maxOutputTokens: 300 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();
@@ -885,17 +864,14 @@ export async function generateInterviewerReply(input: {
     answer: input.answer,
     turn: input.turn,
   });
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || !String(input.answer || '').trim()) return fallback();
+  if (!String(input.answer || '').trim()) return fallback();
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          REPLY_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'reply',
+      timeoutMs: 15_000,
+      parts: [{ text: [
+        REPLY_SYSTEM_PROMPT,
           `You are ${input.avatar.name}, ${input.avatar.title}.`,
           `Personality: ${input.avatar.personality}`,
           `Interviewing ability: ${input.avatar.ability}`,
@@ -904,9 +880,8 @@ export async function generateInterviewerReply(input: {
           `Their answer (verbatim): ${String(input.answer).slice(0, 3000)}`,
           `Grade: ${input.score}/100. Strengths: ${JSON.stringify((input.strengths || []).slice(0, 3))}. Gaps: ${JSON.stringify((input.improvements || []).slice(0, 3))}.`,
           input.followUp ? `A follow-up is coming: ${String(input.followUp).slice(0, 300)}` : 'No follow-up is coming; the next planned question is next.',
-        ].join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 300 },
-      }),
+      ].join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.7, maxOutputTokens: 300 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();
@@ -1008,17 +983,13 @@ function templateTrackModules(profile: Profile, role: string): LearningModule[] 
 
 export async function generateLearningTrack(profile: Profile, role: string): Promise<{ modules: LearningModule[]; model: string }> {
   const fallback = () => ({ modules: templateTrackModules(profile, role), model: 'template' });
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return fallback();
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(30_000),
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: [
-          TRACK_SYSTEM_PROMPT,
+    const response = await geminiFetch({
+      feature: 'learning',
+      timeoutMs: 30_000,
+      parts: [{ text: [
+        TRACK_SYSTEM_PROMPT,
           `Target role: ${role}`,
           JSON.stringify({
             skills: profile.skills,
@@ -1027,9 +998,8 @@ export async function generateLearningTrack(profile: Profile, role: string): Pro
             education_level: profile.education_level,
             projects: (Array.isArray(profile.projects) ? profile.projects : []).slice(0, 5),
           }),
-        ].join('\n\n') }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.4, maxOutputTokens: 4096 },
-      }),
+      ].join('\n\n') }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.4, maxOutputTokens: 4096 },
     });
     if (!response.ok) return fallback();
     const payload: any = await response.json();

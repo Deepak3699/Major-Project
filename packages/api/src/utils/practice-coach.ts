@@ -14,6 +14,7 @@ import {
   type Difficulty,
 } from './practice-ai';
 import type { AvatarPersona, JobContext } from './interview-avatars';
+import { geminiFetch, type GeminiFeature } from './gemini';
 
 /**
  * The live-interview layer: conversation-driven questioning, Hinglish
@@ -24,7 +25,6 @@ import type { AvatarPersona, JobContext } from './interview-avatars';
  * uses the template brain instead of Gemini.
  */
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
 const MAX_SNAPSHOTS = 3;
 const MAX_SNAPSHOT_CHARS = 700_000;
 
@@ -84,28 +84,21 @@ interface GeminiPart {
 }
 
 async function geminiJson(
+  feature: GeminiFeature,
   parts: GeminiPart[],
   options: { temperature?: number; maxOutputTokens?: number; timeoutMs?: number } = {},
 ): Promise<any | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(options.timeoutMs ?? 30_000),
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: options.temperature ?? 0.5,
-            maxOutputTokens: options.maxOutputTokens ?? 1200,
-          },
-        }),
+    const response = await geminiFetch({
+      feature,
+      parts,
+      timeoutMs: options.timeoutMs ?? 30_000,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: options.temperature ?? 0.5,
+        maxOutputTokens: options.maxOutputTokens ?? 1200,
       },
-    );
+    });
     if (!response.ok) return null;
     const payload: any = await response.json();
     const text = payload?.candidates?.[0]?.content?.parts
@@ -267,7 +260,7 @@ export async function generateHinglishReply(input: {
     turn: input.turn,
   });
 
-  const parsed = await geminiJson([
+  const parsed = await geminiJson('hinglish_reply', [
     {
       text: [
         'You are an Indian interviewer mid-conversation. The candidate just answered your question.',
@@ -437,7 +430,7 @@ export async function generateNextQuestion(input: AdaptiveQuestionInput): Promis
     `Q${index + 1} (${item.category || 'question'}, ${item.topic}): ${String(item.question).slice(0, 300)}\nA${index + 1}: ${String(item.answer || '(no answer)').slice(0, 1200)}`
   )).join('\n\n');
 
-  const parsed = await geminiJson([
+  const parsed = await geminiJson('adaptive_question', [
     {
       text: [
         NEXT_QUESTION_PROMPT,
@@ -583,7 +576,7 @@ export async function generatePresentationFeedback(input: {
   const snapshots = (input.metrics.snapshots || []).slice(0, MAX_SNAPSHOTS).map(parseSnapshot).filter(Boolean) as Array<{ mimeType: string; data: string }>;
   if (!input.metrics.camera_on || snapshots.length === 0) return fallback();
 
-  const parsed = await geminiJson([
+  const parsed = await geminiJson('presentation', [
     {
       text: [
         PRESENTATION_PROMPT,
@@ -773,7 +766,7 @@ export async function generateSessionReport(input: ReportInput): Promise<Session
   const items = input.items.filter((item) => Number.isFinite(item.score));
   if (!items.length) return fallback();
 
-  const parsed = await geminiJson([
+  const parsed = await geminiJson('report', [
     {
       text: [
         REPORT_PROMPT,

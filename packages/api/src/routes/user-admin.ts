@@ -557,11 +557,10 @@ export const userAdminRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    const removingActiveAdmin =
+    const removingFinalAdmin =
       target.role === 'admin' &&
-      target.status === 'active' &&
       ((changes.role && changes.role !== 'admin') || changes.status === 'suspended');
-    if (removingActiveAdmin && (await activeAdminCount(target.id)) === 0) {
+    if (removingFinalAdmin && (await activeAdminCount(target.id)) === 0) {
       return reply.status(400).send({ error: 'At least one active administrator must remain.' });
     }
 
@@ -683,7 +682,7 @@ export const userAdminRoutes: FastifyPluginAsync = async (fastify) => {
     if (target.email.toLowerCase() !== parsed.data.confirm_email.toLowerCase()) {
       return reply.status(400).send({ error: 'The confirmation email does not match this account.' });
     }
-    if (target.role === 'admin' && target.status === 'active' && (await activeAdminCount(target.id)) === 0) {
+    if (target.role === 'admin' && (await activeAdminCount(target.id)) === 0) {
       return reply.status(400).send({ error: 'At least one active administrator must remain.' });
     }
 

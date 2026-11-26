@@ -17,6 +17,28 @@ useAuthStore.subscribe((state) => {
     delete api.defaults.headers.common['Authorization'];
   }
 });
+
+// A tab left open across a deploy keeps the previous bundle in memory. Its
+// lazy route chunks no longer exist, so client-side navigation renders blank
+// until a hard refresh. Detect the new entry chunk and reload once.
+const currentBundle = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.getAttribute('src');
+let lastBundleCheck = 0;
+async function ensureCurrentBundle(): Promise<void> {
+  if (!currentBundle || Date.now() - lastBundleCheck < 30_000) return;
+  lastBundleCheck = Date.now();
+  try {
+    const res = await fetch('/index.html', { cache: 'no-store' });
+    if (!res.ok) return;
+    const html = await res.text();
+    if (!html.includes(currentBundle)) window.location.reload();
+  } catch {
+    // Offline / flaky network: keep the current page usable.
+  }
+}
+window.addEventListener('focus', ensureCurrentBundle);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) void ensureCurrentBundle();
+});
 import '@fontsource-variable/inter';
 import './index.css';
 

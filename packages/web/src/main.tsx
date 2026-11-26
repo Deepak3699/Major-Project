@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import App from '@/App';
+import { ActivityTracker } from '@/components/ActivityTracker';
 import { ToastProvider } from '@/components/ui/toast';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
@@ -62,6 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <BrowserRouter>
+          <ActivityTracker />
           <App />
         </BrowserRouter>
       </ToastProvider>

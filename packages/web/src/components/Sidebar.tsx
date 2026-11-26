@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings as SettingsIcon, LogOut, Search, PanelLeft, BriefcaseBusiness,
   Target, ClipboardList, UserRound, MessageCircle, Bookmark, FileText, X,
-  Mic, GraduationCap, Coins, Award, Sparkles, ArrowUpRight, Bot,
+  Mic, GraduationCap, Coins, Award, Sparkles, ArrowUpRight, Bot, UsersRound,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
@@ -54,6 +54,7 @@ const ADMIN_SECTIONS = [
   { label: "Insights", items: [
     { to: "/duplicates", label: "Duplicates", icon: GitMerge },
     { to: "/analytics", label: "Analytics", icon: TrendingUp },
+    { to: "/admin/users", label: "People & activity", icon: UsersRound },
     { to: "/admin/feedback", label: "Candidate feedback", icon: MessageCircle },
     { to: "/admin/placements", label: "Placement outcomes", icon: Award },
     { to: "/admin/practice", label: "Practice subscriptions", icon: Mic, tour: "nav-admin-practice" },

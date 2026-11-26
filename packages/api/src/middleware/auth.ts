@@ -28,8 +28,19 @@ async function resolveSubject(request: FastifyRequest): Promise<JWTPayload | nul
   const user = request.user as unknown as JWTPayload;
   if (!user?.id) return null;
 
-  const existing = await getDB().unsafe(`SELECT 1 FROM users WHERE id = $1`, [user.id]);
-  return existing.length > 0 ? user : null;
+  // Resolve role/status/version from the database rather than trusting the
+  // token forever. This makes a suspension, role change or "sign out
+  // everywhere" take effect on the very next request.
+  const existing = await getDB().unsafe(
+    `SELECT role, status, auth_version FROM users WHERE id = $1`,
+    [user.id],
+  );
+  const row = existing[0] as any;
+  if (!row) return null;
+  if (row.status === 'suspended') return null;
+  if (Number((user as any).v ?? 0) !== Number(row.auth_version ?? 0)) return null;
+
+  return { ...user, role: String(row.role || user.role) };
 }
 
 export async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {

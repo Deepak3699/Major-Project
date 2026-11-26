@@ -12,13 +12,14 @@ export interface ModalProps {
   children?: React.ReactNode
   footer?: React.ReactNode
   className?: string
-  size?: "sm" | "md" | "lg"
+  size?: "sm" | "md" | "lg" | "xl"
 }
 
 const sizeMap = {
   sm: "max-w-sm",
   md: "max-w-lg",
   lg: "max-w-2xl",
+  xl: "max-w-5xl",
 }
 
 export function Modal({

@@ -28,7 +28,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     const sql = getDB();
 
     let user = await sql.unsafe(
-      `SELECT id, email, password_hash, role FROM users WHERE email = $1`,
+      `SELECT id, email, password_hash, role, status, auth_version FROM users WHERE email = $1`,
       [email],
     );
 
@@ -69,6 +69,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.status(401).send({ error: 'Invalid credentials. Password is incorrect.' });
     }
 
+    if (userRow.status === 'suspended') {
+      return reply.status(403).send({
+        error: 'This account is suspended. Contact an administrator to restore access.',
+      });
+    }
+
     if (
       (requestedRole === 'admin' && userRow.role !== 'admin') ||
       (requestedRole === 'user' && userRow.role === 'admin')
@@ -77,13 +83,19 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const finalRole = userRow.role;
+    const tokenVersion = Number(userRow.auth_version || 0);
+
+    await sql.unsafe(
+      `UPDATE users SET last_login_at = now(), last_seen_at = now() WHERE id = $1`,
+      [userRow.id],
+    );
 
     const token = fastify.jwt.sign(
-      { id: userRow.id, email: userRow.email, role: finalRole },
+      { id: userRow.id, email: userRow.email, role: finalRole, v: tokenVersion },
       { expiresIn: '7d' },
     );
     const refreshToken = fastify.jwt.sign(
-      { id: userRow.id, email: userRow.email, role: finalRole, typ: 'refresh' },
+      { id: userRow.id, email: userRow.email, role: finalRole, v: tokenVersion, typ: 'refresh' },
       { expiresIn: '30d' },
     );
 
@@ -184,31 +196,41 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const decoded = fastify.jwt.verify<{ id: string; typ?: string }>(parseResult.data.refresh_token) as any;
+      const decoded = fastify.jwt.verify<{ id: string; typ?: string; v?: number }>(parseResult.data.refresh_token) as any;
       if (decoded.typ !== 'refresh') {
         return reply.status(401).send({ error: 'Invalid refresh token' });
       }
       const sql = getDB();
       const user = await sql.unsafe(
-        `SELECT id, email, role FROM users WHERE id = $1`,
+        `SELECT id, email, role, status, auth_version FROM users WHERE id = $1`,
         [decoded.id],
       );
 
-      const userRow = user[0] as unknown as { id: string; email: string; role: string };
-      if (!userRow) {
+      const userRow = user[0] as unknown as {
+        id: string;
+        email: string;
+        role: string;
+        status?: string;
+        auth_version?: number;
+      };
+      if (!userRow || userRow.status === 'suspended') {
         return reply.status(401).send({ error: 'Invalid refresh token' });
+      }
+      if (Number(decoded.v ?? 0) !== Number(userRow.auth_version ?? 0)) {
+        return reply.status(401).send({ error: 'Session has been revoked. Please sign in again.' });
       }
 
       if (redis) {
         await redis.setex(`bl_:${parseResult.data.refresh_token}`, 7 * 24 * 60 * 60, '1');
       }
 
+      const tokenVersion = Number(userRow.auth_version || 0);
       const token = fastify.jwt.sign(
-        { id: userRow.id, email: userRow.email, role: userRow.role },
+        { id: userRow.id, email: userRow.email, role: userRow.role, v: tokenVersion },
         { expiresIn: '7d' },
       );
       const refreshToken = fastify.jwt.sign(
-        { id: userRow.id, email: userRow.email, role: userRow.role, typ: 'refresh' },
+        { id: userRow.id, email: userRow.email, role: userRow.role, v: tokenVersion, typ: 'refresh' },
         { expiresIn: '30d' },
       );
 

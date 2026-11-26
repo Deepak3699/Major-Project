@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticePresentationMetrics, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, AdminInterviewDetail, AdminInterviewSession, CreditLedgerEntry, CreditPage, CreditsOverview, AiCall, AiConfig, AiOverview } from './types';
+import { AdminUserDetail, AdminUserOverview, AdminUserRow, AdminVisitorResponse } from './admin-user-types';
 import { API_URL } from '@/lib/env';
 
 const api = axios.create({
@@ -522,8 +523,53 @@ export const creditsAdmin = {
     (await api.post('/admin/credits/adjust', values)).data as { wallet: CreditsOverview['wallet']; entry: CreditLedgerEntry | null; already_processed: boolean },
 };
 
-export const adminAI = {
-  overview: async () => (await api.get('/admin/ai')).data as AiOverview,
+export const userAdmin = {
+  overview: async (days = 30) =>
+    (await api.get('/admin/users/overview', { params: { days } })).data as AdminUserOverview,
+  list: async (params: {
+    search?: string;
+    role?: string;
+    status?: string;
+    sort?: string;
+    limit?: number;
+    offset?: number;
+  } = {}) =>
+    (await api.get('/admin/users', { params })).data as {
+      data: AdminUserRow[];
+      pagination: { limit: number; offset: number; total: number };
+    },
+  detail: async (id: string) =>
+    (await api.get(`/admin/users/${id}`)).data as AdminUserDetail,
+  update: async (id: string, values: {
+    role?: string;
+    status?: 'active' | 'suspended';
+    full_name?: string;
+    headline?: string;
+    location?: string;
+    phone?: string;
+    revoke_sessions?: boolean;
+  }) => (await api.patch(`/admin/users/${id}`, values)).data as { ok: boolean },
+  resetPassword: async (id: string) =>
+    (await api.post(`/admin/users/${id}/reset-password`, {})).data as {
+      ok: boolean;
+      password: string;
+      message: string;
+    },
+  remove: async (id: string, confirm_email: string) =>
+    (await api.delete(`/admin/users/${id}`, { data: { confirm_email } })).data as {
+      ok: boolean;
+      deleted: boolean;
+    },
+  visitors: async (params: {
+    search?: string;
+    type?: 'all' | 'anonymous' | 'registered';
+    limit?: number;
+    offset?: number;
+  } = {}) =>
+    (await api.get('/admin/users/visitors', { params })).data as AdminVisitorResponse,
+};
+
+export const adminAI = {  overview: async () => (await api.get('/admin/ai')).data as AiOverview,
   settings: async () => (await api.get('/admin/ai/settings')).data as { config: AiConfig; features: string[]; defaults: AiConfig },
   saveSettings: async (values: Partial<AiConfig>) =>
     (await api.put('/admin/ai/settings', values)).data as { message: string; config: AiConfig },

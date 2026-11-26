@@ -49,7 +49,9 @@ REFS = re.compile(
     re.I,
 )
 ADD_COLUMN = re.compile(
-    r"ALTER TABLE\s+([\w\"]+)\s+ADD COLUMN (?:IF NOT EXISTS )?([\w\"]+)\s+([^,]+)", re.I
+    r"ALTER TABLE\s+([\w\"]+)\s+ADD COLUMN (?:IF NOT EXISTS )?([\w\"]+)\s+"
+    r"(.+?)(?=;|\bALTER TABLE\b|\bDO \$\$|$)",
+    re.I,
 )
 CREATE_INDEX = re.compile(
     r"CREATE\s+(UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s+ON\s+(\w+)"

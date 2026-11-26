@@ -92,4 +92,35 @@ describe('authenticate / authorize', () => {
     await authenticate(req, reply);
     expect(reply.code).toBe(401);
   });
+
+  test('rejects a suspended account even when the token is otherwise valid', async () => {
+    mockUnsafe.mockResolvedValue([{ role: 'admin', status: 'suspended', auth_version: 0 }]);
+    const req = makeRequest(null); const reply = makeReply();
+    await authenticate(req, reply);
+    expect(reply.code).toBe(401);
+  });
+
+  test('rejects a token issued before sessions were revoked', async () => {
+    mockUnsafe.mockResolvedValue([{ role: 'admin', status: 'active', auth_version: 2 }]);
+    const req = makeRequest(null); const reply = makeReply();
+    await authenticate(req, reply);
+    expect(reply.code).toBe(401);
+  });
+
+  test('accepts a token whose version matches the account', async () => {
+    mockUnsafe.mockResolvedValue([{ role: 'admin', status: 'active', auth_version: 3 }]);
+    mockVerify.mockImplementation(async function (this: any) {
+      this.user = { id: 'u1', email: 'a@b.c', role: 'admin', v: 3 };
+    });
+    const req = makeRequest(null); const reply = makeReply();
+    await authenticate(req, reply);
+    expect(reply.code).toBeNull();
+  });
+
+  test('authorize() trusts the current database role over the token role', async () => {
+    mockUnsafe.mockResolvedValue([{ role: 'viewer', status: 'active', auth_version: 0 }]);
+    const req = makeRequest(null); const reply = makeReply();
+    await authorize(['admin'])(req, reply);
+    expect(reply.code).toBe(403);
+  });
 });

@@ -45,7 +45,10 @@ const Jobs: React.FC = () => {
     event.preventDefault();
     setFilters((current) => ({ ...current, q: input.trim() || undefined, page: 1 }));
   };
+  // Changing a search filter starts again at page 1. Moving between pages must
+  // keep the requested page instead of being reset by setFilter.
   const setFilter = (key: string, value: unknown) => setFilters((current) => ({ ...current, [key]: value, page: 1 }));
+  const goToPage = (page: number) => setFilters((current) => ({ ...current, page }));
 
   return (
     <div className="space-y-6">
@@ -118,9 +121,9 @@ const Jobs: React.FC = () => {
       )}
       {data && data.pagination.pages > 1 && (
         <div className="flex items-center justify-center gap-3">
-          <button disabled={Number(filters.page) <= 1} onClick={() => setFilter('page', Number(filters.page) - 1)} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-40">Previous</button>
+          <button disabled={Number(filters.page) <= 1} onClick={() => goToPage(Number(filters.page) - 1)} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-40">Previous</button>
           <span className="font-mono text-[11px] tabular-nums text-muted-foreground">Page <span className="text-foreground">{Number(filters.page)}</span> of <span className="text-foreground">{data.pagination.pages}</span></span>
-          <button disabled={Number(filters.page) >= data.pagination.pages} onClick={() => setFilter('page', Number(filters.page) + 1)} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-40">Next</button>
+          <button disabled={Number(filters.page) >= data.pagination.pages} onClick={() => goToPage(Number(filters.page) + 1)} className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-border-strong disabled:opacity-40">Next</button>
         </div>
       )}
     </div>

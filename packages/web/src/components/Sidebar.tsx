@@ -54,7 +54,7 @@ const ADMIN_SECTIONS = [
   { label: "Insights", items: [
     { to: "/duplicates", label: "Duplicates", icon: GitMerge },
     { to: "/analytics", label: "Analytics", icon: TrendingUp },
-    { to: "/admin/users", label: "People & activity", icon: UsersRound },
+    { to: "/admin/users", label: "People & activity", icon: UsersRound, tour: "nav-admin-people" },
     { to: "/admin/feedback", label: "Candidate feedback", icon: MessageCircle },
     { to: "/admin/placements", label: "Placement outcomes", icon: Award },
     { to: "/admin/practice", label: "Practice subscriptions", icon: Mic, tour: "nav-admin-practice" },

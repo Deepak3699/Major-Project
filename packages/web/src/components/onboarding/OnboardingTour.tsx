@@ -29,6 +29,7 @@ type TargetId =
   | 'nav-for-you'
   | 'nav-practice'
   | 'nav-jobs'
+  | 'nav-admin-people'
   | 'nav-admin-practice'
   | 'palette'
   | 'user-menu';
@@ -50,6 +51,7 @@ const SELECTOR: Record<TargetId, string> = {
   'nav-for-you': '[data-tour="nav-for-you"]',
   'nav-practice': '[data-tour="nav-practice"]',
   'nav-jobs': '[data-tour="nav-jobs"]',
+  'nav-admin-people': '[data-tour="nav-admin-people"]',
   'nav-admin-practice': '[data-tour="nav-admin-practice"]',
   'palette': '[data-tour="palette"]',
   'user-menu': '[data-tour="user-menu"]',
@@ -130,22 +132,29 @@ const ADMIN_STEPS: TourStep[] = [
     icon: BriefcaseBusiness,
   },
   {
+    target: 'nav-admin-people',
+    eyebrow: 'People & activity · 03',
+    title: 'See who really uses the platform.',
+    body: 'Every account, its original profile and active time, plus anonymous visitors and website traffic — all in charts you can scan in seconds.',
+    icon: UserRound,
+  },
+  {
     target: 'nav-admin-practice',
-    eyebrow: 'Subscriptions · 03',
+    eyebrow: 'Subscriptions · 04',
     title: 'Practice upgrade requests.',
     body: 'Candidates on the free quota can request Pro access here. You approve or reject requests, and can grant Pro directly by email.',
     icon: Mic,
   },
   {
     target: 'palette',
-    eyebrow: 'Speed · 04',
+    eyebrow: 'Speed · 05',
     title: 'One keystroke away.',
     body: 'Press ⌘K or Ctrl+K from anywhere to jump straight to any admin page, including settings.',
     icon: Search,
   },
   {
     target: 'user-menu',
-    eyebrow: 'Account · 05',
+    eyebrow: 'Account · 06',
     title: 'Light, dark, and replay.',
     body: 'The avatar menu keeps the theme switch, automation-run alerts live in the bell, and this tutorial can be replayed from the menu any time.',
     icon: Settings,

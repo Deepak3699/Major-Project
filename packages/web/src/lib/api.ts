@@ -4,7 +4,9 @@ import { API_URL } from '@/lib/env';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  // Starting an interview generates questions; allow room for a slow
+  // provider without the browser timing out before the template fallback.
+  timeout: 60000,
 });
 
 let isRefreshing = false;

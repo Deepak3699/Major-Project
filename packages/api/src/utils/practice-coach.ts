@@ -217,7 +217,7 @@ export async function generateNextQuestion(input: AdaptiveQuestionInput): Promis
         })}`,
       ].filter(Boolean).join('\n\n'),
     },
-  ], { temperature: 0.75, maxOutputTokens: 500, timeoutMs: 25_000 });
+  ], { temperature: 0.75, maxOutputTokens: 500, timeoutMs: asked.length === 0 ? 12_000 : 20_000 });
 
   const question = typeof parsed?.question === 'string' ? parsed.question.trim() : '';
   if (!question || question.length < 12 || question.length > 600) return fallback();

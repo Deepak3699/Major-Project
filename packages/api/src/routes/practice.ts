@@ -329,27 +329,31 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     // generated from the candidate's own answer, so the round is a
     // conversation rather than a pre-loaded questionnaire.
     const targetCount = parsed.data.question_count;
-    const firstQuestion = await generateNextQuestion({
-      profile,
-      role,
-      difficulty: parsed.data.difficulty as Difficulty,
-      job,
-      avatar,
-      asked: [],
-      targetCount,
-      language: 'english',
-      recentTopics,
-    });
-    const model = firstQuestion.source === 'gemini' ? (await getAiConfig()).model : 'template';
-
-    // The avatar greets the candidate before the first question. Kept on the
-    // session row so reopening an interview resumes the same opening line.
-    const openingLine = await generateOpeningLine({
-      avatar,
-      role,
-      job,
-      candidateName: candidateFirstName(profile),
-    });
+    // Both calls are independent and each has a template fallback. Running
+    // them together avoids a slow provider doubling the wait to open a round.
+    const [firstQuestion, openingLine, config] = await Promise.all([
+      generateNextQuestion({
+        profile,
+        role,
+        difficulty: parsed.data.difficulty as Difficulty,
+        job,
+        avatar,
+        asked: [],
+        targetCount,
+        language: 'english',
+        recentTopics,
+      }),
+      // The avatar greets the candidate before the first question. Kept on the
+      // session row so reopening an interview resumes the same opening line.
+      generateOpeningLine({
+        avatar,
+        role,
+        job,
+        candidateName: candidateFirstName(profile),
+      }),
+      getAiConfig(),
+    ]);
+    const model = firstQuestion.source === 'gemini' ? config.model : 'template';
 
     const created = await sql.unsafe(
       `INSERT INTO interview_sessions

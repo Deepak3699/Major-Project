@@ -148,6 +148,9 @@ const DEFAULT_TITLES: Record<string, string> = {
   rohan: 'Founder & Builder',
 };
 
+/** Coarse mouth shapes used when a boundary-driven lip-sync source is available. */
+export type Viseme = 'sil' | 'aa' | 'ee' | 'oo' | 'ff' | 'mm' | 'th';
+
 interface AvatarPortraitProps {
   avatarId?: string;
   name?: string;
@@ -155,6 +158,8 @@ interface AvatarPortraitProps {
   state?: InterviewerState;
   /** Increments on each spoken word boundary; drives the lip-sync envelope. */
   pulse?: number;
+  /** Optional phoneme hint for the current word (rounded, wide, closed, etc.). */
+  viseme?: Viseme;
   className?: string;
   /** Cards can opt out of the animation loop to keep a gallery cheap. */
   animated?: boolean;
@@ -169,6 +174,7 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
   title,
   state = 'idle',
   pulse = 0,
+  viseme = 'sil',
   className,
   animated = true,
   showNameplate = true,
@@ -186,6 +192,8 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
   stateRef.current = state;
   const pulseRef = useRef(pulse);
   pulseRef.current = pulse;
+  const visemeRef = useRef<Viseme>(viseme);
+  visemeRef.current = viseme;
 
   const headRef = useRef<SVGGElement>(null);
   const bodyRef = useRef<SVGGElement>(null);
@@ -222,18 +230,24 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
       const idle = current === 'speaking' ? 0 : 0.045 + 0.035 * Math.sin(now / 620);
       const open = Math.min(1, Math.max(openness, idle));
 
+      // Viseme shaping keeps words from all looking like the same "ah" shape.
+      const shape = visemeRef.current;
+      const width = shape === 'oo' ? 0.58 : shape === 'ee' ? 1.14 : shape === 'ff' || shape === 'mm' ? 0.78 : 1;
+      const height = shape === 'ff' || shape === 'mm' ? 0.16 : shape === 'th' ? 0.62 : shape === 'oo' ? 1.16 : shape === 'ee' ? 0.74 : 1;
+      const shaped = open * height;
+
       const mouth = mouthRef.current;
       if (mouth) {
-        mouth.setAttribute('ry', (1.3 + open * 8.4).toFixed(2));
-        mouth.setAttribute('rx', (11 + open * 3.4).toFixed(2));
+        mouth.setAttribute('ry', (1.3 + shaped * 8.4).toFixed(2));
+        mouth.setAttribute('rx', ((11 + open * 3.4) * width).toFixed(2));
       }
       const lower = lowerLipRef.current;
-      if (lower) lower.setAttribute('transform', `translate(0 ${(open * 3.8).toFixed(2)})`);
+      if (lower) lower.setAttribute('transform', `translate(0 ${(shaped * 3.8).toFixed(2)})`);
       const teeth = teethRef.current;
       if (teeth) {
-        const show = open > 0.24;
+        const show = shaped > 0.24;
         teeth.setAttribute('height', show ? '2.4' : '0');
-        teeth.setAttribute('y', (138.3 - open * 8.4).toFixed(2));
+        teeth.setAttribute('y', (138.3 - shaped * 8.4).toFixed(2));
       }
 
       const head = headRef.current;

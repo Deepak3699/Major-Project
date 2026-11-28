@@ -235,7 +235,7 @@ function ArtifactView({ artifact }: { artifact: PreparationArtifact }) {
   );
 }
 
-const Preparation: React.FC = () => {
+const Preparation: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const client = useQueryClient();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -278,7 +278,7 @@ const Preparation: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-grad-hero p-6 text-[hsl(33,34%,94%)] sm:p-8">
+      {!embedded && <section className="relative overflow-hidden rounded-2xl border border-[hsl(22,22%,24%)] bg-grad-hero p-6 text-[hsl(33,34%,94%)] sm:p-8">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-grad-glow" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
@@ -299,7 +299,7 @@ const Preparation: React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       <section className="card p-5 sm:p-6" aria-labelledby="preparation-setup-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">

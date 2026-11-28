@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Compass, GraduationCap, Mic, Search, Target, UserRound, BriefcaseBusiness, Settings, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
@@ -183,6 +184,7 @@ const VIEWPORT_PAD = 16;
 
 const OnboardingTour = () => {
   const { user } = useAuthStore();
+  const location = useLocation();
   const isAdmin = user?.role === 'admin';
 
   const steps = useMemo(() => buildSteps(!!isAdmin), [isAdmin]);
@@ -226,13 +228,15 @@ const OnboardingTour = () => {
     if (!user?.role) return;
     if (serverProgress === undefined) return;
     if (isTutorialDone()) return;
+    // The practice workspace has its own guided tour; avoid stacking two tours.
+    if (location.pathname.startsWith('/practice')) return;
     if (serverProgress?.completed || serverProgress?.skipped) {
       markTutorialDone();
       return;
     }
     const timer = window.setTimeout(() => { setStep(0); setOpen(true); }, 1100);
     return () => window.clearTimeout(timer);
-  }, [user?.role, serverProgress]);
+  }, [user?.role, serverProgress, location.pathname]);
 
   // Replay from the Header avatar menu.
   useEffect(() => {

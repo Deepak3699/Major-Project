@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth";
 import {
   LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
@@ -27,18 +27,16 @@ const LEGACY_SECTIONS: { label: string; items: { to: string; label: string; icon
 const CANDIDATE_SECTIONS = [
   { label: "Career space", items: [
     { to: "/dashboard", label: "Home", icon: LayoutDashboard },
-    { to: "/jobs", label: "Discover jobs", icon: BriefcaseBusiness },
     { to: "/recommendations", label: "For you", icon: Target, tour: "nav-for-you" },
-    { to: "/saved", label: "Saved jobs", icon: Bookmark },
     { to: "/applications", label: "Applications", icon: ClipboardList },
     { to: "/placements", label: "Placement outcomes", icon: Award },
-    { to: "/contacts", label: "Employer contacts", icon: Contact },
-    { to: "/resume", label: "Resume studio", icon: FileText },
+    { to: "/jobs", label: "Discover jobs", icon: BriefcaseBusiness },
+    { to: "/saved", label: "Saved jobs", icon: Bookmark },
     { to: "/profile", label: "My profile", icon: UserRound },
   ] },
   { label: "Practice space", items: [
-    { to: "/practice", label: "Interview practice", icon: Mic, tour: "nav-practice" },
-    { to: "/preparation", label: "Preparation workspace", icon: Sparkles },
+    { to: "/practice", label: "Practice workspace", icon: Mic, tour: "nav-practice" },
+    { to: "/resume", label: "Resume studio", icon: FileText },
     { to: "/learning", label: "Learning tracks", icon: GraduationCap },
     { to: "/credits", label: "Credits & plan", icon: Coins },
   ] },
@@ -69,34 +67,53 @@ const EASE = "transition-[width,opacity] duration-200 ease-[cubic-bezier(0.22,1,
 
 interface NavItemProps { to: string; label: string; icon: IconType; collapsed: boolean; onNavigate?: () => void; tour?: string }
 function NavItem({ to, label, icon: Icon, collapsed, onNavigate, tour }: NavItemProps) {
+  const location = useLocation();
+  const isJobDetail = /^\/jobs\/[^/]+/.test(location.pathname);
+  const detailFrom = new URLSearchParams(location.search).get("from");
+
+  // Job details opened from For you belong to that workspace, not Discover
+  // jobs. Keep the highlight (and the visual indicator) on the entry point the
+  // candidate actually used.
+  const resolveActive = (isActive: boolean) => {
+    if (!isJobDetail) return isActive;
+    if (to === "/recommendations") return detailFrom === "recommendations";
+    if (to === "/jobs") return detailFrom !== "recommendations";
+    return false;
+  };
+
   return (
     <NavLink
       to={to}
+      end={to === "/jobs"}
       onClick={onNavigate}
       title={label}
       data-tour={tour}
-      className={({ isActive }) =>
-        cn(
+      className={({ isActive }) => {
+        const active = resolveActive(isActive);
+        return cn(
           "group relative flex h-10 min-h-10 items-center gap-3 rounded-xl text-[13px] font-medium transition-all duration-150",
           collapsed ? "justify-center px-0 mx-1" : "px-3",
           "text-sidebar-foreground/72 hover:bg-sidebar-muted/70 hover:text-sidebar-foreground",
-          isActive && "bg-signal/[0.12] text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--signal)/0.08)]",
-        )
-      }
+          active && "bg-signal/[0.12] text-sidebar-foreground shadow-[inset_0_0_0_1px_hsl(var(--signal)/0.08)]",
+        );
+      }}
     >
-      {({ isActive }) => (
-        <>
-          {isActive && !collapsed && <span aria-hidden className="absolute left-0 top-2.5 h-5 w-[3px] rounded-r-full bg-[hsl(14,52%,62%)]" />}
-          <Icon
-            className={cn(
-              "h-[18px] w-[18px] shrink-0 transition-colors",
-              isActive ? "text-[hsl(14,52%,62%)] opacity-100" : "opacity-65 group-hover:opacity-100",
-            )}
-            strokeWidth={isActive ? 2 : 1.8}
-          />
-          <span className={cn("truncate tracking-[-0.01em]", collapsed && "hidden")}>{label}</span>
-        </>
-      )}
+      {({ isActive }) => {
+        const active = resolveActive(isActive);
+        return (
+          <>
+            {active && !collapsed && <span aria-hidden className="absolute left-0 top-2.5 h-5 w-[3px] rounded-r-full bg-[hsl(14,52%,62%)]" />}
+            <Icon
+              className={cn(
+                "h-[18px] w-[18px] shrink-0 transition-colors",
+                active ? "text-[hsl(14,52%,62%)] opacity-100" : "opacity-65 group-hover:opacity-100",
+              )}
+              strokeWidth={active ? 2 : 1.8}
+            />
+            <span className={cn("truncate tracking-[-0.01em]", collapsed && "hidden")}>{label}</span>
+          </>
+        );
+      }}
     </NavLink>
   );
 }

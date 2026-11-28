@@ -87,7 +87,8 @@
     --grain-mix: multiply;
   }
 
-  html.dark {
+  html.dark,
+  [data-practice-room] {
     color-scheme: dark;
     /* Terracotta Atelier — dark theme: deep walnut, almond text, warm terracotta */
     --background: 22 24% 8%;
@@ -161,9 +162,12 @@
     --grain-mix: screen;
   }
 
-  html.dark .bg-white { background-color: hsl(var(--surface)); }
-  html.dark .bg-gray-50 { background-color: hsl(var(--background)); }
-  html.dark .text-gray-600 { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-white,
+  [data-practice-room] .bg-white { background-color: hsl(var(--surface)); }
+  html.dark .bg-gray-50,
+  [data-practice-room] .bg-gray-50 { background-color: hsl(var(--background)); }
+  html.dark .text-gray-600,
+  [data-practice-room] .text-gray-600 { color: hsl(var(--muted-foreground)); }
 
   * {
     border-color: hsl(var(--border));
@@ -523,3 +527,46 @@
 }
 .candidate-stat { transition: transform 160ms ease, border-color 160ms ease; }
 .candidate-stat:hover { transform: translateY(-2px); border-color: hsl(var(--border-strong)); }
+
+/* ---- practice rooms: shared immersive stage ---- */
+[data-practice-room] {
+  background-color: #160f0c;
+  color: #fff6ed;
+}
+[data-practice-room] .practice-room-content { position: relative; z-index: 1; }
+[data-practice-room][data-fullscreen] {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  border-radius: 0;
+  border: 0;
+}
+[data-practice-room][data-fullscreen] .practice-room-content {
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.75rem;
+  scrollbar-width: thin;
+}
+[data-practice-room][data-fullscreen] .room-main-grid {
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+@media (max-width: 900px) {
+  [data-practice-room][data-fullscreen] .room-main-grid { grid-template-columns: minmax(0, 1fr); }
+}
+[data-practice-room][data-fullscreen] .space-y-5 > * + *,
+[data-practice-room][data-fullscreen] .space-y-4 > * + * { margin-top: 0.5rem; }
+[data-practice-room][data-fullscreen] .p-3\.5 { padding: 0.625rem; }
+[data-practice-room][data-fullscreen] .p-4 { padding: 0.75rem; }
+[data-practice-room][data-fullscreen] .p-5 { padding: 0.75rem; }
+[data-practice-room][data-fullscreen] .p-6 { padding: 0.875rem; }
+[data-practice-room][data-fullscreen] .sm\:p-5 { padding: 0.75rem; }
+[data-practice-room][data-fullscreen] .sm\:p-6 { padding: 0.875rem; }

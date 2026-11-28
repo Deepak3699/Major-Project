@@ -26,12 +26,12 @@ const Profile = lazy(() => import('@/pages/Profile'));
 const ResumeStudio = lazy(() => import('@/pages/ResumeStudio'));
 const SavedJobs = lazy(() => import('@/pages/SavedJobs'));
 const CandidateContacts = lazy(() => import('@/pages/CandidateContacts'));
-const Practice = lazy(() => import('@/pages/Practice'));
+const PracticeWorkspace = lazy(() => import('@/pages/PracticeWorkspace'));
+const PracticeRoom = lazy(() => import('@/pages/PracticeRoom'));
 const PracticeSession = lazy(() => import('@/pages/PracticeSession'));
 const Learning = lazy(() => import('@/pages/Learning'));
 const Credits = lazy(() => import('@/pages/Credits'));
 const Placements = lazy(() => import('@/pages/Placements'));
-const Preparation = lazy(() => import('@/pages/Preparation'));
 const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
 const AdminJobs = lazy(() => import('@/pages/AdminJobs'));
 const AdminFeedback = lazy(() => import('@/pages/AdminFeedback'));
@@ -108,12 +108,18 @@ function App() {
       <Route path="saved" element={isCandidate ? <SavedJobs /> : <Navigate to="/dashboard" replace />} />
       <Route path="contacts" element={isCandidate ? <CandidateContacts /> : isAdmin ? <Contacts /> : <Navigate to="/dashboard" replace />} />
       <Route path="resume" element={isCandidate ? <ResumeStudio /> : <Navigate to="/dashboard" replace />} />
-      <Route path="practice" element={isCandidate ? <Practice /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice" element={isCandidate ? <PracticeWorkspace /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice/start" element={<Navigate to="/practice" replace />} />
+      <Route path="practice/interview" element={isCandidate ? <PracticeRoom room="interview" /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice/prepare" element={isCandidate ? <PracticeRoom room="prepare" /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice/group" element={isCandidate ? <PracticeRoom room="group" /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice/presentation" element={isCandidate ? <PracticeRoom room="presentation" /> : <Navigate to="/dashboard" replace />} />
+      <Route path="practice/mock" element={isCandidate ? <PracticeRoom room="mock" /> : <Navigate to="/dashboard" replace />} />
       <Route path="practice/session/:id" element={isCandidate ? <PracticeSession /> : <Navigate to="/dashboard" replace />} />
       <Route path="learning" element={isCandidate ? <Learning /> : <Navigate to="/dashboard" replace />} />
       <Route path="credits" element={isCandidate ? <Credits /> : <Navigate to="/dashboard" replace />} />
       <Route path="placements" element={isCandidate ? <Placements /> : <Navigate to="/dashboard" replace />} />
-      <Route path="preparation" element={isCandidate ? <Preparation /> : <Navigate to="/dashboard" replace />} />
+      <Route path="preparation" element={isCandidate ? <Navigate to="/practice/prepare" replace /> : <Navigate to="/dashboard" replace />} />
       <Route path="profile" element={isCandidate ? <Profile /> : <Navigate to="/dashboard" replace />} />
       <Route path="settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" replace />} />
       <Route path="admin/feedback" element={isAdmin ? <AdminFeedback /> : <Navigate to="/dashboard" replace />} />

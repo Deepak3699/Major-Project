@@ -28,6 +28,8 @@ import { AvatarPortrait } from '@/components/interview/AvatarPortrait';
 import { InterviewerDeck } from '@/components/interview/InterviewerDeck';
 import { FALLBACK_AVATARS } from '@/components/interview/roster';
 import { formatDateTime } from '@/lib/format';
+import { usePracticeFocus } from '@/stores/practiceFocus';
+import { enterFullscreenForNavigation } from '@/lib/fullscreen';
 import { cn } from '@/components/ui/cn';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -174,12 +176,13 @@ const SessionRow = ({ session, i }: { session: PracticeSessionSummary; i: number
   );
 };
 
-const Practice: React.FC = () => {
+const Practice: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const focus = usePracticeFocus((state) => state.focus);
   const studioRef = useRef<HTMLDivElement>(null);
-  const [jobId, setJobId] = useState(searchParams.get('job') || '');
-  const [role, setRole] = useState('');
+  const [jobId, setJobId] = useState(searchParams.get('job') || focus?.jobId || '');
+  const [role, setRole] = useState(focus?.role || '');
   const [avatarId, setAvatarId] = useState('');
   const [avatarTouched, setAvatarTouched] = useState(false);
   const [difficulty, setDifficulty] = useState<PracticeDifficulty>('standard');
@@ -269,6 +272,7 @@ const Practice: React.FC = () => {
 
   const start = async () => {
     if (quotaExhausted) { setUpgradeOpen(true); return; }
+    await enterFullscreenForNavigation();
     setStarting(true);
     try {
       const res = await practice.createSession({
@@ -279,7 +283,7 @@ const Practice: React.FC = () => {
         job_id: jobId || undefined,
       });
       await queryClient.invalidateQueries('practice-sessions');
-      navigate(`/practice/session/${res.session.id}`);
+      navigate(`/practice/session/${res.session.id}`, { state: { autoFullscreen: true } });
     } catch (err) {
       if ((err as any)?.response?.status === 402) setUpgradeOpen(true);
       toast({ title: 'Session not started', description: (err as Error).message, variant: 'error' });
@@ -290,7 +294,7 @@ const Practice: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <motion.section
+      {!embedded && <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: EASE }}
@@ -335,9 +339,9 @@ const Practice: React.FC = () => {
             ))}
           </div>
         </div>
-      </motion.section>
+      </motion.section>}
 
-      <StatCardGrid loading={subLoading}>
+      {!embedded && <StatCardGrid loading={subLoading}>
         <StatCard icon={ShieldCheck} label="Plan" value={subscription ? (subscription.plan === 'pro' ? 'Pro' : 'Free') : null} hint={subscription?.unlimited ? 'Unlimited interviews' : 'Monthly interview quota'} />
         <StatCard
           icon={Mic}
@@ -349,7 +353,7 @@ const Practice: React.FC = () => {
         />
         <StatCard icon={ScrollText} label="Latest score" value={lastScore ?? '—'} tone={scoreTone(lastScore)} hint={completed[0]?.verdict || undefined} />
         <StatCard icon={Users} label="Interviews completed" value={completed.length} hint={bestScore != null ? `best ${bestScore}/100` : 'no scored rounds yet'} />
-      </StatCardGrid>
+      </StatCardGrid>}
 
       {activeSession && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }}>
@@ -373,7 +377,7 @@ const Practice: React.FC = () => {
         </motion.div>
       )}
 
-      <section ref={studioRef} id="studio" className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)]">
+      <section ref={studioRef} id="studio" className="practice-room-studio grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)]">
         <div className="card h-fit space-y-5 p-5">
           <div>
             <p className="eyebrow flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" /> The job</p>
@@ -529,11 +533,11 @@ const Practice: React.FC = () => {
       </section>
 
       {sessionsLoading ? (
-        <div className="card space-y-3 p-5">
+        <div className="card practice-room-log space-y-3 p-5">
           {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-14 w-full" />)}
         </div>
       ) : sessions.length === 0 ? (
-        <div className="card px-6">
+        <div className="card practice-room-log px-6">
           <EmptyState
             icon={Mic}
             title="No interview practice yet"
@@ -542,7 +546,7 @@ const Practice: React.FC = () => {
           />
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="practice-room-log space-y-2">
           <p className="eyebrow">Session log</p>
           {sessions.map((s, i) => <SessionRow key={s.id} session={s} i={i} />)}
         </div>

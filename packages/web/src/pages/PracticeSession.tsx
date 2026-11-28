@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import {
@@ -10,8 +10,10 @@ import {
   Check,
   Eye,
   Lightbulb,
+  Maximize2,
   MessageSquare,
   Mic,
+  Minimize2,
   Minus,
   Scissors,
   Shirt,
@@ -47,6 +49,8 @@ import { useInterviewerSpeech, useVoiceAnswers } from '@/components/interview/sp
 import { useCameraPresence } from '@/components/interview/useCameraPresence';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/components/ui/cn';
+import { exitFullscreenOnLeave } from '@/lib/fullscreen';
+import { RoomAtmosphere } from '@/components/practice/RoomAtmosphere';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -429,13 +433,14 @@ const ResultsView = ({ session, byCategory, questions }: {
 
 /* ------------------------------- active runner ------------------------------- */
 
-const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
+const AnswerPanel = ({ session, question, index, total, isLast, onNext, quiet = false }: {
   session: PracticeSessionSummary;
   question: PracticeQuestion;
   index: number;
   total: number;
   isLast: boolean;
   onNext: () => void;
+  quiet?: boolean;
 }) => {
   const avatar = session.avatar || fallbackAvatar();
   const [text, setText] = useState('');
@@ -585,6 +590,8 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
             <p className="eyebrow flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> {avatar.name.split(' ')[0]} asks</p>
             <p className="mt-1.5 max-w-phi-body text-[17px] font-medium leading-relaxed tracking-[-0.01em] text-foreground">{question.question}</p>
           </div>
+          {!quiet && (
+            <>
           <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">
             {graded
               ? 'Graded from your own answer — the breakdown below explains the score.'
@@ -596,6 +603,8 @@ const AnswerPanel = ({ session, question, index, total, isLast, onNext }: {
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
               <Mic className="h-3 w-3" /> One click arms the mic — after that every question flows automatically
             </p>
+          )}
+            </>
           )}
 
           {!graded ? (
@@ -701,13 +710,43 @@ const FinalizeCard = ({ session, answeredCount, finishing, onFinish }: {
   );
 };
 
-const PracticeSession: React.FC = () => {
-  const { id = '' } = useParams<{ id: string }>();
+const PracticeSession: React.FC<{ sessionId?: string; mockMode?: boolean; onMockFinish?: (result: { overallScore: number | null; sessionId: string }) => void }> = ({ sessionId, mockMode = false, onMockFinish }) => {
+  const { id: routeId = '' } = useParams<{ id: string }>();
+  const id = sessionId || routeId;
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [discardOpen, setDiscardOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
   const { toast } = useToast();
+  const sessionRef = useRef<HTMLDivElement>(null);
+  const [fullscreen, setFullscreen] = useState(() => Boolean(document.fullscreenElement));
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      exitFullscreenOnLeave();
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await sessionRef.current?.requestFullscreen();
+    } catch {
+      // Fullscreen may be blocked by browser policy; the session still works.
+    }
+  };
+
+  // A session launched from "start interview" should open fullscreen. The
+  // click handler already requests it; this is a retry if that call was denied.
+  useEffect(() => {
+    if (!(location.state as { autoFullscreen?: boolean } | null)?.autoFullscreen) return;
+    if (document.fullscreenElement) return;
+    void sessionRef.current?.requestFullscreen?.().catch?.(() => {});
+  }, [location.state]);
 
   const camera = useCameraPresence();
   const { data, isLoading, isError } = useQuery(
@@ -777,7 +816,14 @@ const PracticeSession: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div
+      ref={sessionRef}
+      data-practice-room
+      data-fullscreen={fullscreen ? '' : undefined}
+      className={cn('relative overflow-hidden rounded-[30px] p-4', fullscreen && 'rounded-none border-0')}
+    >
+      <RoomAtmosphere dense />
+      <div className="practice-room-content space-y-4">
       <motion.section
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -813,9 +859,20 @@ const PracticeSession: React.FC = () => {
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Button variant="ghost" asChild><Link to="/practice"><ArrowLeft className="h-4 w-4" />Session log</Link></Button>
-            {session.status === 'in_progress' && (
-              <Button variant="outline" onClick={() => setDiscardOpen(true)}><Trash2 className="h-4 w-4" />Discard</Button>
+            <Button variant="ghost" onClick={() => void toggleFullscreen()} aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
+              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            </Button>
+            {!mockMode && (
+              <>
+                <Button variant="ghost" asChild><Link to="/practice"><ArrowLeft className="h-4 w-4" />Session log</Link></Button>
+                {session.status === 'in_progress' && (
+                  <Button variant="outline" onClick={() => setDiscardOpen(true)}><Trash2 className="h-4 w-4" />Discard</Button>
+                )}
+              </>
+            )}
+            {mockMode && session.status === 'completed' && (
+              <Button onClick={() => onMockFinish?.({ overallScore: session.overall_score ?? null, sessionId: id })}><Check className="h-4 w-4" /> Finish mock round</Button>
             )}
           </div>
         </div>
@@ -832,7 +889,7 @@ const PracticeSession: React.FC = () => {
             <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{answered.length}/{targetCount}</span>
           </div>
 
-          <CameraPanel camera={camera} />
+          {!mockMode && <CameraPanel camera={camera} />}
 
           {pending.length === 0 && questions.length > 0 ? (
             <FinalizeCard
@@ -850,6 +907,7 @@ const PracticeSession: React.FC = () => {
               total={targetCount}
               isLast={answered.length + 1 >= targetCount}
               onNext={advance}
+              quiet={mockMode}
             />
           ) : (
             <PageLoader label="Preparing questions…" />
@@ -878,6 +936,7 @@ const PracticeSession: React.FC = () => {
           </>
         )}
       />
+      </div>
     </div>
   );
 };

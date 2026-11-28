@@ -223,6 +223,76 @@ export const practiceRoutes: FastifyPluginAsync = async (fastify) => {
     return { subscription: state };
   });
 
+  /* ------------------------ one free lifetime mock round ------------------------ */
+
+  fastify.get('/mock-round', async (request, reply) => {
+    if (!isCandidate(request, reply)) return;
+    const sql = getDB();
+    const userId = currentUser(request).id;
+    const subscription = await subscriptionState(sql, userId);
+    const rows = await sql.unsafe('SELECT used_at, session_id, result, completed_at, attempts FROM practice_mock_rounds WHERE user_id = $1', [userId]);
+    const usage = rows[0] as any;
+    return {
+      used: Boolean(usage),
+      used_at: usage?.used_at || null,
+      can_use: subscription.unlimited || !usage,
+      subscription,
+      last_result: typeof usage?.result === 'string' ? JSON.parse(usage.result) : (usage?.result || null),
+      completed_at: usage?.completed_at || null,
+      attempts: usage?.attempts || 1,
+    };
+  });
+
+  fastify.put('/mock-round/result', async (request, reply) => {
+    if (!isCandidate(request, reply)) return;
+    const sql = getDB();
+    const userId = currentUser(request).id;
+    const parsed = z.object({
+      aptitude_correct: z.number().int().min(0).default(0),
+      aptitude_total: z.number().int().min(0).default(0),
+      interview_score: z.number().nullable().default(null),
+      interview_session_id: z.string().optional().nullable(),
+      completed_at: z.string().optional(),
+    }).safeParse(request.body || {});
+    if (!parsed.success) return reply.status(400).send({ error: 'Invalid mock round result.' });
+    const result = parsed.data;
+    const rows = await sql.unsafe(`
+      INSERT INTO practice_mock_rounds (user_id, used_at, session_id, result, completed_at, attempts)
+      VALUES ($1, now(), $2, $3::jsonb, now(), 1)
+      ON CONFLICT (user_id) DO UPDATE SET
+        result = EXCLUDED.result,
+        completed_at = now(),
+        session_id = COALESCE(EXCLUDED.session_id, practice_mock_rounds.session_id),
+        attempts = practice_mock_rounds.attempts + 1
+      RETURNING used_at, completed_at, attempts
+    `, [userId, result.interview_session_id || null, JSON.stringify(result)]);
+    await simpleAudit(userId, 'practice.mock_round_completed', result.interview_session_id || null, { aptitude_correct: result.aptitude_correct, interview_score: result.interview_score });
+    return { ok: true, completed_at: (rows[0] as any).completed_at, attempts: (rows[0] as any).attempts };
+  });
+
+  fastify.post('/mock-round', async (request, reply) => {
+    if (!isCandidate(request, reply)) return;
+    const sql = getDB();
+    const userId = currentUser(request).id;
+    const subscription = await subscriptionState(sql, userId);
+    const existing = await sql.unsafe('SELECT used_at FROM practice_mock_rounds WHERE user_id = $1', [userId]);
+    if (!subscription.unlimited && existing.length > 0) {
+      return reply.status(402).send({
+        error: 'Your free mock round is already used. Upgrade to Pro for unlimited mock rounds.',
+        code: 'MOCK_ROUND_LIMIT',
+      });
+    }
+    const parsed = z.object({ session_id: idSchema.optional() }).safeParse(request.body || {});
+    const sessionId = parsed.success ? (parsed.data.session_id || null) : null;
+    const rows = await sql.unsafe(`
+      INSERT INTO practice_mock_rounds (user_id, session_id) VALUES ($1, $2)
+      ON CONFLICT (user_id) DO UPDATE SET session_id = COALESCE(EXCLUDED.session_id, practice_mock_rounds.session_id)
+      RETURNING used_at, session_id
+    `, [userId, sessionId]);
+    await simpleAudit(userId, 'practice.mock_round_started', sessionId, { lifetime_free: !subscription.unlimited });
+    return { used: true, used_at: (rows[0] as any).used_at, can_use: true };
+  });
+
   fastify.post('/upgrade-request', async (request, reply) => {
     if (!isCandidate(request, reply)) return;
     const userId = currentUser(request).id;

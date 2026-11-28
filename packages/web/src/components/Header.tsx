@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "react-query";
 import { useAuthStore } from "@/stores/auth";
-import { admin } from "@/lib/api";
+import { admin, candidate } from "@/lib/api";
 import { Bell, Menu, ArrowUpRight, CircleSlash2, ChevronDown, Search, Sun, Moon } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { ProfileAvatar } from "@/components/candidate/ProfileAvatar";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/components/ui/cn";
 import { formatDateTime } from "@/lib/format";
@@ -17,7 +19,12 @@ const TITLES: Array<{ match: RegExp; title: string; section: string }> = [
   { match: /^\/saved/, title: "Saved jobs", section: "Pipeline" },
   { match: /^\/resume/, title: "Resume studio", section: "Documents" },
   { match: /^\/practice\/session\/[^/]+/, title: "Interview session", section: "Practice" },
-  { match: /^\/practice/, title: "Interview practice", section: "Practice" },
+  { match: /^\/practice\/interview/, title: "AI interview room", section: "Practice" },
+  { match: /^\/practice\/prepare/, title: "Prepare materials", section: "Practice" },
+  { match: /^\/practice\/group/, title: "Group discussion", section: "Practice" },
+  { match: /^\/practice\/presentation/, title: "Presentation stage", section: "Practice" },
+  { match: /^\/practice\/mock/, title: "Full mock round", section: "Practice" },
+  { match: /^\/practice/, title: "Practice workspace", section: "Practice" },
   { match: /^\/learning/, title: "Learning tracks", section: "Practice" },
   { match: /^\/credits/, title: "Credits & plan", section: "Account" },
   { match: /^\/placements/, title: "Placement outcomes", section: "Account" },
@@ -56,8 +63,17 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = user?.role === "admin";
+  const isCandidate = user?.role === "candidate" || user?.role === "user";
   const isPlatformUser = isAdmin || user?.role === "candidate" || user?.role === "user";
-  const pageTitle = isAdmin && /^\/jobs/.test(location.pathname) ? { title: 'Job review', section: 'Jobs' } : usePageTitle(location.pathname);
+  const { data: candidateProfile } = useQuery('candidate-profile', candidate.profile, { enabled: isCandidate, staleTime: 60_000 });
+  const candidateName = candidateProfile?.profile?.full_name?.trim() || user?.email || '';
+  const basePageTitle = isAdmin && /^\/jobs/.test(location.pathname) ? { title: 'Job review', section: 'Jobs' } : usePageTitle(location.pathname);
+  const detailFrom = new URLSearchParams(location.search).get('from');
+  const pageTitle = /^\/jobs\/[^/]+/.test(location.pathname) && detailFrom === 'recommendations'
+    ? { title: 'Job details', section: 'For you' }
+    : /^\/jobs\/[^/]+/.test(location.pathname) && detailFrom === 'dashboard'
+      ? { title: 'Job details', section: 'Home' }
+      : basePageTitle;
 
   const [runs, setRuns] = useState<Run[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -214,18 +230,37 @@ const Header = ({ onMenuClick }: { onMenuClick?: () => void }) => {
             onClick={() => setUserOpen((v) => !v)}
             className="flex items-center gap-2 rounded-full p-1 pr-1.5 transition-colors hover:bg-accent"
           >
-            <Avatar name={user?.email} size="sm" />
+            {isCandidate ? (
+              <ProfileAvatar
+                avatarId={candidateProfile?.profile?.avatar_id}
+                src={candidateProfile?.profile?.avatar_url}
+                name={candidateName}
+                size={28}
+              />
+            ) : (
+              <Avatar name={user?.email} size="sm" />
+            )}
             <span className="hidden max-w-32 truncate text-[12.5px] font-medium text-foreground lg:block">
-              {user?.email}
+              {isCandidate ? candidateName : user?.email}
             </span>
             <ChevronDown className={cn("hidden h-3.5 w-3.5 text-muted-foreground transition-transform lg:block", userOpen && "rotate-180")} />
           </button>
           {userOpen && (
             <div className="absolute right-0 mt-2 w-52 origin-top-right overflow-hidden rounded-lg border border-border bg-surface shadow-popover animate-scale-in">
               <div className="border-b px-4 py-3">
-                <p className="truncate text-[12.5px] font-medium text-foreground">{user?.email}</p>
-                <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{user?.role}</p>
+                <p className="truncate text-[12.5px] font-medium text-foreground">{isCandidate ? candidateName : user?.email}</p>
+                <p className="truncate font-mono text-[10px] text-muted-foreground">{user?.email}</p>
+                <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{user?.role}</p>
               </div>
+              {isCandidate && (
+                <button
+                  type="button"
+                  onClick={() => { setUserOpen(false); navigate('/profile'); }}
+                  className="w-full px-4 py-2.5 text-left text-[12.5px] font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  My profile
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => { setUserOpen(false); navigate('/welcome'); }}

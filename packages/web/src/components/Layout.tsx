@@ -118,7 +118,7 @@ const Layout: React.FC = () => {
           {[
             { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
             { to: '/jobs', label: 'Jobs', icon: BriefcaseBusiness },
-            { to: '/preparation', label: 'Prep', icon: Sparkles },
+            { to: '/practice/prepare', label: 'Prep', icon: Sparkles },
             { to: '/profile', label: 'Profile', icon: UserRound },
           ].map(({ to, label, icon: Icon }) => (
             <NavLink

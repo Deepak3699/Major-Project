@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS candidate_profiles (
   projects JSONB NOT NULL DEFAULT '[]'::jsonb,
   certifications TEXT[] NOT NULL DEFAULT '{}',
   resume_filename TEXT,
+  avatar_id TEXT NOT NULL DEFAULT 'ember',
+  avatar_url TEXT,
   profile_confirmed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, LayoutDashboard, Users, Building2, Contact, GitMerge, TrendingUp,
   Settings, LogOut, Zap, CornerDownLeft, Command, BriefcaseBusiness, Target,
-  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap, Coins, Award, Sparkles,
+  ClipboardList, UserRound, MessageCircle, Mic, GraduationCap, Coins, Award, Sparkles, FileText,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { admin } from '@/lib/api';
@@ -54,11 +54,17 @@ export function CommandPalette() {
     const candidateNav: Cmd[] = [
       { id: 'dashboard', label: 'Overview', icon: <LayoutDashboard />, group: 'Navigate', run: () => go('/dashboard') },
       { id: 'jobs', label: 'Discover jobs', icon: <BriefcaseBusiness />, group: 'Navigate', run: () => go('/jobs') },
+      { id: 'employer-contacts', label: 'Employer contacts', icon: <Contact />, group: 'Navigate', run: () => go('/jobs?view=contacts') },
       { id: 'recommendations', label: 'Recommended jobs', icon: <Target />, group: 'Navigate', run: () => go('/recommendations') },
       { id: 'applications', label: 'Application tracker', icon: <ClipboardList />, group: 'Navigate', run: () => go('/applications') },
     { id: 'placements', label: 'Placement outcomes', icon: <Award />, group: 'Navigate', run: () => go('/placements') },
       { id: 'practice', label: 'Interview practice', icon: <Mic />, group: 'Navigate', run: () => go('/practice') },
-    { id: 'preparation', label: 'Preparation workspace', icon: <Sparkles />, group: 'Navigate', run: () => go('/preparation') },
+      { id: 'practice-start', label: 'Practice workspace', icon: <Sparkles />, group: 'Navigate', run: () => go('/practice') },
+      { id: 'practice-interview', label: 'Interview room', icon: <Mic />, group: 'Navigate', run: () => go('/practice/interview') },
+      { id: 'practice-prepare', label: 'Prepare materials', icon: <FileText />, group: 'Navigate', run: () => go('/practice/prepare') },
+      { id: 'practice-group', label: 'Group discussion', icon: <Users />, group: 'Navigate', run: () => go('/practice/group') },
+      { id: 'practice-presentation', label: 'Presentation stage', icon: <Award />, group: 'Navigate', run: () => go('/practice/presentation') },
+      { id: 'practice-mock', label: 'Full mock round', icon: <Target />, group: 'Navigate', run: () => go('/practice/mock') },
       { id: 'learning', label: 'Learning tracks', icon: <GraduationCap />, group: 'Navigate', run: () => go('/learning') },
       { id: 'credits', label: 'Credits & plan', icon: <Coins />, group: 'Navigate', run: () => go('/credits') },
       { id: 'profile', label: 'Candidate profile', icon: <UserRound />, group: 'Navigate', run: () => go('/profile') },

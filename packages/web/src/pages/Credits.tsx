@@ -103,7 +103,7 @@ const Credits: React.FC = () => {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild className="h-11 bg-[hsl(14,46%,58%)] px-5 text-[hsl(22,32%,12%)] hover:bg-[hsl(14,50%,64%)]">
-                <Link to="/preparation"><Sparkles className="h-4 w-4" />Use for preparation</Link>
+                <Link to="/practice/prepare"><Sparkles className="h-4 w-4" />Use for preparation</Link>
               </Button>
               <Button variant="outline" asChild className="h-11 border-[hsl(33,34%,94%/0.18)] bg-transparent px-5 text-[#EFDECD] hover:bg-[hsl(33,34%,94%/0.08)] hover:text-[#EFDECD]">
                 <a href="#ledger"><History className="h-4 w-4" />View ledger</a>

@@ -169,6 +169,8 @@ export interface CandidateProfile {
   projects: Array<{ name: string; description: string; technologies: string[] }>;
   certifications: string[];
   resume_filename?: string | null;
+  avatar_id?: string;
+  avatar_url?: string | null;
   profile_confirmed_at?: string | null;
 }
 
@@ -443,6 +445,24 @@ export interface PracticeSubscription {
   monthly_limit: number | null;
   unlimited: boolean;
   requested_upgrade: boolean;
+}
+
+export interface MockRoundResult {
+  aptitude_correct: number;
+  aptitude_total: number;
+  interview_score: number | null;
+  interview_session_id?: string | null;
+  completed_at?: string;
+}
+
+export interface MockRoundStatus {
+  used: boolean;
+  used_at?: string | null;
+  can_use: boolean;
+  subscription: PracticeSubscription;
+  last_result?: MockRoundResult | null;
+  completed_at?: string | null;
+  attempts?: number;
 }
 
 export interface PracticePresentationMetrics {

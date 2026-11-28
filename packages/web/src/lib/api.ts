@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticePresentationMetrics, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, AdminInterviewDetail, AdminInterviewSession, CreditLedgerEntry, CreditPage, CreditsOverview, AiCall, AiConfig, AiOverview } from './types';
+import { ApplicationStatus, CandidateApplication, CandidateJob, CandidateProfile, LearningTrackView, LoginResponse, MockRoundStatus, MockRoundResult, OnboardingProgress, PlacementOutcome, PreparationArtifact, PreparationModule, PracticeAnswerResult, PracticeAvatarsResult, PracticeDifficulty, PracticeFinishResult, PracticePresentationMetrics, PracticeQuestion, PracticeSessionSummary, PracticeSubscription, PracticeUpgradeRequest, AdminCreditWallet, AdminInterviewDetail, AdminInterviewSession, CreditLedgerEntry, CreditPage, CreditsOverview, AiCall, AiConfig, AiOverview } from './types';
 import { AdminUserDetail, AdminUserOverview, AdminUserRow, AdminVisitorResponse } from './admin-user-types';
 import { API_URL } from '@/lib/env';
 
@@ -388,6 +388,8 @@ function normalizeCandidateProfile(value: unknown): CandidateProfile | null {
     remote_preference: ['any', 'remote', 'hybrid', 'onsite'].includes(raw.remote_preference) ? raw.remote_preference : 'any',
     experience_years: Number(raw.experience_years) || 0,
     education_level: text(raw.education_level), salary_currency: raw.salary_currency || 'INR',
+    avatar_id: text(raw.avatar_id) || 'ember',
+    avatar_url: typeof raw.avatar_url === 'string' && raw.avatar_url ? raw.avatar_url : null,
     experience: profileCollection(raw.experience).map((item: any) => typeof item === 'string'
       ? { title: '', company: '', period: '', description: item }
       : { title: text(item?.title), company: text(item?.company), period: text(item?.period), description: text(item?.description) }),
@@ -406,6 +408,8 @@ export const candidate = {
     const response = await api.put('/candidate/profile', profile);
     return { ...response.data, profile: normalizeCandidateProfile(response.data?.profile) };
   },
+  saveAvatar: async (values: { avatar_id: string; avatar_url?: string | null }) =>
+    (await api.patch('/candidate/avatar', values)).data as { avatar_id: string; avatar_url: string | null },
   deleteAccount: async (password:string) => (await api.delete('/candidate/account', { data:{ password } })).data as { deleted:boolean },
   parseResume: async (file: File) => (await api.post('/candidate/resume/parse', file, {
     headers: { 'Content-Type': 'application/octet-stream', 'X-Resume-Filename': file.name },
@@ -464,6 +468,11 @@ export const preparation = {
 
 export const practice = {
   subscription: async () => (await api.get('/candidate/practice/subscription')).data as { subscription: PracticeSubscription },
+  mockRoundStatus: async () => (await api.get('/candidate/practice/mock-round')).data as MockRoundStatus,
+  saveMockRoundResult: async (result: Omit<MockRoundResult, 'completed_at'>) =>
+    (await api.put('/candidate/practice/mock-round/result', result)).data as { ok: boolean; completed_at: string; attempts: number },
+  startMockRound: async (sessionId?: string) =>
+    (await api.post('/candidate/practice/mock-round', sessionId ? { session_id: sessionId } : {})).data as { used: boolean; used_at: string; can_use: boolean },
   sessions: async () => (await api.get('/candidate/practice/sessions')).data as { sessions: PracticeSessionSummary[] },
   avatars: async (jobId?: string) =>
     (await api.get('/candidate/practice/avatars', { params: jobId ? { job_id: jobId } : {} })).data as PracticeAvatarsResult,

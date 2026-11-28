@@ -10,6 +10,14 @@ import { comparePassword } from '../utils/crypto';
 
 const APPLICATION_STATUSES = ['SAVED','RECOMMENDED','READY_TO_APPLY','APPLIED','SCREENING','INTERVIEW','OFFER','REJECTED','WITHDRAWN','JOINED'] as const;
 const idSchema = z.string().uuid();
+const avatarUrlSchema = z.string().trim().max(2_500_000).nullable().optional().refine(
+  (value) => !value || /^data:image\/(png|jpe?g|webp);base64,/i.test(value) || /^https?:\/\//i.test(value),
+  'Avatar must be an uploaded image or an http(s) URL',
+);
+const avatarSchema = z.object({
+  avatar_id: z.string().trim().max(40).default('ember'),
+  avatar_url: avatarUrlSchema,
+});
 const profileSchema = z.object({
   full_name: z.string().trim().min(1).max(160),
   headline: z.string().trim().max(200).default(''),
@@ -29,6 +37,8 @@ const profileSchema = z.object({
   projects: z.array(z.object({ name: z.string().max(200).default(''), description: z.string().max(2000).default(''), technologies: z.array(z.string().max(80)).max(40).default([]) })).max(30).default([]),
   certifications: z.array(z.string().trim().min(1).max(160)).max(50).default([]),
   resume_filename: z.string().trim().max(255).nullable().optional(),
+  avatar_id: z.string().trim().max(40).default('ember'),
+  avatar_url: avatarUrlSchema,
 });
 
 const statuses = z.enum(APPLICATION_STATUSES);
@@ -155,10 +165,10 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
       INSERT INTO candidate_profiles (
         user_id, full_name, headline, contact_email, phone, location, summary, skills, preferred_roles,
         preferred_locations, remote_preference, experience_years, education_level, salary_min,
-        salary_currency, experience, projects, certifications, resume_filename,
+        salary_currency, experience, projects, certifications, resume_filename, avatar_id, avatar_url,
         profile_confirmed_at, updated_at
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17::jsonb,$18,$19,now(),now()
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17::jsonb,$18,$19,$20,$21,now(),now()
       ) ON CONFLICT (user_id) DO UPDATE SET
         full_name = EXCLUDED.full_name, headline = EXCLUDED.headline, contact_email = EXCLUDED.contact_email, phone = EXCLUDED.phone,
         location = EXCLUDED.location, summary = EXCLUDED.summary, skills = EXCLUDED.skills,
@@ -167,14 +177,15 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
         education_level = EXCLUDED.education_level, salary_min = EXCLUDED.salary_min,
         salary_currency = EXCLUDED.salary_currency, experience = EXCLUDED.experience,
         projects = EXCLUDED.projects, certifications = EXCLUDED.certifications,
-        resume_filename = EXCLUDED.resume_filename, profile_confirmed_at = now(), updated_at = now()
+        resume_filename = EXCLUDED.resume_filename, avatar_id = EXCLUDED.avatar_id,
+        avatar_url = EXCLUDED.avatar_url, profile_confirmed_at = now(), updated_at = now()
       RETURNING *
     `, [
       userId, profile.full_name, profile.headline, profile.contact_email || null, profile.phone || null,
       profile.location, profile.summary, profile.skills, profile.preferred_roles, profile.preferred_locations,
       profile.remote_preference, profile.experience_years, profile.education_level, profile.salary_min ?? null,
       profile.salary_currency, sql.json(profile.experience), sql.json(profile.projects), profile.certifications,
-      profile.resume_filename || null,
+      profile.resume_filename || null, profile.avatar_id || 'ember', profile.avatar_url || null,
     ]);
     const savedProfile = {
       ...(rows[0] as any),
@@ -182,6 +193,22 @@ export const candidateRoutes: FastifyPluginAsync = async (fastify) => {
       projects: parseJsonArray((rows[0] as any)?.projects),
     };
     return { profile: savedProfile, completion: profileCompletion(savedProfile), confirmed_at: savedProfile?.profile_confirmed_at };
+  });
+
+  // Avatar changes are independent of the long profile form: the picker and
+  // photo uploader persist immediately so a refresh never loses the selection.
+  fastify.patch('/avatar', async (request, reply) => {
+    if (!isCandidate(request, reply)) return;
+    const parsed = avatarSchema.safeParse(request.body);
+    if (!parsed.success) return reply.status(400).send({ error: 'Invalid avatar', details: parsed.error.issues });
+    const rows = await getDB().unsafe(`
+      UPDATE candidate_profiles
+         SET avatar_id = $2, avatar_url = $3, updated_at = now()
+       WHERE user_id = $1
+       RETURNING avatar_id, avatar_url
+    `, [currentUser(request).id, parsed.data.avatar_id || 'ember', parsed.data.avatar_url || null]);
+    if (!rows.length) return reply.status(404).send({ error: 'Save your profile once before choosing an avatar.' });
+    return rows[0];
   });
 
   fastify.delete('/account', async (request, reply) => {
